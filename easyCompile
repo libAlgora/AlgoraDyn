@@ -1,0 +1,67 @@
+#!/bin/bash
+
+########################################################################
+# Copyright (C) 2013 - 2018 : Kathrin Hanauer                          #
+#                                                                      #
+# This file is part of Algora.                                         #
+#                                                                      #
+# Algora is free software: you can redistribute it and/or modify       #
+# it under the terms of the GNU General Public License as published by #
+# the Free Software Foundation, either version 3 of the License, or    #
+# (at your option) any later version.                                  #
+#                                                                      #
+# Algora is distributed in the hope that it will be useful,            #
+# but WITHOUT ANY WARRANTY; without even the implied warranty of       #
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the        #
+# GNU General Public License for more details.                         #
+#                                                                      #
+# You should have received a copy of the GNU General Public License    #
+# along with Algora.  If not, see <http://www.gnu.org/licenses/>.      #
+#                                                                      #
+# Contact information:                                                 #
+#   http://algora.xaikal.org                                           #
+#   kal@xaikal.org                                                     #
+########################################################################
+
+export QT_SELECT=qt5
+PRO_FILE="AlgoraDyn.pro"
+#QMAKE="/path/to/qmake"
+
+[ -z "${QMAKE}" ] && QMAKE=$(which qmake 2>/dev/null) && echo "Using ${QMAKE} for \"qmake\"."
+[ -z "${QMAKE}" ] && QMAKE=$(which qmake-qt5 2>/dev/null) && echo "Using ${QMAKE} for \"qmake\"."
+[ -n "${QMAKE}" ] || eval 'echo "Binary \"qmake\" or \"qmake-qt5\"  not found. Please specify its location explicitly via the QMAKE variable." 1>&2; exit 1'
+
+QMAKE_ARGS="-r -spec linux-g++-64"
+QMAKE_ARGS_DEBUG="CONFIG+=debug"
+
+
+CUR_DIR=$(pwd)
+BUILD_DIR="${CUR_DIR}/build"
+BUILD_DIR_DEBUG="${BUILD_DIR}/Debug"
+BUILD_DIR_RELEASE="${BUILD_DIR}/Release"
+
+PRO_PATH="${CUR_DIR}/src/${PRO_FILE}"
+
+if [ "$1" == "-c" -o "$1" == "--clean" ]
+then
+	echo "Removing build directory as requested..."
+  rm -rf ${BUILD_DIR}
+elif [ "$#" -gt 0 ]
+then
+	echo "Unsupported option $1".
+	exit 1
+fi
+
+echo "Creating build paths if necessary..."
+mkdir -p "${BUILD_DIR_DEBUG}"
+mkdir -p "${BUILD_DIR_RELEASE}"
+
+echo "Compiling debug version..."
+cd "${BUILD_DIR_DEBUG}"
+${QMAKE} ${PRO_PATH} ${QMAKE_ARGS} ${QMAKE_ARGS_DEBUG} && make
+
+echo "Compiling release version..."
+cd "${BUILD_DIR_RELEASE}"
+${QMAKE} ${PRO_PATH} ${QMAKE_ARGS} && make
+
+cd "${CUR_DIR}"
