@@ -7,6 +7,8 @@ namespace Algora {
 
 void DynamicDiGraphAlgorithm::onDiGraphSet()
 {
+    DiGraphAlgorithm::onDiGraphSet();
+
     //auto f3 = std::bind(&Foo::print_sum, &foo, 95, _1);
     //    f3(5);
     using namespace std::placeholders;  // for _1, _2, _3...

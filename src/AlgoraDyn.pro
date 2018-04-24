@@ -44,3 +44,4 @@ INCLUDEPATH += $$PWD/../../AlgoraCore/src
 DEPENDPATH += $$PWD/../../AlgoraCore/src
 
 include(algorithm/algorithm.pri)
+include(algorithm.reach/algorithm.reach.pri)
