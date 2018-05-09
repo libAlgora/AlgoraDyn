@@ -16,7 +16,7 @@ public:
 public:
     virtual void run() override;
     virtual std::string getName() const noexcept override { return "Simple Incremental Single-Source Reachability Algorithm"; }
-    virtual std::string getShortName() const noexcept override { return "SimpleIncSSReach"; }
+    virtual std::string getShortName() const noexcept override { return "Simple-ISSReach"; }
 
 protected:
     virtual void onDiGraphUnset() override;
