@@ -19,7 +19,7 @@
 namespace Algora {
 
 SimpleIncSSReachAlgorithm::SimpleIncSSReachAlgorithm()
-    : DynamicSSReachAlgorithm()
+    : DynamicSSReachAlgorithm(), initialized(false)
 {
     isReachable.setDefaultValue(0);
 }
