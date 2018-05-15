@@ -22,7 +22,6 @@ namespace Algora {
 
 struct ESTree::VertexData {
     Vertex *vertex;
-    std::vector<VertexData*> outNeighbors;
     std::vector<VertexData*> inNeighbors;
     unsigned int parentIndex;
     unsigned int level;
@@ -32,7 +31,6 @@ struct ESTree::VertexData {
         if (p != nullptr) {
             inNeighbors.push_back(p);
             level = p->level + 1;
-            p->outNeighbors.push_back(this);
         }
     }
 
@@ -95,7 +93,6 @@ void ESTree::run()
    bfs.onNonTreeArcDiscover([&](Arc *a) {
         VertexData *td = data(a->getTail());
         VertexData *hd = data(a->getHead());
-        td->outNeighbors.push_back(hd);
         hd->inNeighbors.push_back(td);
         PRINT_DEBUG( "(" << td->vertex << ", " << hd->vertex << ")" << " is a non-tree arc.")
    });
