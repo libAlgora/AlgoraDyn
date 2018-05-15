@@ -1,12 +1,11 @@
 #include "estree.h"
 
-//#include <forward_list>
 #include <vector>
-#include <queue>
 #include <climits>
 
 #include "algorithm.basic/breadthfirstsearch.h"
 #include "algorithm/digraphalgorithmexception.h"
+#include "datastructure/bucketqueue.h"
 
 #define DEBUG_ESTREE
 
@@ -46,21 +45,22 @@ struct ESTree::VertexData {
         return level != UINT_MAX;
     }
 };
-auto cmp = [](ESTree::VertexData *l, ESTree::VertexData *r) { return (l->level  > r->level); };
-typedef std::priority_queue<ESTree::VertexData*, std::vector<ESTree::VertexData*>, decltype(cmp)> PriorityQueue;
+
+struct ESNode_Priority { int operator()(const ESTree::VertexData *vd) { return vd->level; }};
+typedef BucketQueue<ESTree::VertexData*, ESNode_Priority> PriorityQueue;
 
 #ifdef DEBUG_ESTREE
 void printQueue(PriorityQueue q) {
     std::cout << "PriorityQueue: ";
     while(!q.empty()) {
-        std::cout << q.top()->vertex << "[" << q.top()->level << "]" << ", ";
-        q.pop();
+        std::cout << q.bot()->vertex << "[" << q.bot()->level << "]" << ", ";
+        q.popBot();
     }
     std::cout << std::endl;
 }
 #endif
 
-void process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queue);
+void process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queue, const PropertyMap<ESTree::VertexData*> &data);
 
 ESTree::ESTree()
     : DynamicSSReachAlgorithm(), root(nullptr), initialized(false)
@@ -118,30 +118,35 @@ void ESTree::onDiGraphUnset()
 
 void ESTree::onArcRemove(Arc *a)
 {
-    PRINT_DEBUG("An arc is about to be removed: (" << a->getTail() << ", " << a->getHead() << ")")
 
    if (!initialized) {
         return;
     }
 
-    Vertex *tail = a->getTail();
+    PRINT_DEBUG("An arc is about to be removed: (" << a->getTail() << ", " << a->getHead() << ")")
     Vertex *head = a->getHead();
+    if (head == root) {
+        PRINT_DEBUG("Head of arc is root. Nothing to do.")
+        return;
+    }
 
-    PriorityQueue queue(cmp);
-    if (tail != root) {
-        queue.push(data(tail));
-        PRINT_DEBUG("Added " << tail << " to queue.")
+    VertexData *hd = data(head);
+    for (auto i = hd->inNeighbors.begin(); i != hd->inNeighbors.end(); i++) {
+        if ((*i)->vertex == a->getTail()) {
+           *i = nullptr;
+           break; // multiple arcs?
+        }
     }
-    if (head != root) {
-        queue.push(data(head));
-        PRINT_DEBUG("Added " << head << " to queue.")
-    }
+
+    PriorityQueue queue;
+    queue.push(hd);
+    PRINT_DEBUG("Added " << head << " to queue.")
 
     while (!queue.empty()) {
         IF_DEBUG(printQueue(queue))
-        auto vd = queue.top();
-        queue.pop();
-        process(diGraph, vd, queue);
+        auto vd = queue.bot();
+        queue.popBot();
+        process(diGraph, vd, queue, data);
     }
 }
 
@@ -154,42 +159,50 @@ bool ESTree::query(const Vertex *t)
     return d != nullptr && d->isReachable();
 }
 
-void process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queue) {
-    PRINT_DEBUG("Processing vertex " << vd->vertex)
+void process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queue, const PropertyMap<ESTree::VertexData*> &data) {
+
     ESTree::VertexData *parent = vd->inNeighbors[vd->parentIndex];
-    PRINT_DEBUG("  Current parent is " << parent->vertex << ".")
     bool parentChanged = false;
-    while (vd->isReachable() && (graph->findArc(parent->vertex, vd->vertex) == nullptr || vd->level <= parent->level)) {
-    //while (parent == nullptr || vd->level < parent->level + 1) {
+    bool levelChanged = false;
+
+    PRINT_DEBUG("Processing vertex " << vd->vertex << " on level " << vd->level << ".");
+    PRINT_DEBUG("  Current parent is " << (parent == nullptr ? "null" : parent->vertex->toString())
+                << " at index " << vd->parentIndex << ".");
+
+    bool inNeighborFound = parent != nullptr;
+
+    while (vd->isReachable() && (parent == nullptr || vd->level <= parent->level)) {
         vd->parentIndex++;
         parentChanged = true;
-        PRINT_DEBUG("  Advancing parent index.")
+        PRINT_DEBUG("  Advancing parent index to " << vd->parentIndex << ".")
 
         if (vd->parentIndex >= vd->inNeighbors.size()) {
-            PRINT_DEBUG("  Maximum parent index exceeded, increasing level.")
-            vd->level++;
-            if (vd->level >= graph->getSize()) {
-                PRINT_DEBUG("    Vertex is unreachable.")
+            if ((vd->level + 1 >= graph->getSize()) || (levelChanged && !inNeighborFound)) {
+                PRINT_DEBUG("    Vertex is unreachable (source: " << (inNeighborFound ? "no" : "yes" ) << ").")
                 vd->setUnreachable();
+            } else {
+                vd->level++;
+                levelChanged = true;
+                PRINT_DEBUG("  Maximum parent index exceeded, increasing level to " << vd->level << ".")
+                vd->parentIndex = 0;
             }
-            vd->parentIndex = 0;
-            for (auto nd : vd->outNeighbors) {
-                //if (nd != nullptr) {
-                if (graph->findArc(vd->vertex, nd->vertex) != nullptr) {
-                    queue.push(nd);
-                    PRINT_DEBUG("    Added child " << nd->vertex << " to queue.")
-                }
-            }
-
         }
         if (vd->isReachable())  {
             parent = vd->inNeighbors[vd->parentIndex];
-            PRINT_DEBUG("  Trying " << parent->vertex << " as parent.")
+            inNeighborFound |= parent != nullptr;
+            PRINT_DEBUG("  Trying " << (parent == nullptr ? "null" : parent->vertex->toString()) << " as parent.")
         }
     }
     if (parentChanged && vd->isReachable())  {
         queue.push(vd);
         PRINT_DEBUG("  Added " << vd->vertex << " to queue again.")
+    }
+    if (levelChanged) {
+        graph->mapOutgoingArcs(vd->vertex, [&](Arc *a) {
+            queue.push(data(a->getHead()));
+            PRINT_DEBUG("    Added child " << a->getHead() << " to queue.")
+
+        });
     }
 }
 
