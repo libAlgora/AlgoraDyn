@@ -63,7 +63,20 @@ void process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queue, const
 ESTree::ESTree()
     : DynamicSSReachAlgorithm(), root(nullptr), initialized(false)
 {
-   data.setDefaultValue(nullptr);
+    data.setDefaultValue(nullptr);
+ESTree::~ESTree()
+{
+    if (diGraph == nullptr) {
+        return;
+    }
+
+    diGraph->mapVertices([&](Vertex *v) {
+        VertexData *vd = data(v);
+        if (vd != nullptr) {
+            delete vd;
+        }
+    });
+    data.resetAll();
 }
 
 void ESTree::run()
@@ -108,9 +121,16 @@ void ESTree::run()
 
 void ESTree::onDiGraphUnset()
 {
+    diGraph->mapVertices([&](Vertex *v) {
+        VertexData *vd = data(v);
+        if (vd != nullptr) {
+            delete vd;
+        }
+    });
+    data.resetAll();
     DynamicSSReachAlgorithm::onDiGraphUnset();
     initialized = false;
-    data.resetAll();
+}
 }
 
 void ESTree::onArcRemove(Arc *a)

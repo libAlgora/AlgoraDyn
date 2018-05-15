@@ -10,7 +10,8 @@ class ESTree : public DynamicSSReachAlgorithm
 {
 public:
     struct VertexData;
-    ESTree();
+    explicit ESTree();
+    virtual ~ESTree();
 
     // DiGraphAlgorithm interface
 public:
