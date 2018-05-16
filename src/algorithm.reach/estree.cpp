@@ -37,6 +37,12 @@ struct ESTree::VertexData {
     void setUnreachable() {
         parentIndex = 0;
         level = UINT_MAX;
+        // free at least some space
+        int i = inNeighbors.size() - 1;
+        while (i >= 0 && inNeighbors[i] == nullptr) {
+            inNeighbors.pop_back();
+            i--;
+        }
     }
 
     bool isReachable() {
@@ -64,6 +70,9 @@ ESTree::ESTree()
     : DynamicSSReachAlgorithm(), root(nullptr), initialized(false)
 {
     data.setDefaultValue(nullptr);
+    knownArcs.setDefaultValue(false);
+}
+
 ESTree::~ESTree()
 {
     if (diGraph == nullptr) {
@@ -77,6 +86,7 @@ ESTree::~ESTree()
         }
     });
     data.resetAll();
+    knownArcs.resetAll();
 }
 
 void ESTree::run()
@@ -88,9 +98,9 @@ void ESTree::run()
     PRINT_DEBUG("Initializing ESTree...")
 
     data.resetAll();
+    knownArcs.resetAll();
 
    BreadthFirstSearch bfs(false);
-   bfs.setGraph(this->diGraph);
    root = source;
    if (root == nullptr) {
        root =  diGraph->getAnyVertex();
@@ -101,26 +111,26 @@ void ESTree::run()
         Vertex *t = a->getTail();
         Vertex *h = a->getHead();
         data[h] = new VertexData(h, data(t));
+        knownArcs[a] = true;
         PRINT_DEBUG( "(" << t << ", " << h << ")" << " is a tree arc.")
    });
    bfs.onNonTreeArcDiscover([&](Arc *a) {
         VertexData *td = data(a->getTail());
         VertexData *hd = data(a->getHead());
         hd->inNeighbors.push_back(td);
+        knownArcs[a] = true;
         PRINT_DEBUG( "(" << td->vertex << ", " << hd->vertex << ")" << " is a non-tree arc.")
    });
-
-   if (!bfs.prepare()) {
-       throw DiGraphAlgorithmException(this, "Could not prepare BFS algorithm.");
-   }
-   bfs.run();
-   bfs.deliver();
+   runAlgorithm(bfs, diGraph);
 
    initialized = true;
 }
 
 void ESTree::onDiGraphUnset()
 {
+    if (!initialized) {
+        return;
+    }
     diGraph->mapVertices([&](Vertex *v) {
         VertexData *vd = data(v);
         if (vd != nullptr) {
@@ -128,9 +138,88 @@ void ESTree::onDiGraphUnset()
         }
     });
     data.resetAll();
+    knownArcs.resetAll();
     DynamicSSReachAlgorithm::onDiGraphUnset();
     initialized = false;
 }
+
+void ESTree::onArcAdd(Arc *a)
+{
+    if (!initialized) {
+        return;
+    }
+    PRINT_DEBUG("An arc had been added: (" << a->getTail() << ", " << a->getHead() << ")")
+
+    Vertex *tail = a->getTail();
+    if (!query(tail)) {
+        PRINT_DEBUG("Tail is unreachable.")
+        return;
+    }
+
+    //update...
+    VertexData *td = data(tail);
+    Vertex *head = a->getHead();
+    VertexData *hd = data(head);
+    knownArcs[a] = true;
+    if (hd == nullptr) {
+       hd = new VertexData(head, td);
+       data[head]  = hd;
+    } else {
+        hd->inNeighbors.push_back(td);
+        if (hd->level <= td->level + 1) {
+            // arc does not change anything
+            return;
+        } else {
+            hd->level = td->level + 1;
+        }
+    }
+
+    BreadthFirstSearch bfs(false);
+    bfs.setStartVertex(head);
+    bfs.onArcDiscover([&](const Arc *a) {
+        PRINT_DEBUG( "Discovering arc (" << a->getTail() << ", " << a->getHead() << ")...");
+        if (knownArcs(a)) {
+            PRINT_DEBUG( "Arc is already known.");
+            return false;
+        }
+
+        knownArcs[a] = true;
+        Vertex *at = a->getTail();
+        Vertex *ah = a->getHead();
+        VertexData *atd = data(at);
+        VertexData *ahd = data(ah);
+
+        if (ahd == nullptr) {
+            ahd = new VertexData(ah, atd);
+            data[ah] = ahd;
+            PRINT_DEBUG( "(" << at << ", " << ah << ")" << " is a new tree arc.");
+            return true;
+        }
+        ahd->inNeighbors.push_back(atd);
+        if (atd->level + 1 < ahd->level) {
+            ahd->level = atd->level + 1;
+            PRINT_DEBUG( "(" << at << ", " << ah << ")" << " replaces a tree arc.")
+        } else {
+            PRINT_DEBUG( "(" << at << ", " << ah << ")" << " is a non-tree arc.")
+        }
+        return false;
+    });
+    runAlgorithm(bfs, diGraph);
+
+    restoreTree(hd);
+}
+
+void ESTree::onVertexRemove(Vertex *v)
+{
+    if (!initialized) {
+        return;
+    }
+
+     VertexData *vd = data(v);
+     if (vd != nullptr) {
+         delete vd;
+         data.resetToDefault(v);
+     }
 }
 
 void ESTree::onArcRemove(Arc *a)
@@ -141,6 +230,7 @@ void ESTree::onArcRemove(Arc *a)
     }
 
     PRINT_DEBUG("An arc is about to be removed: (" << a->getTail() << ", " << a->getHead() << ")")
+
     Vertex *head = a->getHead();
     if (head == root) {
         PRINT_DEBUG("Head of arc is root. Nothing to do.")
@@ -154,17 +244,8 @@ void ESTree::onArcRemove(Arc *a)
            break; // multiple arcs?
         }
     }
-
-    PriorityQueue queue;
-    queue.push(hd);
-    PRINT_DEBUG("Added " << head << " to queue.")
-
-    while (!queue.empty()) {
-        IF_DEBUG(printQueue(queue))
-        auto vd = queue.bot();
-        queue.popBot();
-        process(diGraph, vd, queue, data);
-    }
+    restoreTree(hd);
+    knownArcs.resetToDefault(a);
 }
 
 bool ESTree::query(const Vertex *t)
@@ -174,6 +255,20 @@ bool ESTree::query(const Vertex *t)
     }
     VertexData *d = data(t);
     return d != nullptr && d->isReachable();
+}
+
+void ESTree::restoreTree(ESTree::VertexData *rd)
+{
+    PriorityQueue queue;
+    queue.push(rd);
+    PRINT_DEBUG("Initialized queue with " << rd->vertex << ".")
+
+    while (!queue.empty()) {
+        IF_DEBUG(printQueue(queue))
+        auto vd = queue.bot();
+        queue.popBot();
+        process(diGraph, vd, queue, data);
+    }
 }
 
 void process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queue, const PropertyMap<ESTree::VertexData*> &data) {
@@ -195,7 +290,7 @@ void process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queue, const
 
         if (vd->parentIndex >= vd->inNeighbors.size()) {
             if ((vd->level + 1 >= graph->getSize()) || (levelChanged && !inNeighborFound)) {
-                PRINT_DEBUG("    Vertex is unreachable (source: " << (inNeighborFound ? "no" : "yes" ) << ").")
+                PRINT_DEBUG("    Vertex is unreachable (source: " << (levelChanged ? (inNeighborFound ? "no" : "yes" ) : "?") << ").")
                 vd->setUnreachable();
             } else {
                 vd->level++;

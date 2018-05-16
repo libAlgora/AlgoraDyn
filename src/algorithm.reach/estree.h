@@ -24,6 +24,8 @@ protected:
 
     // DynamicDiGraphAlgorithm interface
 protected:
+    virtual void onArcAdd(Arc *a) override;
+    virtual void onVertexRemove(Vertex *v) override;
     virtual void onArcRemove(Arc *a) override;
 
     // DynamicSSReachAlgorithm interface
@@ -34,6 +36,9 @@ private:
     PropertyMap<VertexData*> data;
     Vertex *root;
     bool initialized;
+    PropertyMap<bool> knownArcs;
+
+    void restoreTree(VertexData *rd);
 };
 
 }
