@@ -7,7 +7,7 @@
 #include "algorithm/digraphalgorithmexception.h"
 #include "datastructure/bucketqueue.h"
 
-#define DEBUG_ESTREE
+//#define DEBUG_ESTREE
 
 #ifdef DEBUG_ESTREE
 #include <iostream>
@@ -79,12 +79,9 @@ ESTree::~ESTree()
         return;
     }
 
-    diGraph->mapVertices([&](Vertex *v) {
-        VertexData *vd = data(v);
-        if (vd != nullptr) {
-            delete vd;
-        }
-    });
+    for (auto i = data.cbegin(); i != data.cend(); i++) {
+        delete i->second;
+    }
     data.resetAll();
     knownArcs.resetAll();
 }
