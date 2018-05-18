@@ -10,7 +10,8 @@ namespace Algora {
 class SimpleIncSSReachAlgorithm : public DynamicSSReachAlgorithm
 {
 public:
-    SimpleIncSSReachAlgorithm();
+    explicit SimpleIncSSReachAlgorithm();
+    virtual ~SimpleIncSSReachAlgorithm();
 
     // DiGraphAlgorithm interface
 public:
@@ -34,10 +35,9 @@ public:
     virtual void dumpData(std::ostream &os) override;
 
 private:
-    PropertyMap<int> isReachable;
+    struct Reachability;
+    Reachability *data;
     bool initialized;
-
-    void reachFrom(const Vertex *s);
 };
 
 }
