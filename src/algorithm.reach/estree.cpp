@@ -253,12 +253,22 @@ void ESTree::onArcRemove(Arc *a)
     }
 
     VertexData *hd = data(head);
+    if (hd == nullptr) {
+        PRINT_DEBUG("Head of arc is unreachable (and never was). Nothing to do.")
+        return;
+    }
+
     for (auto i = hd->inNeighbors.begin(); i != hd->inNeighbors.end(); i++) {
         if ((*i) != nullptr && (*i)->vertex == a->getTail()) {
            *i = nullptr;
            break; // multiple arcs?
         }
     }
+    if (!hd->isReachable()) {
+        PRINT_DEBUG("Head of arc is already unreachable. Nothing to do.")
+        return;
+    }
+
     restoreTree(hd);
     knownArcs.resetToDefault(a);
 }
@@ -298,6 +308,11 @@ void ESTree::restoreTree(ESTree::VertexData *rd)
 }
 
 void process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queue, const PropertyMap<ESTree::VertexData*> &data) {
+
+    if (vd->level == 0UL) {
+        PRINT_DEBUG("No need to process source vertex " << vd->vertex << " on level " << vd->level << ".");
+        return;
+    }
 
     ESTree::VertexData *parent = vd->inNeighbors[vd->parentIndex];
     bool parentChanged = false;
