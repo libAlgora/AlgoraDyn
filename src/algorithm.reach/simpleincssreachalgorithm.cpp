@@ -165,29 +165,16 @@ bool SimpleIncSSReachAlgorithm::query(const Vertex *t)
     return isReachable[t] > 0;
 }
 
-void SimpleIncSSReachAlgorithm::reachFrom(const Vertex *s)
+void SimpleIncSSReachAlgorithm::dumpData(std::ostream &os)
 {
-    PRINT_DEBUG(" Starting reachFrom " << s)
-    isReachable[s]++;
-    BreadthFirstSearch bfs(false);
-    bfs.setGraph(diGraph);
-    bfs.setStartVertex(s);
-    bfs.onVertexDiscover([&](const Vertex *v) {
-        PRINT_DEBUG("Reaching " << v << " with score " << isReachable(v) )
-        isReachable[v]++;
-        if (isReachable(v) > 1) {
-             PRINT_DEBUG("no update of successors of " << v)
-            // successors need not be updated
-            return false;
+    if (!initialized) {
+        os << "uninitialized" << std::endl;
+    } else {
+        os << "Source: " << source << std::endl;
+        for (auto i = data->reachableInNeighbors.cbegin(); i != data->reachableInNeighbors.cend(); i++) {
+            os << (Vertex*) i->first << ": " << i-> second << std::endl;
         }
-        // continue
-        return true;
-    });
-    if (!bfs.prepare()) {
-        throw DiGraphAlgorithmException(this, "Could not prepare BFS algorithm.");
     }
-    bfs.run();
-    bfs.deliver();
 }
 
 } // namespace

@@ -3,6 +3,7 @@
 
 #include "algorithm/dynamicdigraphalgorithm.h"
 #include "graph/digraph.h"
+#include <ostream>
 
 namespace Algora {
 
@@ -14,6 +15,8 @@ public:
 
     void setSource(Vertex *s) { source = s; }
     virtual bool query(const Vertex *t) = 0;
+
+    virtual void dumpData(std::ostream&) { }
 
     // DiGraphAlgorithm interface
 public:

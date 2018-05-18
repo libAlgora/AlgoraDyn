@@ -50,6 +50,24 @@ struct ESTree::VertexData {
     }
 };
 
+std::ostream& operator<<(std::ostream& os, const ESTree::VertexData *vd) {
+    if (vd == nullptr) {
+        os << " null ";
+        return os;
+    }
+
+    os << "N-: [ ";
+    for (auto nd : vd->inNeighbors) {
+        if (nd == nullptr) {
+            os << "null ";
+        } else {
+            os << nd->vertex << " ";
+        }
+    }
+    os << "] ; parent: " << vd->parentIndex << " ; level: " << vd->level;
+    return os;
+}
+
 struct ESNode_Priority { int operator()(const ESTree::VertexData *vd) { return vd->level; }};
 typedef BucketQueue<ESTree::VertexData*, ESNode_Priority> PriorityQueue;
 
@@ -252,6 +270,17 @@ bool ESTree::query(const Vertex *t)
     }
     VertexData *d = data(t);
     return d != nullptr && d->isReachable();
+}
+
+void ESTree::dumpData(std::ostream &os)
+{
+    if (!initialized) {
+        os << "uninitialized" << std::endl;
+    }  else {
+        for (auto i = data.cbegin(); i != data.cend(); i++) {
+            os << i-> first << ": " << i-> second << std::endl;
+        }
+    }
 }
 
 void ESTree::restoreTree(ESTree::VertexData *rd)

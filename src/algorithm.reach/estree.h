@@ -31,6 +31,7 @@ protected:
     // DynamicSSReachAlgorithm interface
 public:
     virtual bool query(const Vertex *t) override;
+    virtual void dumpData(std::ostream &os) override;
 
 private:
     PropertyMap<VertexData*> data;
