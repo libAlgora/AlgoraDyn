@@ -254,7 +254,7 @@ void ESTree::onArcRemove(Arc *a)
 
     VertexData *hd = data(head);
     for (auto i = hd->inNeighbors.begin(); i != hd->inNeighbors.end(); i++) {
-        if ((*i)->vertex == a->getTail()) {
+        if ((*i) != nullptr && (*i)->vertex == a->getTail()) {
            *i = nullptr;
            break; // multiple arcs?
         }
