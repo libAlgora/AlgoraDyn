@@ -91,7 +91,6 @@ ESTree::ESTree()
     : DynamicSSReachAlgorithm(), root(nullptr), initialized(false)
 {
     data.setDefaultValue(nullptr);
-    knownArcs.setDefaultValue(false);
 }
 
 ESTree::~ESTree()
@@ -104,7 +103,6 @@ ESTree::~ESTree()
         delete i->second;
     }
     data.resetAll();
-    knownArcs.resetAll();
 }
 
 void ESTree::run()
@@ -116,7 +114,6 @@ void ESTree::run()
     PRINT_DEBUG("Initializing ESTree...")
 
     data.resetAll();
-    knownArcs.resetAll();
 
    BreadthFirstSearch bfs(false);
    root = source;
@@ -129,14 +126,12 @@ void ESTree::run()
         Vertex *t = a->getTail();
         Vertex *h = a->getHead();
         data[h] = new VertexData(h, data(t));
-        knownArcs[a] = true;
         PRINT_DEBUG( "(" << t << ", " << h << ")" << " is a tree arc.")
    });
    bfs.onNonTreeArcDiscover([&](Arc *a) {
         VertexData *td = data(a->getTail());
         VertexData *hd = data(a->getHead());
         hd->inNeighbors.push_back(td);
-        knownArcs[a] = true;
         PRINT_DEBUG( "(" << td->vertex << ", " << hd->vertex << ")" << " is a non-tree arc.")
    });
    runAlgorithm(bfs, diGraph);
@@ -164,19 +159,17 @@ void ESTree::run()
 
 void ESTree::onDiGraphUnset()
 {
-    if (!initialized) {
-        return;
+    if (initialized) {
+        diGraph->mapVertices([&](Vertex *v) {
+            VertexData *vd = data(v);
+            if (vd != nullptr) {
+                delete vd;
+            }
+        });
+        data.resetAll();
+        initialized = false;
     }
-    diGraph->mapVertices([&](Vertex *v) {
-        VertexData *vd = data(v);
-        if (vd != nullptr) {
-            delete vd;
-        }
-    });
-    data.resetAll();
-    knownArcs.resetAll();
     DynamicSSReachAlgorithm::onDiGraphUnset();
-    initialized = false;
 }
 
 void ESTree::onVertexAdd(Vertex *v)
@@ -201,7 +194,6 @@ void ESTree::onArcAdd(Arc *a)
     VertexData *td = data(tail);
     Vertex *head = a->getHead();
     VertexData *hd = data(head);
-    knownArcs[a] = true;
     if (hd == nullptr) {
        hd = new VertexData(head, td);
        data[head]  = hd;
@@ -219,24 +211,11 @@ void ESTree::onArcAdd(Arc *a)
     bfs.setStartVertex(head);
     bfs.onArcDiscover([&](const Arc *a) {
         PRINT_DEBUG( "Discovering arc (" << a->getTail() << ", " << a->getHead() << ")...");
-        //if (knownArcs(a)) {
-        //    PRINT_DEBUG( "Arc is already known.");
-        //    return false;
-        //}
-
-        //knownArcs[a] = true;
         Vertex *at = a->getTail();
         Vertex *ah = a->getHead();
         VertexData *atd = data(at);
         VertexData *ahd = data(ah);
 
-        //if (ahd == nullptr) {
-        //    ahd = new VertexData(ah, atd);
-        //    data[ah] = ahd;
-        //    PRINT_DEBUG( "(" << at << ", " << ah << ")" << " is a new tree arc.");
-        //    return true;
-        //}
-        //ahd->inNeighbors.push_back(atd);
         if (atd->level + 1 < ahd->level) {
             ahd->level = atd->level + 1;
             PRINT_DEBUG( "(" << at << ", " << ah << ")" << " replaces a tree arc.");
@@ -306,16 +285,19 @@ void ESTree::onArcRemove(Arc *a)
     }
 
     restoreTree(hd);
-    knownArcs.resetToDefault(a);
 }
 
 bool ESTree::query(const Vertex *t)
 {
+    if (t == source) {
+        return true;
+    }
+
     if (!initialized) {
         run();
     }
     VertexData *d = data(t);
-    return d != nullptr && d->isReachable();
+    return d->isReachable();
 }
 
 void ESTree::dumpData(std::ostream &os)
@@ -351,7 +333,6 @@ void process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queue, const
     }
 
     ESTree::VertexData *parent = vd->inNeighbors[vd->parentIndex];
-    //bool parentChanged = false;
     bool levelChanged = false;
 
     PRINT_DEBUG("Processing vertex " << vd << ".");
@@ -360,7 +341,6 @@ void process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queue, const
 
     while (vd->isReachable() && (parent == nullptr || vd->level <= parent->level)) {
         vd->parentIndex++;
-        //parentChanged = true;
         PRINT_DEBUG("  Advancing parent index to " << vd->parentIndex << ".")
 
         if (vd->parentIndex >= vd->inNeighbors.size()) {
@@ -380,10 +360,6 @@ void process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queue, const
             PRINT_DEBUG("  Trying " << parent << " as parent.")
         }
     }
-    //if (parentChanged && vd->isReachable())  {
-    //    queue.push(vd);
-    //    PRINT_DEBUG("  Added " << vd->vertex << " to queue again.")
-    //}
     if (levelChanged) {
         graph->mapOutgoingArcs(vd->vertex, [&](Arc *a) {
             auto *hd = data(a->getHead());

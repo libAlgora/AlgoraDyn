@@ -38,7 +38,6 @@ private:
     PropertyMap<VertexData*> data;
     Vertex *root;
     bool initialized;
-    PropertyMap<bool> knownArcs;
 
     void restoreTree(VertexData *rd);
 };
