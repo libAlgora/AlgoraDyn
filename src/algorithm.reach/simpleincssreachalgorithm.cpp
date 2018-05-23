@@ -172,9 +172,9 @@ void SimpleIncSSReachAlgorithm::run()
 }
 
 void SimpleIncSSReachAlgorithm::onDiGraphUnset() {
-    DynamicSSReachAlgorithm::onDiGraphUnset();
     initialized = false;
     data->reset();
+    DynamicSSReachAlgorithm::onDiGraphUnset();
 }
 
 void SimpleIncSSReachAlgorithm::onVertexAdd(Vertex *)

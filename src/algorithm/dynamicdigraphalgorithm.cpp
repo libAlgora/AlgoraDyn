@@ -21,12 +21,13 @@ void DynamicDiGraphAlgorithm::onDiGraphSet()
 
 void DynamicDiGraphAlgorithm::onDiGraphUnset()
 {
-    if (!diGraph)
-        return;
-    diGraph->removeOnVertexAdd(this);
-    diGraph->removeOnVertexRemove(this);
-    diGraph->removeOnArcAdd(this);
-    diGraph->removeOnArcRemove(this);
+    if (diGraph) {
+        diGraph->removeOnVertexAdd(this);
+        diGraph->removeOnVertexRemove(this);
+        diGraph->removeOnArcAdd(this);
+        diGraph->removeOnArcRemove(this);
+    }
+    DiGraphAlgorithm::onDiGraphUnset();
 }
 
 }
