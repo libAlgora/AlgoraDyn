@@ -154,6 +154,12 @@ void ESTree::run()
        }
    });
 
+   diGraph->mapVertices([&](Vertex *v) {
+       if (data(v) == nullptr) {
+           data[v] = new VertexData(v);
+       }
+   });
+
    initialized = true;
 }
 
