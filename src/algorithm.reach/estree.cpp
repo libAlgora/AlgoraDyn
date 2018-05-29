@@ -95,14 +95,7 @@ ESTree::ESTree()
 
 ESTree::~ESTree()
 {
-    if (diGraph == nullptr) {
-        return;
-    }
-
-    for (auto i = data.cbegin(); i != data.cend(); i++) {
-        delete i->second;
-    }
-    data.resetAll();
+    cleanup();
 }
 
 void ESTree::run()
@@ -165,16 +158,7 @@ void ESTree::run()
 
 void ESTree::onDiGraphUnset()
 {
-    if (initialized) {
-        diGraph->mapVertices([&](Vertex *v) {
-            VertexData *vd = data(v);
-            if (vd != nullptr) {
-                delete vd;
-            }
-        });
-        data.resetAll();
-        initialized = false;
-    }
+    cleanup();
     DynamicSSReachAlgorithm::onDiGraphUnset();
 }
 
@@ -294,6 +278,11 @@ void ESTree::onArcRemove(Arc *a)
     restoreTree(hd);
 }
 
+void ESTree::onSourceSet()
+{
+    cleanup();
+}
+
 bool ESTree::query(const Vertex *t)
 {
     if (t == source) {
@@ -330,6 +319,17 @@ void ESTree::restoreTree(ESTree::VertexData *rd)
         queue.popBot();
         process(diGraph, vd, queue, data);
     }
+}
+
+void ESTree::cleanup()
+{
+    for (auto i = data.cbegin(); i != data.cend(); i++) {
+        delete i->second;
+    }
+
+    data.resetAll();
+
+    initialized = false;
 }
 
 void process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queue, const PropertyMap<ESTree::VertexData*> &data) {

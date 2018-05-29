@@ -13,7 +13,7 @@ public:
     explicit DynamicSSReachAlgorithm() : DynamicDiGraphAlgorithm(), source(0) { }
     virtual ~DynamicSSReachAlgorithm() { }
 
-    void setSource(Vertex *s) { source = s; }
+    void setSource(Vertex *s) { source = s; onSourceSet(); }
     virtual bool query(const Vertex *t) = 0;
 
     virtual void dumpData(std::ostream&) { }
@@ -23,6 +23,8 @@ public:
     virtual bool prepare() override { return source != 0 && DynamicDiGraphAlgorithm::prepare() && diGraph->containsVertex(source); }
 
 protected:
+    virtual void onSourceSet() = 0;
+
     Vertex *source;
 };
 

@@ -34,10 +34,15 @@ public:
     virtual bool query(const Vertex *t) override;
     virtual void dumpData(std::ostream &os) override;
 
+    // DynamicSSReachAlgorithm interface
+protected:
+    virtual void onSourceSet() override;
+
 private:
     struct Reachability;
     Reachability *data;
     bool initialized;
+
 };
 
 }

@@ -245,4 +245,10 @@ void SimpleIncSSReachAlgorithm::dumpData(std::ostream &os)
     }
 }
 
+void SimpleIncSSReachAlgorithm::onSourceSet()
+{
+    initialized = false;
+    data->reset();
+}
+
 } // namespace

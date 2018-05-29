@@ -30,6 +30,10 @@ protected:
     virtual void onArcRemove(Arc *a) override;
 
     // DynamicSSReachAlgorithm interface
+protected:
+    virtual void onSourceSet() override;
+
+    // DynamicSSReachAlgorithm interface
 public:
     virtual bool query(const Vertex *t) override;
     virtual void dumpData(std::ostream &os) override;
@@ -40,6 +44,8 @@ private:
     bool initialized;
 
     void restoreTree(VertexData *rd);
+    void cleanup();
+
 };
 
 }
