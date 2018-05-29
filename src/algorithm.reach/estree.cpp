@@ -191,26 +191,27 @@ void ESTree::onArcAdd(Arc *a)
     PRINT_DEBUG("An arc had been added: (" << a->getTail() << ", " << a->getHead() << ")")
 
     Vertex *tail = a->getTail();
-    if (!query(tail)) {
+    Vertex *head = a->getHead();
+    VertexData *td = data(tail);
+    VertexData *hd = data(head);
+
+    assert(td != nullptr);
+    assert(hd != nullptr);
+
+    // store arc
+    hd->inNeighbors.push_back(td);
+
+    if (!td->isReachable()) {
         PRINT_DEBUG("Tail is unreachable.")
         return;
     }
 
     //update...
-    VertexData *td = data(tail);
-    Vertex *head = a->getHead();
-    VertexData *hd = data(head);
-    if (hd == nullptr) {
-       hd = new VertexData(head, td);
-       data[head]  = hd;
+    if (hd->level <= td->level + 1) {
+        // arc does not change anything
+        return;
     } else {
-        hd->inNeighbors.push_back(td);
-        if (hd->level <= td->level + 1) {
-            // arc does not change anything
-            return;
-        } else {
-            hd->level = td->level + 1;
-        }
+        hd->level = td->level + 1;
     }
 
     BreadthFirstSearch bfs(false);
