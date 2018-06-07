@@ -21,8 +21,8 @@ public:
     void removeArc(unsigned int tailId, unsigned int headId, unsigned int timestamp);
 
     void resetToBigBang();
-    void applyNextOperation();
-    void applyNextDelta();
+    bool applyNextOperation();
+    bool applyNextDelta();
 
 private:
     class CheshireCat;
