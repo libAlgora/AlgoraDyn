@@ -25,12 +25,15 @@ void CachingBFSSSReachAlgorithm::run()
     }
     bfs.run();
     bfs.deliver();
+    initialized = true;
 }
 
 bool CachingBFSSSReachAlgorithm::query(const Vertex *t)
 {
     if (!initialized) {
-        prepare();
+        if (!prepare()) {
+            throw DiGraphAlgorithmException(this, "Could not prepare myself.");
+        }
         run();
     }
     return levels(t) != -1;
@@ -38,12 +41,17 @@ bool CachingBFSSSReachAlgorithm::query(const Vertex *t)
 
 void CachingBFSSSReachAlgorithm::onDiGraphSet()
 {
+    DynamicSSReachAlgorithm::onDiGraphSet();
     bfs.setGraph(diGraph);
+    initialized = false;
 }
 
 void CachingBFSSSReachAlgorithm::onDiGraphUnset()
 {
+    bfs.setGraph(diGraph);
     bfs.unsetGraph();
+    initialized = false;
+    DynamicSSReachAlgorithm::onDiGraphUnset();
 }
 
 void CachingBFSSSReachAlgorithm::onArcAdd(Arc *)
