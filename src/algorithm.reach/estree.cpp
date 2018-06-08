@@ -236,7 +236,6 @@ void ESTree::onVertexRemove(Vertex *v)
 
 void ESTree::onArcRemove(Arc *a)
 {
-
    if (!initialized) {
         return;
     }
