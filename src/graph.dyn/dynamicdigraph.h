@@ -19,6 +19,7 @@ public:
     void removeVertex(unsigned int vertexId, unsigned int timestamp);
     void addArc(unsigned int tailId, unsigned int headId, unsigned int timestamp);
     void removeArc(unsigned int tailId, unsigned int headId, unsigned int timestamp);
+    void clear();
 
     void resetToBigBang();
     bool applyNextOperation();

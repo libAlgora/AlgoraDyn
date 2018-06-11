@@ -100,6 +100,21 @@ struct DynamicDiGraph::CheshireCat {
         dynGraph.clear();
     }
 
+    void clear() {
+        reset();
+        vertices.clear();
+        constructionArcMap.clear();
+        constructionGraph.clear();
+        timestamps.clear();
+
+        for (auto opList : operations) {
+            for (auto op: opList) {
+               delete op;
+            }
+        }
+        operations.clear();
+    }
+
     void checkTimestamp(unsigned int timestamp) {
         if (!timestamps.empty() && timestamp < timestamps.back()) {
             throw std::invalid_argument("Timestamps must be non-decreasing.");
@@ -280,6 +295,11 @@ void DynamicDiGraph::addArc(unsigned int tailId, unsigned int headId, unsigned i
 void DynamicDiGraph::removeArc(unsigned int tailId, unsigned int headId, unsigned int timestamp)
 {
     grin->removeArc(tailId, headId, timestamp);
+}
+
+void DynamicDiGraph::clear()
+{
+    grin->clear();
 }
 
 void DynamicDiGraph::resetToBigBang()
