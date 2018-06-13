@@ -8,12 +8,13 @@ class DiGraph;
 class DynamicDiGraph
 {
 public:
-    DynamicDiGraph();
+    explicit DynamicDiGraph();
     ~DynamicDiGraph();
 
     DiGraph *getDiGraph() const;
     unsigned int getCurrentTime() const;
     unsigned int getMaxTime() const;
+    unsigned int getNumberOfDeltas() const;
 
     void addVertex(unsigned int timestamp);
     void removeVertex(unsigned int vertexId, unsigned int timestamp);

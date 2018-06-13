@@ -294,6 +294,11 @@ unsigned int DynamicDiGraph::getMaxTime() const
     return grin->timestamps.empty() ? 0U : grin->timestamps.back();
 }
 
+unsigned int DynamicDiGraph::getNumberOfDeltas() const
+{
+    return grin->timestamps.size();
+}
+
 void DynamicDiGraph::addVertex(unsigned int timestamp)
 {
     grin->addVertex(timestamp);
@@ -338,6 +343,5 @@ bool DynamicDiGraph::applyNextDelta()
 {
     return grin->nextDelta();
 }
-
 
 }
