@@ -188,11 +188,10 @@ struct DynamicDiGraph::CheshireCat {
         constructionArcMap[ca] = aao;
     }
 
-    void removeArc(unsigned int tailId, unsigned int headId, unsigned int timestamp) {
+    Arc *findArc(unsigned int tailId, unsigned int headId) {
         if (tailId >= vertices.size() || headId >= vertices.size()) {
-            throw std::invalid_argument("Tail or head ID does not exist.");
+            return nullptr;
         }
-
         Vertex *ct = vertices[tailId]->constructionVertex;
         Vertex *ch = vertices[headId]->constructionVertex;
         Arc *ca = nullptr;
@@ -202,6 +201,24 @@ struct DynamicDiGraph::CheshireCat {
             }
         }, [&](const Arc*) { return ca != nullptr; });
 
+        return ca;
+    }
+
+    void removeArc(unsigned int tailId, unsigned int headId, unsigned int timestamp) {
+        //if (tailId >= vertices.size() || headId >= vertices.size()) {
+        //    throw std::invalid_argument("Tail or head ID does not exist.");
+        //}
+
+        //Vertex *ct = vertices[tailId]->constructionVertex;
+        //Vertex *ch = vertices[headId]->constructionVertex;
+        //Arc *ca = nullptr;
+        //constructionGraph.mapOutgoingArcsUntil(ct, [&](Arc *a) {
+        //    if (a->getHead() == ch) {
+        //        ca = a;
+        //    }
+        //}, [&](const Arc*) { return ca != nullptr; });
+
+        Arc *ca = findArc(tailId, headId);
         if (!ca) {
             throw std::invalid_argument("Arc does not exist.");
         }
@@ -295,6 +312,11 @@ void DynamicDiGraph::addArc(unsigned int tailId, unsigned int headId, unsigned i
 void DynamicDiGraph::removeArc(unsigned int tailId, unsigned int headId, unsigned int timestamp)
 {
     grin->removeArc(tailId, headId, timestamp);
+}
+
+bool DynamicDiGraph::hasArc(unsigned int tailId, unsigned int headId)
+{
+    return grin->findArc(tailId, headId) != nullptr;
 }
 
 void DynamicDiGraph::clear()
