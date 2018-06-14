@@ -8,8 +8,10 @@
 namespace Algora {
 
 struct Operation {
+    enum Type { VERTEX_ADDITION, VERTEX_REMOVAL, ARC_ADDITION, ARC_REMOVAL, MULTIPLE };
     virtual ~Operation() {}
     virtual void apply(IncidenceListGraph *graph) = 0;
+    virtual Type getType() const = 0;
 };
 
 struct OperationSet : public Operation {
@@ -25,6 +27,7 @@ struct OperationSet : public Operation {
             op->apply(graph);
         }
     }
+    virtual Type getType() const override { return MULTIPLE; }
 };
 
 struct AddVertexOperation : public Operation {
@@ -36,6 +39,7 @@ struct AddVertexOperation : public Operation {
     virtual void apply(IncidenceListGraph *graph) {
         vertex = graph->addVertex();
     }
+    virtual Type getType() const override { return VERTEX_ADDITION; }
 };
 
 struct RemoveVertexOperation : public Operation {
@@ -46,6 +50,7 @@ struct RemoveVertexOperation : public Operation {
     virtual void apply(IncidenceListGraph *graph) {
         graph->removeVertex(addOp->vertex);
     }
+    virtual Type getType() const override { return VERTEX_REMOVAL; }
 };
 
 struct AddArcOperation : public Operation {
@@ -60,6 +65,7 @@ struct AddArcOperation : public Operation {
     virtual void apply(IncidenceListGraph *graph) {
         arc = graph->addArc(tail->vertex, head->vertex);
     }
+    virtual Type getType() const override { return ARC_ADDITION; }
 };
 
 struct RemoveArcOperation : public Operation {
@@ -70,6 +76,7 @@ struct RemoveArcOperation : public Operation {
     virtual void apply(IncidenceListGraph *graph) {
         graph->removeArc(addOp->arc);
     }
+    virtual Type getType() const override { return ARC_REMOVAL; }
 };
 
 struct DynamicDiGraph::CheshireCat {
@@ -205,19 +212,6 @@ struct DynamicDiGraph::CheshireCat {
     }
 
     void removeArc(unsigned int tailId, unsigned int headId, unsigned int timestamp) {
-        //if (tailId >= vertices.size() || headId >= vertices.size()) {
-        //    throw std::invalid_argument("Tail or head ID does not exist.");
-        //}
-
-        //Vertex *ct = vertices[tailId]->constructionVertex;
-        //Vertex *ch = vertices[headId]->constructionVertex;
-        //Arc *ca = nullptr;
-        //constructionGraph.mapOutgoingArcsUntil(ct, [&](Arc *a) {
-        //    if (a->getHead() == ch) {
-        //        ca = a;
-        //    }
-        //}, [&](const Arc*) { return ca != nullptr; });
-
         Arc *ca = findArc(tailId, headId);
         if (!ca) {
             throw std::invalid_argument("Arc does not exist.");
@@ -264,6 +258,38 @@ struct DynamicDiGraph::CheshireCat {
             opIndex++;
         }
         return true;
+    }
+
+    unsigned int findTimeIndex(unsigned int timestamp) const {
+        unsigned int tIndex = 0U;
+        while (tIndex < timestamps.size() && timestamps[tIndex] < timestamp) {
+            tIndex++;
+        }
+        return tIndex;
+    }
+
+    unsigned int countOperations(unsigned int timeFrom, unsigned int timeUntil, Operation::Type type) const {
+        unsigned int tIndex = findTimeIndex(timeFrom);
+        unsigned int numOperations = 0U;
+        while (tIndex < timestamps.size() && timestamps[tIndex] <= timeUntil) {
+            for (Operation *op : operations[tIndex]) {
+                if (op->getType() == type) {
+                    numOperations++;
+                } else if (op->getType() == Operation::Type::MULTIPLE) {
+                    // there should be no nested operation sets...
+                    OperationSet *os = dynamic_cast<OperationSet*>(op);
+                    if (os) {
+                        for (Operation *o : os->operations) {
+                            if (o->getType() == type) {
+                                numOperations++;
+                            }
+                        }
+                    }
+                }
+            }
+            tIndex++;
+        }
+        return numOperations;
     }
 };
 
@@ -342,6 +368,26 @@ bool DynamicDiGraph::applyNextOperation()
 bool DynamicDiGraph::applyNextDelta()
 {
     return grin->nextDelta();
+}
+
+unsigned int DynamicDiGraph::countVertexAdditions(unsigned int timeFrom, unsigned int timeUntil) const
+{
+    return grin->countOperations(timeFrom, timeUntil, Operation::Type::VERTEX_ADDITION);
+}
+
+unsigned int DynamicDiGraph::countVertexRemovals(unsigned int timeFrom, unsigned int timeUntil) const
+{
+    return grin->countOperations(timeFrom, timeUntil, Operation::Type::VERTEX_REMOVAL);
+}
+
+unsigned int DynamicDiGraph::countArcAdditions(unsigned int timeFrom, unsigned int timeUntil) const
+{
+    return grin->countOperations(timeFrom, timeUntil, Operation::Type::ARC_ADDITION);
+}
+
+unsigned int DynamicDiGraph::countArcRemovals(unsigned int timeFrom, unsigned int timeUntil) const
+{
+    return grin->countOperations(timeFrom, timeUntil, Operation::Type::ARC_REMOVAL);
 }
 
 }

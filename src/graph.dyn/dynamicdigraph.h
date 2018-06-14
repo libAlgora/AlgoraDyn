@@ -27,6 +27,11 @@ public:
     bool applyNextOperation();
     bool applyNextDelta();
 
+    unsigned int countVertexAdditions(unsigned int timeFrom, unsigned int timeUntil) const;
+    unsigned int countVertexRemovals(unsigned int timeFrom, unsigned int timeUntil) const;
+    unsigned int countArcAdditions(unsigned int timeFrom, unsigned int timeUntil) const;
+    unsigned int countArcRemovals(unsigned int timeFrom, unsigned int timeUntil) const;
+
 private:
     class CheshireCat;
     CheshireCat *grin;
