@@ -4,10 +4,37 @@
 #include <sstream>
 #include <vector>
 #include <string>
+#include <algorithm>
+#include <iostream>
 
 #include "graph.dyn/dynamicdigraph.h"
 
+//#define DEBUG_KONECTREADER
+
+#ifdef DEBUG_KONECTREADER
+#define PRINT_DEBUG(msg) std::cout << msg << std::endl;
+#define IF_DEBUG(cmd) cmd;
+#else
+//#define PRINT_DEBUG(msg)
+#define PRINT_DEBUG(msg) ((void)0);
+#define IF_DEBUG(cmd)
+#endif
+
+
 namespace Algora {
+
+struct Entry {
+    unsigned int tail;
+    unsigned int head;
+    bool add;
+    unsigned int timestamp;
+
+    Entry(unsigned int t, unsigned int h, bool a, unsigned int m)
+        : tail(t), head(h), add(a), timestamp(m) {}
+};
+bool operator<(const Entry &lhs, const Entry &rhs) {
+    return lhs.timestamp < rhs.timestamp;
+}
 
 KonectNetworkReader::KonectNetworkReader()
 {
@@ -30,6 +57,8 @@ bool KonectNetworkReader::provideDynamicDiGraph(DynamicDiGraph *dynGraph)
     using namespace std;
     istream &inputStream = *(StreamDiGraphReader::inputStream);
 
+    std::vector<Entry> entries;
+
     for (string line; getline(inputStream, line); ) {
         istringstream iss(line);
         vector<string> tokens { istream_iterator<string>{iss},
@@ -43,24 +72,44 @@ bool KonectNetworkReader::provideDynamicDiGraph(DynamicDiGraph *dynGraph)
             return false;
         }
         try {
-            int tail = std::stoi(tokens[0]);
-            int head = std::stoi(tokens[1]);
+            //PRINT_DEBUG("Trying to parse tokens: " << tokens[0] << "; " << tokens[1] << "; " << tokens[2] << "; " << tokens[3])
+            unsigned int tail = std::stoul(tokens[0]);
+            unsigned int head = std::stoul(tokens[1]);
             int plusMinus = std::stoi(tokens[2]);
             unsigned long timestamp = std::stoul(tokens[3]);
             if (plusMinus > 0) {
-                dynGraph->addArc(tail, head, timestamp);
+                entries.emplace_back(tail, head, true, timestamp);
             } else if (plusMinus < 0) {
-                dynGraph->removeArc(tail, head, timestamp);
+                entries.emplace_back(tail, head, false, timestamp);
             } else {
                 lastError = "Don't know how to interpret a value of '0' in third column.";
                 return false;
             }
-        } catch (const std::invalid_argument &) {
-            lastError = "Could not parse value.";
+        } catch (const std::invalid_argument &e) {
+            stringstream ss;
+            ss << "Could not parse line \"" << line << "\": " << e.what() << endl;
+            lastError = ss.str();
             return false;
         }
-
     }
+    std::stable_sort(entries.begin(), entries.end());
+        for (const Entry &e : entries) {
+            if (e.add) {
+                PRINT_DEBUG("Adding arc " << e.tail << ", " << e.head << " at time " << e.timestamp);
+                try {
+                    dynGraph->addArc(e.tail, e.head, e.timestamp);
+                } catch (const std::invalid_argument &e) {
+                    std::cerr << e.what() << std::endl;
+                }
+            } else {
+                PRINT_DEBUG("Removing arc " << e.tail << ", " << e.head << " at time " << e.timestamp);
+                try {
+                    dynGraph->removeArc(e.tail, e.head, e.timestamp);
+                } catch (const std::invalid_argument &e) {
+                    std::cerr << e.what() << std::endl;
+                }
+            }
+        }
 
     return true;
 }
