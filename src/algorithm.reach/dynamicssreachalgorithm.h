@@ -10,7 +10,7 @@ namespace Algora {
 class DynamicSSReachAlgorithm : public DynamicDiGraphAlgorithm
 {
 public:
-    explicit DynamicSSReachAlgorithm() : DynamicDiGraphAlgorithm(), source(0) { }
+    explicit DynamicSSReachAlgorithm() : DynamicDiGraphAlgorithm(), source(nullptr) { }
     virtual ~DynamicSSReachAlgorithm() { }
 
     void setSource(Vertex *s) { source = s; onSourceSet(); }
@@ -20,10 +20,10 @@ public:
 
     // DiGraphAlgorithm interface
 public:
-    virtual bool prepare() override { return source != 0 && DynamicDiGraphAlgorithm::prepare() && diGraph->containsVertex(source); }
+    virtual bool prepare() override { return source != nullptr && DynamicDiGraphAlgorithm::prepare() && diGraph->containsVertex(source); }
 
 protected:
-    virtual void onSourceSet() = 0;
+    virtual void onSourceSet() { }
 
     Vertex *source;
 };
