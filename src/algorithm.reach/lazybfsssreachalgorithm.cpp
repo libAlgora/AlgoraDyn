@@ -77,9 +77,10 @@ void LazyBFSSSReachAlgorithm::onArcRemove(Arc *)
 
 bool LazyBFSSSReachAlgorithm::query(const Vertex *t)
 {
-    if (!grin->discovered(t)) {
-        grin->searchOn(t);
+    if (grin->inititialized && grin->discovered(t)) {
+        return true;
     }
+    grin->searchOn(t);
     return grin->discovered(t);
 }
 
