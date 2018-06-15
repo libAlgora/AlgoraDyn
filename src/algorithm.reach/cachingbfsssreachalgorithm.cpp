@@ -30,6 +30,9 @@ void CachingBFSSSReachAlgorithm::run()
 
 bool CachingBFSSSReachAlgorithm::query(const Vertex *t)
 {
+    if (t == source) {
+        return true;
+    }
     if (!initialized) {
         if (!prepare()) {
             throw DiGraphAlgorithmException(this, "Could not prepare myself.");

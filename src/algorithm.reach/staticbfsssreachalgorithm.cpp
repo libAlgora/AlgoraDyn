@@ -5,6 +5,7 @@
 namespace Algora {
 
 StaticBFSSSReachAlgorithm::StaticBFSSSReachAlgorithm()
+    : DynamicSSReachAlgorithm()
 {
 
 }
@@ -21,7 +22,10 @@ void StaticBFSSSReachAlgorithm::run()
 
 bool StaticBFSSSReachAlgorithm::query(const Vertex *t)
 {
-    static BreadthFirstSearch bfs(false);
+    if (t == source) {
+        return true;
+    }
+    BreadthFirstSearch bfs(false);
     bfs.setStartVertex(source);
     bool reachable = false;
     bfs.setArcStopCondition([&](const Arc *a) {
