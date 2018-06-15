@@ -10,7 +10,7 @@ namespace Algora {
 class SimpleIncSSReachAlgorithm : public DynamicSSReachAlgorithm
 {
 public:
-    explicit SimpleIncSSReachAlgorithm();
+    explicit SimpleIncSSReachAlgorithm(bool reverse = false, bool searchForward = false);
     virtual ~SimpleIncSSReachAlgorithm();
 
     // DiGraphAlgorithm interface
@@ -42,7 +42,6 @@ private:
     struct Reachability;
     Reachability *data;
     bool initialized;
-
 };
 
 }

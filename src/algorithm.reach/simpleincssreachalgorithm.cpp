@@ -30,7 +30,10 @@ struct SimpleIncSSReachAlgorithm::Reachability {
     Vertex *source;
     std::vector<const Vertex*> unknownStateVertices;
 
-    Reachability() {
+    bool reverse;
+    bool searchForward;
+
+    Reachability(bool r, bool sf) : reverse(r), searchForward(sf) {
         reachability.setDefaultValue(State::UNREACHABLE);
         source = nullptr;
     }
@@ -114,14 +117,20 @@ struct SimpleIncSSReachAlgorithm::Reachability {
         unknownStateVertices.clear();
         propagate(from, diGraph, State::UNKNOWN);
         // TODO: does this help?
-        std::reverse(unknownStateVertices.begin(), unknownStateVertices.end());
+        if (reverse) {
+            std::reverse(unknownStateVertices.begin(), unknownStateVertices.end());
+        }
         while (!unknownStateVertices.empty()) {
            const Vertex *u = unknownStateVertices.back();
            unknownStateVertices.pop_back();
            if (reachability(u) == State::UNKNOWN) {
-               // TODO: does this help?
                if (checkReachability(u, diGraph)) {
-                    reachFrom(u, diGraph);
+                   if (searchForward) {
+                       // TODO: does this help?
+                       reachFrom(u, diGraph);
+                   } else {
+                       reachability[u] = State::REACHABLE;
+                   }
                }
            }
         }
@@ -151,8 +160,8 @@ struct SimpleIncSSReachAlgorithm::Reachability {
 };
 
 
-SimpleIncSSReachAlgorithm::SimpleIncSSReachAlgorithm()
-    : DynamicSSReachAlgorithm(), data(new Reachability), initialized(false)
+SimpleIncSSReachAlgorithm::SimpleIncSSReachAlgorithm(bool reverse, bool searchForward)
+    : DynamicSSReachAlgorithm(), data(new Reachability(reverse, searchForward)), initialized(false)
 { }
 
 SimpleIncSSReachAlgorithm::~SimpleIncSSReachAlgorithm()
