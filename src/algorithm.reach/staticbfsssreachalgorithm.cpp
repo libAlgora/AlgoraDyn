@@ -25,7 +25,9 @@ bool StaticBFSSSReachAlgorithm::query(const Vertex *t)
     bfs.setStartVertex(source);
     bool reachable = false;
     bfs.setArcStopCondition([&](const Arc *a) {
-        reachable = a->getHead() != t;
+        if (a->getHead() == t) {
+            reachable = true;
+        }
         return reachable;
     });
     runAlgorithm(bfs, diGraph);
