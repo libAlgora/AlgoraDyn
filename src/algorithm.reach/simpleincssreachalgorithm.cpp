@@ -161,7 +161,9 @@ struct SimpleIncSSReachAlgorithm::Reachability {
 
 
 SimpleIncSSReachAlgorithm::SimpleIncSSReachAlgorithm(bool reverse, bool searchForward)
-    : DynamicSSReachAlgorithm(), data(new Reachability(reverse, searchForward)), initialized(false)
+    : DynamicSSReachAlgorithm(), data(new Reachability(reverse, searchForward)), initialized(false),
+      reverse(reverse), searchForward(searchForward)
+
 { }
 
 SimpleIncSSReachAlgorithm::~SimpleIncSSReachAlgorithm()

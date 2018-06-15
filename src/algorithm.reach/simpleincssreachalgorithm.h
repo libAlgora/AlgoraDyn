@@ -16,8 +16,18 @@ public:
     // DiGraphAlgorithm interface
 public:
     virtual void run() override;
-    virtual std::string getName() const noexcept override { return "Simple Incremental Single-Source Reachability Algorithm"; }
-    virtual std::string getShortName() const noexcept override { return "Simple-ISSReach"; }
+    virtual std::string getName() const noexcept override {
+        return reverse ? ( searchForward ? "Simple Incremental Single-Source Reachability Algorithm (reverse, search forward)"
+                                            : "Simple Incremental Single-Source Reachability Algorithm (reverse)")
+                        :  ( searchForward ? "Simple Incremental Single-Source Reachability Algorithm (search forward)"
+                                            : "Simple Incremental Single-Source Reachability Algorithm");
+    }
+    virtual std::string getShortName() const noexcept override {
+       return  reverse ? ( searchForward ? "Simple-ISSReach-R-SF"
+                                            : "Simple-ISSReach-R")
+                        :  ( searchForward ? "Simple-ISSReach-SF"
+                                            : "Simple-ISSReach");
+    }
 
 protected:
     virtual void onDiGraphUnset() override;
@@ -42,6 +52,9 @@ private:
     struct Reachability;
     Reachability *data;
     bool initialized;
+
+    bool reverse;
+    bool searchForward;
 };
 
 }
