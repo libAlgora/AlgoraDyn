@@ -11,7 +11,7 @@ TEMPLATE = lib
 CONFIG += staticlib
 
 QMAKE_CXXFLAGS_DEBUG += -std=c++11 -O0
-QMAKE_CXXFLAGS_RELEASE += -O3 -std=c++11
+QMAKE_CXXFLAGS_RELEASE += -O3 -std=c++11 -DNDEBUG
 
 zmiy {
   QMAKE_CXXFLAGS_RELEASE += -march=haswell -mmmx -msse -msse2 -msse3 -mssse3 \
