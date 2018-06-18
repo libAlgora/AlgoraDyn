@@ -325,6 +325,16 @@ unsigned int DynamicDiGraph::getNumberOfDeltas() const
     return grin->timestamps.size();
 }
 
+unsigned int DynamicDiGraph::getCurrentGraphSize() const
+{
+    return grin->vertices.size();
+}
+
+unsigned int DynamicDiGraph::getCurrentArcSize() const
+{
+   return grin->constructionArcMap.size();
+}
+
 void DynamicDiGraph::addVertex(unsigned int timestamp)
 {
     grin->addVertex(timestamp);
