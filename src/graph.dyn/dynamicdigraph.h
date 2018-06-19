@@ -20,7 +20,7 @@ public:
 
     void addVertex(unsigned int timestamp);
     void removeVertex(unsigned int vertexId, unsigned int timestamp);
-    void addArc(unsigned int tailId, unsigned int headId, unsigned int timestamp);
+    void addArc(unsigned int tailId, unsigned int headId, unsigned int timestamp, bool antedateVertexAdditions = false);
     void removeArc(unsigned int tailId, unsigned int headId, unsigned int timestamp);
     bool hasArc(unsigned int tailId, unsigned int headId);
     void clear();

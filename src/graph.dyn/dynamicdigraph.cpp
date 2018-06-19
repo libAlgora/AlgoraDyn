@@ -166,7 +166,7 @@ struct DynamicDiGraph::CheshireCat {
         vertices.erase(vertices.cbegin() + vertexId);
     }
 
-    void addArc(unsigned int tailId, unsigned int headId, unsigned int timestamp)
+    void addArc(unsigned int tailId, unsigned int headId, unsigned int timestamp, bool antedateVertexAddition)
     {
         checkTimestamp(timestamp);
 
@@ -177,7 +177,6 @@ struct DynamicDiGraph::CheshireCat {
             os = new OperationSet;
         }
         while (vertices.size() <= maxId) {
-           //addVertex(timestamp);
             Vertex *cv = constructionGraph.addVertex();
             AddVertexOperation *avo = new AddVertexOperation(cv);
             os->operations.push_back(avo);
@@ -187,8 +186,13 @@ struct DynamicDiGraph::CheshireCat {
         Arc *ca = constructionGraph.addArc(vertices[tailId]->constructionVertex, vertices[headId]->constructionVertex);
         AddArcOperation *aao = new AddArcOperation(vertices[tailId], vertices[headId], ca);
         if (os) {
-            os->operations.push_back(aao);
-            operations.back().push_back(os);
+            if (antedateVertexAddition && timeIndex == 0U && timestamp > timestamps.front()) {
+                operations.front().push_back(os);
+                operations.back().push_back(aao);
+            } else {
+                os->operations.push_back(aao);
+                operations.back().push_back(os);
+            }
         } else {
             operations.back().push_back(aao);
         }
@@ -345,9 +349,9 @@ void DynamicDiGraph::removeVertex(unsigned int vertexId, unsigned int timestamp)
     grin->removeVertex(vertexId, timestamp);
 }
 
-void DynamicDiGraph::addArc(unsigned int tailId, unsigned int headId, unsigned int timestamp)
+void DynamicDiGraph::addArc(unsigned int tailId, unsigned int headId, unsigned int timestamp, bool antedateVertexAdditions)
 {
-    grin->addArc(tailId, headId, timestamp);
+    grin->addArc(tailId, headId, timestamp, antedateVertexAdditions);
 }
 
 void DynamicDiGraph::removeArc(unsigned int tailId, unsigned int headId, unsigned int timestamp)
