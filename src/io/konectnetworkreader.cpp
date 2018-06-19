@@ -36,7 +36,8 @@ bool operator<(const Entry &lhs, const Entry &rhs) {
     return lhs.timestamp < rhs.timestamp;
 }
 
-KonectNetworkReader::KonectNetworkReader()
+KonectNetworkReader::KonectNetworkReader(bool antedateVertexAdditions)
+    : antedateVertexAdditions(antedateVertexAdditions)
 {
 
 }
@@ -97,7 +98,7 @@ bool KonectNetworkReader::provideDynamicDiGraph(DynamicDiGraph *dynGraph)
             if (e.add) {
                 PRINT_DEBUG("Adding arc " << e.tail << ", " << e.head << " at time " << e.timestamp);
                 try {
-                    dynGraph->addArc(e.tail, e.head, e.timestamp);
+                    dynGraph->addArc(e.tail, e.head, e.timestamp, antedateVertexAdditions);
                 } catch (const std::invalid_argument &e) {
                     std::cerr << e.what() << std::endl;
                 }

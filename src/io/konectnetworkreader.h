@@ -11,7 +11,7 @@ class DynamicDiGraph;
 class KonectNetworkReader : public StreamDiGraphReader
 {
 public:
-    explicit KonectNetworkReader();
+    explicit KonectNetworkReader(bool antedateVertexAdditions = false);
     virtual ~KonectNetworkReader();
 
     std::string getLastError() const { return lastError; }
@@ -23,6 +23,7 @@ public:
 
 private:
     std::string lastError;
+    bool antedateVertexAdditions;
 };
 
 }
