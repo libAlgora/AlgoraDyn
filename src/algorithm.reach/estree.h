@@ -40,6 +40,7 @@ public:
 
 private:
     PropertyMap<VertexData*> data;
+    PropertyMap<bool> reachable;
     Vertex *root;
     bool initialized;
 
