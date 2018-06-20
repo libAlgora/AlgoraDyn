@@ -84,7 +84,9 @@ struct DynamicDiGraph::CheshireCat {
     IncidenceListGraph constructionGraph;
 
     std::vector<unsigned int> timestamps;
-    std::vector<std::vector<Operation*>> operations;
+    std::vector<Operation*> operations;
+    std::vector<unsigned int> offset;
+    OperationSet antedated;
 
     unsigned int timeIndex;
     unsigned int opIndex;
@@ -92,19 +94,22 @@ struct DynamicDiGraph::CheshireCat {
     std::vector<AddVertexOperation*> vertices;
     std::unordered_map<Arc*,AddArcOperation*> constructionArcMap;
 
-    CheshireCat() : timeIndex(0U), opIndex(0U) { }
+    CheshireCat() : timeIndex(0U), opIndex(0U) { clear(); }
     ~CheshireCat() {
-        for (auto opList : operations) {
-            for (auto op: opList) {
-               delete op;
-            }
-        }
+        clear();
     }
 
     void reset() {
         timeIndex = 0U;
         opIndex = 0U;
         dynGraph.clear();
+
+    }
+
+    void init() {
+        if (!antedated.operations.empty()) {
+            antedated.apply(&dynGraph);
+        }
     }
 
     void clear() {
@@ -114,12 +119,13 @@ struct DynamicDiGraph::CheshireCat {
         constructionGraph.clear();
         timestamps.clear();
 
-        for (auto opList : operations) {
-            for (auto op: opList) {
-               delete op;
-            }
+        // do not delete 'antedated'...
+        for (unsigned int i = 1U; i < operations.size(); i++) {
+            delete operations[i];
         }
         operations.clear();
+        antedated.operations.clear();
+        offset.clear();
     }
 
     void checkTimestamp(unsigned int timestamp) {
@@ -132,7 +138,7 @@ struct DynamicDiGraph::CheshireCat {
     void extendTime(unsigned int timestamp) {
         if (timestamps.empty() || timestamps.back() < timestamp) {
             timestamps.push_back(timestamp);
-            operations.emplace_back();
+            offset.push_back(operations.size());
         }
     }
 
@@ -141,7 +147,7 @@ struct DynamicDiGraph::CheshireCat {
 
         Vertex *cv = constructionGraph.addVertex();
         AddVertexOperation *avo = new AddVertexOperation(cv);
-        operations.back().push_back(avo);
+        operations.push_back(avo);
         vertices.push_back(avo);
     }
 
@@ -162,7 +168,7 @@ struct DynamicDiGraph::CheshireCat {
         constructionGraph.mapIncomingArcs(avo->constructionVertex, removeIncidentArcs);
 
         RemoveVertexOperation *rvo = new RemoveVertexOperation(avo);
-        operations.back().push_back(rvo);
+        operations.push_back(rvo);
         vertices.erase(vertices.cbegin() + vertexId);
     }
 
@@ -174,7 +180,11 @@ struct DynamicDiGraph::CheshireCat {
 
         OperationSet *os = nullptr;
         if (maxId >= vertices.size()) {
-            os = new OperationSet;
+            if (antedateVertexAddition && timeIndex == 0U) {
+                os = &antedated;
+            } else {
+                os = new OperationSet;
+            }
         }
         while (vertices.size() <= maxId) {
             Vertex *cv = constructionGraph.addVertex();
@@ -185,16 +195,11 @@ struct DynamicDiGraph::CheshireCat {
 
         Arc *ca = constructionGraph.addArc(vertices[tailId]->constructionVertex, vertices[headId]->constructionVertex);
         AddArcOperation *aao = new AddArcOperation(vertices[tailId], vertices[headId], ca);
-        if (os) {
-            if (antedateVertexAddition && timeIndex == 0U && timestamp > timestamps.front()) {
-                operations.front().push_back(os);
-                operations.back().push_back(aao);
-            } else {
-                os->operations.push_back(aao);
-                operations.back().push_back(os);
-            }
+        if (os && os != &antedated) {
+            os->operations.push_back(aao);
+            operations.push_back(os);
         } else {
-            operations.back().push_back(aao);
+            operations.push_back(aao);
         }
         constructionArcMap[ca] = aao;
     }
@@ -227,17 +232,19 @@ struct DynamicDiGraph::CheshireCat {
         RemoveArcOperation *rao = new RemoveArcOperation(aao);
         constructionGraph.removeArc(aao->constructionArc);
         constructionArcMap.erase(aao->constructionArc);
-        operations.back().push_back(rao);
+        operations.push_back(rao);
     }
 
     bool advance() {
-        if (timestamps.empty()
-                || (timeIndex + 1 == timestamps.size() && opIndex == operations[timeIndex].size())) {
+        if (opIndex >= operations.size()) {
             return false;
         }
 
-        if (opIndex == operations[timeIndex].size()) {
-            opIndex = 0;
+        if (opIndex == 0) {
+            init();
+        }
+
+        if (timeIndex + 1 < timestamps.size() && opIndex == offset[timeIndex + 1]) {
             timeIndex++;
         }
         return true;
@@ -247,7 +254,7 @@ struct DynamicDiGraph::CheshireCat {
         if (!advance()) {
             return false;
         }
-        operations[timeIndex][opIndex]->apply(&dynGraph);
+        operations[opIndex]->apply(&dynGraph);
         opIndex++;
         return true;
     }
@@ -257,8 +264,12 @@ struct DynamicDiGraph::CheshireCat {
             return false;
         }
 
-        while (opIndex < operations[timeIndex].size()) {
-            operations[timeIndex][opIndex]->apply(&dynGraph);
+        unsigned int maxOp = operations.size();
+        if (timeIndex + 1 < timestamps.size()) {
+            maxOp = offset[timeIndex + 1];
+        }
+        while (opIndex < maxOp) {
+            operations[opIndex]->apply(&dynGraph);
             opIndex++;
         }
         return true;
@@ -273,27 +284,33 @@ struct DynamicDiGraph::CheshireCat {
     }
 
     unsigned int countOperations(unsigned int timeFrom, unsigned int timeUntil, Operation::Type type) const {
-        unsigned int tIndex = findTimeIndex(timeFrom);
+        unsigned int tIndexFrom = findTimeIndex(timeFrom);
+        unsigned int tIndexUntil = findTimeIndex(timeUntil) + 1;
         unsigned int numOperations = 0U;
-        while (tIndex < timestamps.size() && timestamps[tIndex] <= timeUntil) {
-            for (Operation *op : operations[tIndex]) {
-                if (op->getType() == type) {
-                    numOperations++;
-                } else if (op->getType() == Operation::Type::MULTIPLE) {
-                    // there should be no nested operation sets...
-                    OperationSet *os = dynamic_cast<OperationSet*>(op);
-                    if (os) {
-                        for (Operation *o : os->operations) {
-                            if (o->getType() == type) {
-                                numOperations++;
-                            }
+        for (; tIndexFrom < tIndexUntil; tIndexFrom++) {
+            Operation *op = operations[tIndexFrom];
+            if (op->getType() == type) {
+                numOperations++;
+            } else if (op->getType() == Operation::Type::MULTIPLE) {
+                // there should be no nested operation sets...
+                OperationSet *os = dynamic_cast<OperationSet*>(op);
+                if (os) {
+                    for (Operation *o : os->operations) {
+                        if (o->getType() == type) {
+                            numOperations++;
                         }
                     }
                 }
             }
-            tIndex++;
         }
         return numOperations;
+    }
+
+    void squashTimes(unsigned int timeFrom, unsigned int timeUntil) {
+        unsigned int squashOn = findTimeIndex(timeFrom);
+        unsigned int squashMax = findTimeIndex(timeUntil) + 1;
+        timestamps.erase(timestamps.cbegin() + squashOn + 1, timestamps.cbegin() + squashMax);
+        offset.erase(offset.cbegin() + squashOn + 1, offset.cbegin() + squashMax);
     }
 };
 
@@ -402,6 +419,11 @@ unsigned int DynamicDiGraph::countArcAdditions(unsigned int timeFrom, unsigned i
 unsigned int DynamicDiGraph::countArcRemovals(unsigned int timeFrom, unsigned int timeUntil) const
 {
     return grin->countOperations(timeFrom, timeUntil, Operation::Type::ARC_REMOVAL);
+}
+
+void DynamicDiGraph::squashTimes(unsigned int timeFrom, unsigned int timeUntil)
+{
+    grin->squashTimes(timeFrom, timeUntil);
 }
 
 }

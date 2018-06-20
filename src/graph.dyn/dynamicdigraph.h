@@ -34,6 +34,8 @@ public:
     unsigned int countArcAdditions(unsigned int timeFrom, unsigned int timeUntil) const;
     unsigned int countArcRemovals(unsigned int timeFrom, unsigned int timeUntil) const;
 
+    void squashTimes(unsigned int timeFrom, unsigned int timeUntil);
+
 private:
     class CheshireCat;
     CheshireCat *grin;
