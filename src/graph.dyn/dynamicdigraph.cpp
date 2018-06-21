@@ -5,6 +5,17 @@
 #include <vector>
 #include <unordered_map>
 
+//#define DEBUG_DYNDIGRAPH
+
+#ifdef DEBUG_DYNDIGRAPH
+#include <iostream>
+#define PRINT_DEBUG(msg) std::cout << msg << std::endl;
+#define IF_DEBUG(cmd) cmd;
+#else
+#define PRINT_DEBUG(msg)
+#define IF_DEBUG(cmd)
+#endif
+
 namespace Algora {
 
 struct Operation {
@@ -119,9 +130,8 @@ struct DynamicDiGraph::CheshireCat {
         constructionGraph.clear();
         timestamps.clear();
 
-        // do not delete 'antedated'...
-        for (unsigned int i = 1U; i < operations.size(); i++) {
-            delete operations[i];
+        for (auto op : operations) {
+            delete op;
         }
         operations.clear();
         antedated.operations.clear();
@@ -137,6 +147,7 @@ struct DynamicDiGraph::CheshireCat {
 
     void extendTime(unsigned int timestamp) {
         if (timestamps.empty() || timestamps.back() < timestamp) {
+            PRINT_DEBUG( "Extending time from " << (timestamps.empty() ? 0U : timestamps.back()) << " to " << timestamp )
             timestamps.push_back(timestamp);
             offset.push_back(operations.size());
         }
@@ -237,6 +248,7 @@ struct DynamicDiGraph::CheshireCat {
 
     bool advance() {
         if (opIndex >= operations.size()) {
+            PRINT_DEBUG("Cannot advance further.")
             return false;
         }
 
@@ -268,6 +280,7 @@ struct DynamicDiGraph::CheshireCat {
         if (timeIndex + 1 < timestamps.size()) {
             maxOp = offset[timeIndex + 1];
         }
+        PRINT_DEBUG( "Applying delta #op" << opIndex << " - #op" << maxOp)
         while (opIndex < maxOp) {
             operations[opIndex]->apply(&dynGraph);
             opIndex++;
@@ -423,6 +436,7 @@ unsigned int DynamicDiGraph::countArcRemovals(unsigned int timeFrom, unsigned in
 
 void DynamicDiGraph::squashTimes(unsigned int timeFrom, unsigned int timeUntil)
 {
+    grin->reset();
     grin->squashTimes(timeFrom, timeUntil);
 }
 
