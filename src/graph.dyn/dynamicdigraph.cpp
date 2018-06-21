@@ -284,11 +284,11 @@ struct DynamicDiGraph::CheshireCat {
     }
 
     unsigned int countOperations(unsigned int timeFrom, unsigned int timeUntil, Operation::Type type) const {
-        unsigned int tIndexFrom = findTimeIndex(timeFrom);
         unsigned int tIndexUntil = findTimeIndex(timeUntil) + 1;
+        unsigned int opIndexMax = tIndexUntil < offset.size() ? offset[tIndexUntil] : operations.size();
         unsigned int numOperations = 0U;
-        for (; tIndexFrom < tIndexUntil; tIndexFrom++) {
-            Operation *op = operations[tIndexFrom];
+        for (unsigned int opIndex = offset[findTimeIndex(timeFrom)]; opIndex < opIndexMax; opIndex++) {
+            Operation *op = operations[opIndex];
             if (op->getType() == type) {
                 numOperations++;
             } else if (op->getType() == Operation::Type::MULTIPLE) {
