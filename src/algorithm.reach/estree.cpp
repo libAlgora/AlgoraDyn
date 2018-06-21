@@ -122,7 +122,7 @@ void ESTree::run()
         Vertex *t = a->getTail();
         Vertex *h = a->getHead();
         data[h] = new VertexData(h, data(t));
-        reachable[root] = true;
+        reachable[h] = true;
         PRINT_DEBUG( "(" << t << ", " << h << ")" << " is a tree arc.")
    });
    bfs.onNonTreeArcDiscover([&](Arc *a) {
@@ -212,7 +212,7 @@ void ESTree::onArcAdd(Arc *a)
         VertexData *atd = data(at);
         VertexData *ahd = data(ah);
 
-        if (!reachable(ah) ||  atd->level + 1 < ahd->level) {
+        if (!ahd->isReachable() ||  atd->level + 1 < ahd->level) {
             ahd->level = atd->level + 1;
             reachable[ah] = true;
             PRINT_DEBUG( "(" << at << ", " << ah << ")" << " replaces a tree arc.");
@@ -271,8 +271,8 @@ void ESTree::onArcRemove(Arc *a)
     }
     assert(found);
 
-    //if (!hd->isReachable()) {
-    if (!reachable(head)) {
+    if (!hd->isReachable()) {
+    //if (!reachable(head)) {
         PRINT_DEBUG("Head of arc is already unreachable. Nothing to do.")
         return;
     }
@@ -300,8 +300,6 @@ bool ESTree::query(const Vertex *t)
         std::cout << "query in unitialized state." << std::endl;
         run();
     }
-    //VertexData *d = data(t);
-    //return d->isReachable();
     return reachable(t);
 }
 
@@ -356,9 +354,8 @@ void process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queue, const
 
     bool inNeighborFound = parent != nullptr;
     Vertex *v = vd->vertex;
-    bool reachV = reachable(v);
+    bool reachV = vd->isReachable();
 
-    //while (vd->isReachable() && (parent == nullptr || vd->level <= parent->level)) {
     while (reachV && (parent == nullptr || vd->level <= parent->level)) {
         vd->parentIndex++;
         PRINT_DEBUG("  Advancing parent index to " << vd->parentIndex << ".")
@@ -376,7 +373,6 @@ void process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queue, const
                 vd->parentIndex = 0;
             }
         }
-        //if (vd->isReachable())  {
         if (reachV)  {
             parent = vd->inNeighbors[vd->parentIndex];
             inNeighborFound |= parent != nullptr;
