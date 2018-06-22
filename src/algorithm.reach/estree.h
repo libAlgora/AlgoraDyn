@@ -18,6 +18,7 @@ public:
     virtual void run() override;
     virtual std::string getName() const noexcept override { return "ES-Tree Single-Source Reachability Algorithm"; }
     virtual std::string getShortName() const noexcept override { return "EST-DSSReach"; }
+    virtual std::string getProfilingInfo() const override;
 
 protected:
     virtual void onDiGraphUnset() override;
@@ -43,6 +44,14 @@ private:
     PropertyMap<bool> reachable;
     Vertex *root;
     bool initialized;
+
+    unsigned int movesDown;
+    unsigned int movesUp;
+    unsigned int levelIncrease;
+    unsigned int decUnreachableHead;
+    unsigned int decNonTreeArc;
+    unsigned int incUnreachableTail;
+    unsigned int incNonTreeArc;
 
     void restoreTree(VertexData *rd);
     void cleanup();

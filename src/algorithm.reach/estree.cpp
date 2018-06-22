@@ -85,10 +85,11 @@ void printQueue(PriorityQueue q) {
 }
 #endif
 
-void process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queue, const PropertyMap<ESTree::VertexData*> &data, PropertyMap<bool> &reachable);
+unsigned int process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queue, const PropertyMap<ESTree::VertexData*> &data, PropertyMap<bool> &reachable);
 
 ESTree::ESTree()
-    : DynamicSSReachAlgorithm(), root(nullptr), initialized(false)
+    : DynamicSSReachAlgorithm(), root(nullptr), initialized(false),
+      movesDown(0U), movesUp(0U)
 {
     data.setDefaultValue(nullptr);
     reachable.setDefaultValue(false);
@@ -109,6 +110,8 @@ void ESTree::run()
 
     data.resetAll();
     reachable.resetAll();
+    movesDown = 0U;
+    movesUp = 0U;
 
    BreadthFirstSearch bfs(false);
    root = source;
@@ -160,6 +163,19 @@ void ESTree::run()
    initialized = true;
 }
 
+std::string ESTree::getProfilingInfo() const
+{
+    std::stringstream ss;
+    ss << "#moves down: " << movesDown << std::endl;
+    ss << "#level increases: " << levelIncrease << std::endl;
+    ss << "#moves up: " << movesUp << std::endl;
+    ss << "#unreachable head (dec): " << decUnreachableHead << std::endl;
+    ss << "#non-tree arcs (dec): " << decNonTreeArc << std::endl;
+    ss << "#unreachable tail (inc): " << incUnreachableTail << std::endl;
+    ss << "#non-tree arcs (inc): " << incNonTreeArc << std::endl;
+    return ss.str();
+}
+
 void ESTree::onDiGraphUnset()
 {
     cleanup();
@@ -176,7 +192,7 @@ void ESTree::onArcAdd(Arc *a)
     if (!initialized) {
         return;
     }
-    PRINT_DEBUG("An arc had been added: (" << a->getTail() << ", " << a->getHead() << ")")
+    PRINT_DEBUG("An arc has been added: (" << a->getTail() << ", " << a->getHead() << ")")
 
     Vertex *tail = a->getTail();
     Vertex *head = a->getHead();
@@ -191,15 +207,19 @@ void ESTree::onArcAdd(Arc *a)
 
     if (!td->isReachable()) {
         PRINT_DEBUG("Tail is unreachable.")
+        incUnreachableTail++;
         return;
     }
 
     //update...
     if (hd->level <= td->level + 1) {
         // arc does not change anything
+        incNonTreeArc++;
         return;
     } else {
+        movesUp++;
         hd->level = td->level + 1;
+        movesUp++;
         reachable[head] = true;
     }
 
@@ -214,6 +234,7 @@ void ESTree::onArcAdd(Arc *a)
 
         if (!ahd->isReachable() ||  atd->level + 1 < ahd->level) {
             ahd->level = atd->level + 1;
+            movesUp++;
             reachable[ah] = true;
             PRINT_DEBUG( "(" << at << ", " << ah << ")" << " replaces a tree arc.");
             return true;
@@ -257,6 +278,7 @@ void ESTree::onArcRemove(Arc *a)
     VertexData *hd = data(head);
     if (hd == nullptr) {
         PRINT_DEBUG("Head of arc is unreachable (and never was). Nothing to do.")
+        throw std::logic_error("Should not happen");
         return;
     }
 
@@ -274,11 +296,13 @@ void ESTree::onArcRemove(Arc *a)
     if (!hd->isReachable()) {
     //if (!reachable(head)) {
         PRINT_DEBUG("Head of arc is already unreachable. Nothing to do.")
+        decUnreachableHead++;
         return;
     }
 
     if (hd->level <= data(tail)->level) {
         PRINT_DEBUG("Arc is not a tree arc. Nothing to do.")
+        decNonTreeArc++;
         return;
     }
 
@@ -324,7 +348,11 @@ void ESTree::restoreTree(ESTree::VertexData *rd)
         IF_DEBUG(printQueue(queue))
         auto vd = queue.bot();
         queue.popBot();
-        process(diGraph, vd, queue, data, reachable);
+        unsigned int levels = process(diGraph, vd, queue, data, reachable);
+        if (levels > 0) {
+            movesDown++;
+            levelIncrease += levels;
+        }
     }
 }
 
@@ -338,13 +366,20 @@ void ESTree::cleanup()
     reachable.resetAll();
 
     initialized = false;
+
+    //movesDown = 0U;
+    //movesUp = 0U;
+    //decUnreachableHead = 0U;
+    //decNonTreeArc = 0U;
+    //incUnreachableTail = 0U;
+    //incNonTreeArc = 0U;
 }
 
-void process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queue, const PropertyMap<ESTree::VertexData*> &data, PropertyMap<bool> &reachable) {
+unsigned int process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queue, const PropertyMap<ESTree::VertexData*> &data, PropertyMap<bool> &reachable) {
 
     if (vd->level == 0UL) {
         PRINT_DEBUG("No need to process source vertex " << vd << ".");
-        return;
+        return 0U;
     }
 
     ESTree::VertexData *parent = vd->inNeighbors[vd->parentIndex];
@@ -355,6 +390,8 @@ void process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queue, const
     bool inNeighborFound = parent != nullptr;
     Vertex *v = vd->vertex;
     bool reachV = vd->isReachable();
+
+    unsigned int levelDiff = 0U;
 
     while (reachV && (parent == nullptr || vd->level <= parent->level)) {
         vd->parentIndex++;
@@ -368,6 +405,7 @@ void process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queue, const
                 reachV = false;
             } else {
                 vd->level++;
+                levelDiff++;
                 levelChanged = true;
                 PRINT_DEBUG("  Maximum parent index exceeded, increasing level to " << vd->level << ".")
                 vd->parentIndex = 0;
@@ -389,6 +427,8 @@ void process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queue, const
             PRINT_DEBUG("    Added child " << a->getHead() << " to queue.")
         });
     }
+
+    return levelDiff;
 }
 
 }
