@@ -74,8 +74,8 @@ bool KonectNetworkReader::provideDynamicDiGraph(DynamicDiGraph *dynGraph)
         }
         try {
             //PRINT_DEBUG("Trying to parse tokens: " << tokens[0] << "; " << tokens[1] << "; " << tokens[2] << "; " << tokens[3])
-            unsigned int tail = std::stoul(tokens[0]);
-            unsigned int head = std::stoul(tokens[1]);
+            unsigned int tail = std::stoul(tokens[0]) - 1;
+            unsigned int head = std::stoul(tokens[1]) - 1;
             int plusMinus = std::stoi(tokens[2]);
             unsigned long timestamp = std::stoul(tokens[3]);
             if (plusMinus > 0) {
