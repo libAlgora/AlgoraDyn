@@ -1,6 +1,7 @@
 #include "dynamicdigraph.h"
 
 #include "graph.incidencelist/incidencelistgraph.h"
+#include "graph.incidencelist/incidencelistvertex.h"
 
 #include <vector>
 #include <unordered_map>
@@ -44,8 +45,9 @@ struct OperationSet : public Operation {
 struct AddVertexOperation : public Operation {
     Vertex *vertex;
     Vertex *constructionVertex;
+    unsigned int vertexId;
 
-    AddVertexOperation(Vertex *cv) : vertex(nullptr), constructionVertex(cv) { }
+    AddVertexOperation(Vertex *cv, unsigned int vId) : vertex(nullptr), constructionVertex(cv), vertexId(vId) { }
 
     virtual void apply(IncidenceListGraph *graph) {
         vertex = graph->addVertex();
@@ -101,6 +103,7 @@ struct DynamicDiGraph::CheshireCat {
 
     unsigned int timeIndex;
     unsigned int opIndex;
+    unsigned int numVertices;
 
     std::vector<AddVertexOperation*> vertices;
     std::unordered_map<Arc*,AddArcOperation*> constructionArcMap;
@@ -114,7 +117,6 @@ struct DynamicDiGraph::CheshireCat {
         timeIndex = 0U;
         opIndex = 0U;
         dynGraph.clear();
-
     }
 
     void init() {
@@ -153,17 +155,28 @@ struct DynamicDiGraph::CheshireCat {
         }
     }
 
-    void addVertex(unsigned int timestamp) {
+    unsigned int addVertex(unsigned int timestamp, bool atEnd, unsigned int vertexId = 0U, bool okIfExists = false) {
         checkTimestamp(timestamp);
 
+        if (atEnd) {
+            vertexId = vertices.size();
+        }
+        if (vertexId >= vertices.size()) {
+            vertices.resize(vertexId + 1, nullptr);
+        } else if (!okIfExists && vertexId < vertices.size() && vertices.at(vertexId) != nullptr) {
+            throw std::invalid_argument("A vertex with this id exists already.");
+        }
+
         Vertex *cv = constructionGraph.addVertex();
-        AddVertexOperation *avo = new AddVertexOperation(cv);
+        AddVertexOperation *avo = new AddVertexOperation(cv, vertexId);
         operations.push_back(avo);
-        vertices.push_back(avo);
+        vertices[vertexId] = avo;
+
+        return vertexId;
     }
 
     void removeVertex(unsigned int vertexId, unsigned int timestamp) {
-        if (vertexId >= vertices.size()) {
+        if (vertexId >= vertices.size() || vertices.at(vertexId) == nullptr) {
             throw std::invalid_argument("Vertex ID does not exist.");
         }
 
@@ -178,9 +191,10 @@ struct DynamicDiGraph::CheshireCat {
         constructionGraph.mapOutgoingArcs(avo->constructionVertex, removeIncidentArcs);
         constructionGraph.mapIncomingArcs(avo->constructionVertex, removeIncidentArcs);
 
+        constructionGraph.removeVertex(avo->constructionVertex);
         RemoveVertexOperation *rvo = new RemoveVertexOperation(avo);
         operations.push_back(rvo);
-        vertices.erase(vertices.cbegin() + vertexId);
+        vertices[vertexId] = nullptr;
     }
 
     void addArc(unsigned int tailId, unsigned int headId, unsigned int timestamp, bool antedateVertexAddition)
@@ -188,29 +202,43 @@ struct DynamicDiGraph::CheshireCat {
         checkTimestamp(timestamp);
 
         unsigned int maxId = tailId > headId ? tailId : headId;
+        if (maxId >= vertices.size()) {
+            vertices.resize(maxId + 1, nullptr);
+        }
+
+        AddVertexOperation *avoTail = vertices.at(tailId);;
+        AddVertexOperation *avoHead = vertices.at(headId);
 
         OperationSet *os = nullptr;
-        if (maxId >= vertices.size()) {
+        if (avoTail == nullptr || avoHead == nullptr) {
             if (antedateVertexAddition && timeIndex == 0U) {
                 os = &antedated;
             } else {
                 os = new OperationSet;
             }
-        }
-        while (vertices.size() <= maxId) {
-            Vertex *cv = constructionGraph.addVertex();
-            AddVertexOperation *avo = new AddVertexOperation(cv);
-            os->operations.push_back(avo);
-            vertices.push_back(avo);
+
+            if (avoTail == nullptr) {
+                Vertex *cv = constructionGraph.addVertex();
+                avoTail = new AddVertexOperation(cv, tailId);
+                os->operations.push_back(avoTail);
+                vertices[tailId] = avoTail;
+            }
+            if (avoHead == nullptr) {
+                Vertex *cv = constructionGraph.addVertex();
+                avoHead = new AddVertexOperation(cv, headId);
+                os->operations.push_back(avoHead);
+                vertices[headId] = avoHead;
+            }
         }
 
-        Arc *ca = constructionGraph.addArc(vertices[tailId]->constructionVertex, vertices[headId]->constructionVertex);
-        AddArcOperation *aao = new AddArcOperation(vertices[tailId], vertices[headId], ca);
+
+        Arc *ca = constructionGraph.addArc(avoTail->constructionVertex, avoHead->constructionVertex);
+        AddArcOperation *aao = new AddArcOperation(avoTail, avoHead, ca);
         if (os && os != &antedated) {
             os->operations.push_back(aao);
             operations.push_back(os);
         } else {
-            operations.push_back(aao);
+          operations.push_back(aao);
         }
         constructionArcMap[ca] = aao;
     }
@@ -219,8 +247,13 @@ struct DynamicDiGraph::CheshireCat {
         if (tailId >= vertices.size() || headId >= vertices.size()) {
             return nullptr;
         }
-        Vertex *ct = vertices[tailId]->constructionVertex;
-        Vertex *ch = vertices[headId]->constructionVertex;
+        auto avoTail = vertices[tailId];
+        auto avoHead = vertices[headId];
+        if (avoTail == nullptr || avoHead == nullptr) {
+            return nullptr;
+        }
+        Vertex *ct = avoTail->constructionVertex;
+        Vertex *ch = avoHead->constructionVertex;
         Arc *ca = nullptr;
         constructionGraph.mapOutgoingArcsUntil(ct, [&](Arc *a) {
             if (a->getHead() == ch) {
@@ -231,7 +264,7 @@ struct DynamicDiGraph::CheshireCat {
         return ca;
     }
 
-    void removeArc(unsigned int tailId, unsigned int headId, unsigned int timestamp) {
+    void removeArc(unsigned int tailId, unsigned int headId, unsigned int timestamp, bool removeIsolatedEnds) {
         Arc *ca = findArc(tailId, headId);
         if (!ca) {
             throw std::invalid_argument("Arc does not exist.");
@@ -241,9 +274,36 @@ struct DynamicDiGraph::CheshireCat {
 
         AddArcOperation *aao = constructionArcMap[ca];
         RemoveArcOperation *rao = new RemoveArcOperation(aao);
-        constructionGraph.removeArc(aao->constructionArc);
+        constructionGraph.removeArc(ca);
         constructionArcMap.erase(aao->constructionArc);
-        operations.push_back(rao);
+
+        if (removeIsolatedEnds) {
+            AddVertexOperation *avoTail = vertices[tailId];
+            AddVertexOperation *avoHead = vertices[headId];
+            IncidenceListVertex *tail = dynamic_cast<IncidenceListVertex*>(avoTail->constructionVertex);
+            IncidenceListVertex *head = dynamic_cast<IncidenceListVertex*>(avoHead->constructionVertex);
+            if (tail->isIsolated() || head->isIsolated()) {
+                OperationSet *op = new OperationSet;
+                op->operations.push_back(rao);
+                if (tail->isIsolated()) {
+                    constructionGraph.removeVertex(avoTail->constructionVertex);
+                    RemoveVertexOperation *rvo = new RemoveVertexOperation(avoTail);
+                    op->operations.push_back(rvo);
+                    vertices[tailId] = nullptr;
+                }
+                if (head->isIsolated()) {
+                    constructionGraph.removeVertex(avoHead->constructionVertex);
+                    RemoveVertexOperation *rvo = new RemoveVertexOperation(avoHead);
+                    op->operations.push_back(rvo);
+                    vertices[headId] = nullptr;
+                }
+                operations.push_back(op);
+            } else {
+                operations.push_back(rao);
+            }
+        } else {
+            operations.push_back(rao);
+        }
     }
 
     bool advance() {
@@ -368,17 +428,22 @@ unsigned int DynamicDiGraph::getNumberOfDeltas() const
 
 unsigned int DynamicDiGraph::getCurrentGraphSize() const
 {
-    return grin->vertices.size();
+    return grin->constructionGraph.getSize();
 }
 
 unsigned int DynamicDiGraph::getCurrentArcSize() const
 {
-   return grin->constructionArcMap.size();
+    return grin->constructionArcMap.size();
 }
 
-void DynamicDiGraph::addVertex(unsigned int timestamp)
+unsigned int DynamicDiGraph::addVertex(unsigned int timestamp)
 {
-    grin->addVertex(timestamp);
+    return grin->addVertex(timestamp, true);
+}
+
+void DynamicDiGraph::addVertex(unsigned int vertexId, unsigned int timestamp)
+{
+    grin->addVertex(timestamp, false, vertexId);
 }
 
 void DynamicDiGraph::removeVertex(unsigned int vertexId, unsigned int timestamp)
@@ -391,9 +456,9 @@ void DynamicDiGraph::addArc(unsigned int tailId, unsigned int headId, unsigned i
     grin->addArc(tailId, headId, timestamp, antedateVertexAdditions);
 }
 
-void DynamicDiGraph::removeArc(unsigned int tailId, unsigned int headId, unsigned int timestamp)
+void DynamicDiGraph::removeArc(unsigned int tailId, unsigned int headId, unsigned int timestamp, bool removeIsolatedEnds)
 {
-    grin->removeArc(tailId, headId, timestamp);
+    grin->removeArc(tailId, headId, timestamp, removeIsolatedEnds);
 }
 
 bool DynamicDiGraph::hasArc(unsigned int tailId, unsigned int headId)

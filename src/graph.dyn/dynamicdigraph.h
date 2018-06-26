@@ -18,10 +18,11 @@ public:
     unsigned int getCurrentGraphSize() const;
     unsigned int getCurrentArcSize() const;
 
-    void addVertex(unsigned int timestamp);
+    unsigned int addVertex(unsigned int timestamp);
+    void addVertex(unsigned int vertexId, unsigned int timestamp);
     void removeVertex(unsigned int vertexId, unsigned int timestamp);
     void addArc(unsigned int tailId, unsigned int headId, unsigned int timestamp, bool antedateVertexAdditions = false);
-    void removeArc(unsigned int tailId, unsigned int headId, unsigned int timestamp);
+    void removeArc(unsigned int tailId, unsigned int headId, unsigned int timestamp, bool removeIsolatedEnds = false);
     bool hasArc(unsigned int tailId, unsigned int headId);
     void clear();
 
