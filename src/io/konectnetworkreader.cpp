@@ -36,8 +36,8 @@ bool operator<(const Entry &lhs, const Entry &rhs) {
     return lhs.timestamp < rhs.timestamp;
 }
 
-KonectNetworkReader::KonectNetworkReader(bool antedateVertexAdditions)
-    : antedateVertexAdditions(antedateVertexAdditions)
+KonectNetworkReader::KonectNetworkReader(bool antedateVertexAdditions, bool removeIsolatedEndVertices)
+    : antedateVertexAdditions(antedateVertexAdditions), removeIsolatedEndVertices(removeIsolatedEndVertices)
 {
 
 }
@@ -94,23 +94,29 @@ bool KonectNetworkReader::provideDynamicDiGraph(DynamicDiGraph *dynGraph)
         }
     }
     std::stable_sort(entries.begin(), entries.end());
-        for (const Entry &e : entries) {
-            if (e.add) {
-                PRINT_DEBUG("Adding arc " << e.tail << ", " << e.head << " at time " << e.timestamp);
-                try {
-                    dynGraph->addArc(e.tail, e.head, e.timestamp, antedateVertexAdditions);
-                } catch (const std::invalid_argument &e) {
-                    std::cerr << e.what() << std::endl;
-                }
-            } else {
-                PRINT_DEBUG("Removing arc " << e.tail << ", " << e.head << " at time " << e.timestamp);
-                try {
-                    dynGraph->removeArc(e.tail, e.head, e.timestamp);
-                } catch (const std::invalid_argument &e) {
-                    std::cerr << e.what() << std::endl;
-                }
+    unsigned int errors = 0;
+    std::string lastError;
+    for (const Entry &e : entries) {
+        if (e.add) {
+            PRINT_DEBUG("Adding arc " << e.tail << ", " << e.head << " at time " << e.timestamp);
+            try {
+                dynGraph->addArc(e.tail, e.head, e.timestamp, antedateVertexAdditions);
+            } catch (const std::invalid_argument &e) {
+                std::cerr << e.what() << std::endl;
+            }
+        } else {
+            PRINT_DEBUG("Removing arc " << e.tail << ", " << e.head << " at time " << e.timestamp);
+            try {
+                dynGraph->removeArc(e.tail, e.head, e.timestamp, removeIsolatedEndVertices);
+            } catch (const std::invalid_argument &e) {
+                errors++;
+                lastError = e.what();
             }
         }
+    }
+    if (errors > 0) {
+        std::cerr << errors << " errors occurred. Last was: " << lastError << std::endl;
+    }
 
     return true;
 }
