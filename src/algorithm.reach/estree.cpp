@@ -157,10 +157,12 @@ void ESTree::run()
    diGraph->mapVertices([&](Vertex *v) {
        if (data(v) == nullptr) {
            data[v] = new VertexData(v);
+           PRINT_DEBUG( v << " is a unreachable.")
        }
    });
 
    initialized = true;
+    PRINT_DEBUG("Initializing completed.")
 }
 
 std::string ESTree::getProfilingInfo() const
@@ -300,7 +302,8 @@ void ESTree::onArcRemove(Arc *a)
         return;
     }
 
-    if (hd->level <= data(tail)->level) {
+    // todo: we can do more here
+    if (hd->level <= td->level) {
         PRINT_DEBUG("Arc is not a tree arc. Nothing to do.")
         decNonTreeArc++;
         return;
