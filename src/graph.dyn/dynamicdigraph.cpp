@@ -6,6 +6,8 @@
 #include <vector>
 #include <unordered_map>
 
+#include <cassert>
+
 //#define DEBUG_DYNDIGRAPH
 
 #ifdef DEBUG_DYNDIGRAPH
@@ -277,9 +279,10 @@ struct DynamicDiGraph::CheshireCat {
         checkTimestamp(timestamp);
 
         AddArcOperation *aao = constructionArcMap[ca];
+        assert(ca == aao->constructionArc);
         RemoveArcOperation *rao = new RemoveArcOperation(aao);
         constructionGraph.removeArc(ca);
-        constructionArcMap.erase(aao->constructionArc);
+        constructionArcMap.erase(ca);
 
         if (removeIsolatedEnds) {
             AddVertexOperation *avoTail = vertices[tailId];
