@@ -251,6 +251,7 @@ void ESTree::onArcAdd(Arc *a)
 
         if (!ahd->isReachable() ||  atd->level + 1 < ahd->level) {
             ahd->level = atd->level + 1;
+            ahd->parentIndex = 0;
             movesUp++;
             reachable[ah] = true;
             verticesToProcess.push_back(ahd);
