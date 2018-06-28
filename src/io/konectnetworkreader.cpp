@@ -97,9 +97,6 @@ bool KonectNetworkReader::provideDynamicDiGraph(DynamicDiGraph *dynGraph)
     unsigned int errors = 0;
     std::string lastError;
     for (const Entry &e : entries) {
-        if (e.head == e.tail) {
-            std::cout << "Loop detected: " << e.tail << ", op is " << (e.add ? "add" : "del" ) << std::endl;
-        }
         if (e.add) {
             PRINT_DEBUG("Adding arc " << e.tail << ", " << e.head << " at time " << e.timestamp);
             try {
@@ -114,7 +111,7 @@ bool KonectNetworkReader::provideDynamicDiGraph(DynamicDiGraph *dynGraph)
             } catch (const std::invalid_argument &ia) {
                 errors++;
                 lastError = ia.what();
-                std::cerr << "Error at arc " << e.tail << " -> " << e.head << " at time " << e.timestamp << ": " << ia.what() << std::endl;
+                //std::cerr << "Error at arc " << e.tail << " -> " << e.head << " at time " << e.timestamp << ": " << ia.what() << std::endl;
             }
         }
     }
