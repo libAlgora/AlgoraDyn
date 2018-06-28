@@ -417,7 +417,7 @@ unsigned int process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queu
     PRINT_DEBUG("Size of graph is " << graph->getSize() << ".");
 
     bool inNeighborFound = parent != nullptr;
-    bool reachableInNeighborFound = inNeighborFound && parent->isReachable();
+    //bool reachableInNeighborFound = inNeighborFound && parent->isReachable();
     Vertex *v = vd->vertex;
     bool reachV = vd->isReachable();
     unsigned int minimumParentLevel = parent != nullptr ? parent->level : UINT_MAX;
@@ -432,8 +432,7 @@ unsigned int process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queu
 
         if (vd->parentIndex >= vd->inNeighbors.size()) {
             if ((vd->level + 1 >= graph->getSize()) || (levelChanged && !inNeighborFound)) {
-                PRINT_DEBUG("    Vertex is unreachable (source: " << (levelChanged ? (inNeighborFound ? "no" : "yes" ) : "?") << ").")
-                assert(!reachableInNeighborFound);
+                PRINT_DEBUG("    Vertex " << v << " is unreachable (source: " << (levelChanged ? (inNeighborFound ? "no" : "yes" ) : "?") << ").")
                 vd->setUnreachable();
                 reachable.resetToDefault(v);
                 reachV = false;
@@ -449,7 +448,6 @@ unsigned int process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queu
         if (reachV)  {
             parent = vd->inNeighbors[vd->parentIndex];
             inNeighborFound |= parent != nullptr;
-            reachableInNeighborFound |= (parent && parent->isReachable());
             if (parent && parent->level < minimumParentLevel) {
                 minimumParentLevel = parent->level;
                 PRINT_DEBUG("  Minimum parent level is now " << minimumParentLevel << ".")
