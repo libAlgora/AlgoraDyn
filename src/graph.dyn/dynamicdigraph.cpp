@@ -53,6 +53,7 @@ struct AddVertexOperation : public Operation {
 
     virtual void apply(IncidenceListGraph *graph) {
         vertex = graph->addVertex();
+        vertex->setName(std::to_string(vertexId));
     }
     virtual Type getType() const override { return VERTEX_ADDITION; }
 };
