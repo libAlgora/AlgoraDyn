@@ -222,6 +222,10 @@ struct DynamicDiGraph::CheshireCat {
                 avoTail = new AddVertexOperation(cv, tailId);
                 os->operations.push_back(avoTail);
                 vertices[tailId] = avoTail;
+
+                if (tailId == headId) {
+                    avoHead = avoTail;
+                }
             }
             if (avoHead == nullptr) {
                 Vertex *cv = constructionGraph.addVertex();
@@ -291,7 +295,7 @@ struct DynamicDiGraph::CheshireCat {
                     op->operations.push_back(rvo);
                     vertices[tailId] = nullptr;
                 }
-                if (head->isIsolated()) {
+                if (tailId != headId && head->isIsolated()) {
                     constructionGraph.removeVertex(avoHead->constructionVertex);
                     RemoveVertexOperation *rvo = new RemoveVertexOperation(avoHead);
                     op->operations.push_back(rvo);
