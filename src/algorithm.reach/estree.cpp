@@ -65,11 +65,13 @@ struct ESTree::VertexData {
         parentIndex = 0;
         level = UNREACHABLE;
         // free at least some space
-        int i = inNeighbors.size() - 1;
-        while (i >= 0 && inNeighbors[i] == nullptr) {
-            inNeighbors.pop_back();
-            i--;
+        std::vector<VertexData*> neighbors;
+        for (auto n : inNeighbors) {
+            if (n) {
+                neighbors.push_back(n);
+            }
         }
+        inNeighbors.swap(neighbors);
     }
 
     bool isReachable() const {
