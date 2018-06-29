@@ -470,8 +470,6 @@ unsigned int process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queu
         graph->mapOutgoingArcs(vd->vertex, [&](Arc *a) {
             Vertex *head = a->getHead();
             auto *hd = data(head);
-            assert(hd->isReachable());
-            assert(reachable(head));
             queue.push(hd);
             PRINT_DEBUG("    Added child " << a->getHead() << " to queue.")
         });
