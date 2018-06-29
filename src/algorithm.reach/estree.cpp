@@ -60,6 +60,7 @@ struct ESTree::VertexData {
 };
 
 unsigned int ESTree::VertexData::graphSize = 0U;
+
 std::ostream& operator<<(std::ostream& os, const ESTree::VertexData *vd) {
     if (vd == nullptr) {
         os << " null ";
@@ -283,6 +284,7 @@ void ESTree::onArcAdd(Arc *a)
 void ESTree::onVertexRemove(Vertex *v)
 {
     VertexData::graphSize--;
+
     if (!initialized) {
         return;
     }
@@ -332,7 +334,6 @@ void ESTree::onArcRemove(Arc *a)
     assert(found);
 
     if (!hd->isReachable()) {
-    //if (!reachable(head)) {
         PRINT_DEBUG("Head of arc is already unreachable. Nothing to do.")
         decUnreachableHead++;
         return;
@@ -360,7 +361,7 @@ bool ESTree::query(const Vertex *t)
     }
 
     if (!initialized) {
-        std::cout << "query in unitialized state." << std::endl;
+        std::cout << "Query in uninitialized state." << std::endl;
         run();
     }
     return reachable(t);
@@ -428,7 +429,6 @@ unsigned int process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queu
     PRINT_DEBUG("Size of graph is " << graph->getSize() << ".");
 
     bool inNeighborFound = parent != nullptr;
-    //bool reachableInNeighborFound = inNeighborFound && parent->isReachable();
     Vertex *v = vd->vertex;
     bool reachV = vd->isReachable();
     unsigned int minimumParentLevel = parent != nullptr ? parent->level : UINT_MAX;
@@ -470,8 +470,8 @@ unsigned int process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queu
         graph->mapOutgoingArcs(vd->vertex, [&](Arc *a) {
             Vertex *head = a->getHead();
             auto *hd = data(head);
+            PRINT_DEBUG("    Adding child " << hd << " to queue...")
             queue.push(hd);
-            PRINT_DEBUG("    Added child " << a->getHead() << " to queue.")
         });
     }
 
