@@ -20,7 +20,6 @@
 #                                                                      #
 # Contact information:                                                 #
 #   http://algora.xaikal.org                                           #
-#   kal@xaikal.org                                                     #
 ########################################################################
 
 export QT_SELECT=qt5
