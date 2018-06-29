@@ -23,6 +23,9 @@
 namespace Algora {
 
 struct ESTree::VertexData {
+    static const unsigned int UNREACHABLE = UINT_MAX;
+    static unsigned int graphSize;
+
     Vertex *vertex;
     std::vector<VertexData*> inNeighbors;
     unsigned int parentIndex;
@@ -38,7 +41,7 @@ struct ESTree::VertexData {
 
     void setUnreachable() {
         parentIndex = 0;
-        level = UINT_MAX;
+        level = UNREACHABLE;
         // free at least some space
         int i = inNeighbors.size() - 1;
         while (i >= 0 && inNeighbors[i] == nullptr) {
@@ -47,11 +50,16 @@ struct ESTree::VertexData {
         }
     }
 
-    bool isReachable() {
-        return level != UINT_MAX;
+    bool isReachable() const {
+        return level != UNREACHABLE;
+    }
+
+    unsigned int priority() const {
+        return isReachable() ? level : graphSize + 1U;
     }
 };
 
+unsigned int ESTree::VertexData::graphSize = 0U;
 std::ostream& operator<<(std::ostream& os, const ESTree::VertexData *vd) {
     if (vd == nullptr) {
         os << " null ";
@@ -71,7 +79,7 @@ std::ostream& operator<<(std::ostream& os, const ESTree::VertexData *vd) {
     return os;
 }
 
-struct ESNode_Priority { int operator()(const ESTree::VertexData *vd) { return vd->level; }};
+struct ESNode_Priority { int operator()(const ESTree::VertexData *vd) { return vd->priority(); }};
 typedef BucketQueue<ESTree::VertexData*, ESNode_Priority> PriorityQueue;
 
 #ifdef DEBUG_ESTREE
@@ -169,6 +177,7 @@ void ESTree::run()
        }
    });
 
+   VertexData::graphSize = diGraph->getSize();
    initialized = true;
     PRINT_DEBUG("Initializing completed.")
 }
@@ -195,6 +204,7 @@ void ESTree::onDiGraphUnset()
 void ESTree::onVertexAdd(Vertex *v)
 {
     data[v] = new VertexData(v);
+    VertexData::graphSize++;
 }
 
 void ESTree::onArcAdd(Arc *a)
@@ -272,6 +282,7 @@ void ESTree::onArcAdd(Arc *a)
 
 void ESTree::onVertexRemove(Vertex *v)
 {
+    VertexData::graphSize--;
     if (!initialized) {
         return;
     }
