@@ -52,6 +52,7 @@ struct ESTree::VertexData {
     std::vector<VertexData*> inNeighbors;
     unsigned int parentIndex;
     unsigned int level;
+    unsigned int inNeighborsLost = 0U;
 
     VertexData(Vertex *v, VertexData *p = nullptr, unsigned int l = UINT_MAX)
         : vertex(v), parentIndex(0), level(l) {
@@ -65,13 +66,30 @@ struct ESTree::VertexData {
         parentIndex = 0;
         level = UNREACHABLE;
         // free at least some space
+        cleanupInNeighbors(false);
+    }
+
+    void cleanupInNeighbors(bool updateParentIndex) {
         std::vector<VertexData*> neighbors;
         for (auto n : inNeighbors) {
             if (n) {
                 neighbors.push_back(n);
             }
         }
+        if (updateParentIndex) {
+            unsigned int nullsBeforeParent = 0U;
+            for (unsigned int i = 0U; i < parentIndex; i++) {
+                if (!inNeighbors[i]) {
+                    nullsBeforeParent++;
+                }
+            }
+            parentIndex -= nullsBeforeParent;
+            if (parentIndex >= neighbors.size()) {
+                parentIndex = 0U;
+            }
+        }
         inNeighbors.swap(neighbors);
+        inNeighborsLost = 0U;
     }
 
     bool isReachable() const {
@@ -80,6 +98,23 @@ struct ESTree::VertexData {
 
     unsigned int priority() const {
         return isReachable() ? level : graphSize + 1U;
+    }
+
+    void findAndRemoveInNeighbor(VertexData *in) {
+        bool found = false;
+        for (auto i = inNeighbors.begin(); i != inNeighbors.end() && !found; i++) {
+            if ((*i) != nullptr && (*i) == in) {
+               *i = nullptr;
+               PRINT_DEBUG("Removed " << in->vertex << " in N- of " << vertex);
+               found = true;
+               inNeighborsLost++;
+            }
+        }
+        if (inNeighborsLost > inNeighbors.size() / 4) {
+            cleanupInNeighbors(true);
+        }
+
+        assert(found);
     }
 };
 
@@ -347,15 +382,7 @@ void ESTree::onArcRemove(Arc *a)
     }
 
     VertexData *td = data(tail);
-    bool found = false;
-    for (auto i = hd->inNeighbors.begin(); i != hd->inNeighbors.end() && !found; i++) {
-        if ((*i) != nullptr && (*i) == td) {
-           *i = nullptr;
-           PRINT_DEBUG("Removed " << tail << " in N- of " << head);
-           found = true;
-        }
-    }
-    assert(found);
+    hd->findAndRemoveInNeighbor(td);
 
     if (!hd->isReachable()) {
         PRINT_DEBUG("Head of arc is already unreachable. Nothing to do.")
@@ -446,49 +473,60 @@ unsigned int process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queu
         return 0U;
     }
 
-    ESTree::VertexData *parent = vd->inNeighbors[vd->parentIndex];
-    bool levelChanged = false;
-
     PRINT_DEBUG("Processing vertex " << vd << ".");
-    PRINT_DEBUG("Size of graph is " << graph->getSize() << ".");
-
-    bool inNeighborFound = parent != nullptr;
     Vertex *v = vd->vertex;
     bool reachV = vd->isReachable();
-    unsigned int minimumParentLevel = parent != nullptr ? parent->level : UINT_MAX;
+    bool levelChanged = false;
+    unsigned int oldVLevel = vd->level;
+    if (vd->inNeighbors.empty()) {
+        PRINT_DEBUG("Vertex is a source.");
+        if (reachV) {
+            reachV = false;
+            vd->setUnreachable();
+            reachable[v] = false;
+            levelChanged = true;
+            PRINT_DEBUG("Level changed.");
+        }
+    } else {
+        ESTree::VertexData *parent = vd->inNeighbors[vd->parentIndex];
 
-    PRINT_DEBUG("Parent is " << parent);
+        PRINT_DEBUG("Size of graph is " << graph->getSize() << ".");
 
-    unsigned int levelDiff = 0U;
+        bool inNeighborFound = parent != nullptr;
+        unsigned int minimumParentLevel = parent != nullptr ? parent->level : UINT_MAX;
 
-    while (reachV && (parent == nullptr || vd->level <= parent->level)) {
-        vd->parentIndex++;
-        PRINT_DEBUG("  Advancing parent index to " << vd->parentIndex << ".")
+        PRINT_DEBUG("Parent is " << parent);
 
-        if (vd->parentIndex >= vd->inNeighbors.size()) {
-            if ((vd->level + 1 >= graph->getSize()) || (levelChanged && !inNeighborFound)) {
-                PRINT_DEBUG("    Vertex " << v << " is unreachable (source: " << (levelChanged ? (inNeighborFound ? "no" : "yes" ) : "?") << ").")
-                vd->setUnreachable();
-                reachable.resetToDefault(v);
-                reachV = false;
-                levelChanged = true;
-            } else {
-                vd->level++;
-                levelDiff++;
-                levelChanged = true;
-                PRINT_DEBUG("  Maximum parent index exceeded, increasing level to " << vd->level << ".")
-                vd->parentIndex = 0;
+
+        while (reachV && (parent == nullptr || vd->level <= parent->level)) {
+            vd->parentIndex++;
+            PRINT_DEBUG("  Advancing parent index to " << vd->parentIndex << ".")
+
+            if (vd->parentIndex >= vd->inNeighbors.size()) {
+                if ((vd->level + 1 >= graph->getSize()) || (levelChanged && !inNeighborFound)) {
+                    PRINT_DEBUG("    Vertex " << v << " is unreachable (source: " << (levelChanged ? (inNeighborFound ? "no" : "yes" ) : "?") << ").")
+                    vd->setUnreachable();
+                    reachable.resetToDefault(v);
+                    reachV = false;
+                    levelChanged = true;
+                } else {
+                    vd->level++;
+                    levelChanged = true;
+                    PRINT_DEBUG("  Maximum parent index exceeded, increasing level to " << vd->level << ".")
+                    vd->parentIndex = 0;
+                }
+            }
+            if (reachV)  {
+                parent = vd->inNeighbors[vd->parentIndex];
+                inNeighborFound |= parent != nullptr;
+                if (parent && parent->level < minimumParentLevel) {
+                    minimumParentLevel = parent->level;
+                    PRINT_DEBUG("  Minimum parent level is now " << minimumParentLevel << ".")
+                }
+                PRINT_DEBUG("  Trying " << parent << " as parent.")
             }
         }
-        if (reachV)  {
-            parent = vd->inNeighbors[vd->parentIndex];
-            inNeighborFound |= parent != nullptr;
-            if (parent && parent->level < minimumParentLevel) {
-                minimumParentLevel = parent->level;
-                PRINT_DEBUG("  Minimum parent level is now " << minimumParentLevel << ".")
-            }
-            PRINT_DEBUG("  Trying " << parent << " as parent.")
-        }
+
     }
     if (levelChanged) {
         graph->mapOutgoingArcs(vd->vertex, [&](Arc *a) {
@@ -499,7 +537,7 @@ unsigned int process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queu
         });
     }
 
-    return levelDiff;
+    return vd->level - oldVLevel;
 }
 
 }
