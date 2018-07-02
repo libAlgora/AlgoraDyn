@@ -153,7 +153,7 @@ void printQueue(PriorityQueue q) {
 }
 #endif
 
-unsigned int process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queue, const PropertyMap<ESTree::VertexData*> &data, PropertyMap<bool> &reachable);
+unsigned int process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queue, const FastPropertyMap<ESTree::VertexData*> &data, PropertyMap<bool> &reachable);
 
 ESTree::ESTree()
     : DynamicSSReachAlgorithm(), root(nullptr), initialized(false),
@@ -176,7 +176,7 @@ void ESTree::run()
 
     PRINT_DEBUG("Initializing ESTree...")
 
-    data.resetAll();
+    data.resetAll(diGraph->getSize());
     reachable.resetAll();
     movesDown = 0U;
     movesUp = 0U;
@@ -424,7 +424,8 @@ void ESTree::dumpData(std::ostream &os)
         os << "uninitialized" << std::endl;
     }  else {
         for (auto i = data.cbegin(); i != data.cend(); i++) {
-            os << i->first->toString() << ": " << i-> second << std::endl;
+            //os << i->first->toString() << ": " << i-> second << std::endl;
+            os << (*i) << std::endl;
         }
     }
 }
@@ -449,8 +450,13 @@ void ESTree::restoreTree(ESTree::VertexData *rd)
 
 void ESTree::cleanup()
 {
+    //for (auto i = data.cbegin(); i != data.cend(); i++) {
+    //    delete i->second;
+    //}
     for (auto i = data.cbegin(); i != data.cend(); i++) {
-        delete i->second;
+        if ((*i)) {
+            delete (*i);
+        }
     }
 
     data.resetAll();
@@ -466,7 +472,7 @@ void ESTree::cleanup()
     //incNonTreeArc = 0U;
 }
 
-unsigned int process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queue, const PropertyMap<ESTree::VertexData*> &data, PropertyMap<bool> &reachable) {
+unsigned int process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queue, const FastPropertyMap<ESTree::VertexData *> &data, PropertyMap<bool> &reachable) {
 
     if (vd->level == 0UL) {
         PRINT_DEBUG("No need to process source vertex " << vd << ".");
@@ -478,6 +484,8 @@ unsigned int process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queu
     bool reachV = vd->isReachable();
     bool levelChanged = false;
     unsigned int oldVLevel = vd->level;
+
+    // todo... correct?
     if (vd->inNeighbors.empty()) {
         PRINT_DEBUG("Vertex is a source.");
         if (reachV) {

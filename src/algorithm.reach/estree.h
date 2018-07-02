@@ -25,6 +25,7 @@
 
 #include "dynamicssreachalgorithm.h"
 #include "property/propertymap.h"
+#include "property/fastpropertymap.h"
 
 namespace Algora {
 
@@ -62,7 +63,7 @@ public:
     virtual void dumpData(std::ostream &os) override;
 
 private:
-    PropertyMap<VertexData*> data;
+    FastPropertyMap<VertexData*> data;
     PropertyMap<bool> reachable;
     Vertex *root;
     bool initialized;
