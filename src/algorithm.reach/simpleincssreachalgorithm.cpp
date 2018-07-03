@@ -24,6 +24,7 @@
 
 #include "algorithm.basic/breadthfirstsearch.h"
 #include "algorithm/digraphalgorithmexception.h"
+#include "property/fastpropertymap.h"
 #include "graph/vertex.h"
 
 #include <vector>
@@ -48,7 +49,7 @@ namespace Algora {
 
 struct SimpleIncSSReachAlgorithm::Reachability {
     enum struct State : std::int8_t { REACHABLE, UNREACHABLE, UNKNOWN };
-    PropertyMap<State> reachability;
+    FastPropertyMap<State> reachability;
     Vertex *source;
     std::vector<const Vertex*> unknownStateVertices;
 
@@ -74,7 +75,7 @@ struct SimpleIncSSReachAlgorithm::Reachability {
         if (s == State::UNKNOWN) {
             unknownStateVertices.push_back(from);
         }
-        BreadthFirstSearch bfs(false);
+        BreadthFirstSearch<FastPropertyMap> bfs(false);
         bfs.setGraph(diGraph);
         bfs.setStartVertex(from);
         bfs.onVertexDiscover([&](const Vertex *v) {
@@ -101,7 +102,7 @@ struct SimpleIncSSReachAlgorithm::Reachability {
         assert (u != source);
         PRINT_DEBUG("Trying to find reachable predecessor of " << u << ".");
         bool reach = false;
-        BreadthFirstSearch bfs(false);
+        BreadthFirstSearch<FastPropertyMap> bfs(false);
         bfs.setGraph(diGraph);
         bfs.reverseArcDirection(true);
         bfs.setStartVertex(u);
@@ -273,7 +274,8 @@ void SimpleIncSSReachAlgorithm::dumpData(std::ostream &os)
     } else {
         os << "Source: " << source << std::endl;
         for (auto i = data->reachability.cbegin(); i != data->reachability.cend(); i++) {
-            os << (Vertex*) i->first << ": " << data->printState(i-> second) << std::endl;
+            //os << (Vertex*) i->first << ": " << data->printState(i-> second) << std::endl;
+            os << data->printState(*i) << std::endl;
         }
     }
 }

@@ -64,7 +64,7 @@ public:
 
 private:
     FastPropertyMap<VertexData*> data;
-    PropertyMap<bool> reachable;
+    FastPropertyMap<bool> reachable;
     Vertex *root;
     bool initialized;
 

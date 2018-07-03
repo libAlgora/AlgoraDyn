@@ -22,7 +22,7 @@
 
 #include "lazybfsssreachalgorithm.h"
 
-#include "property/propertymap.h"
+#include "property/fastpropertymap.h"
 
 #include <deque>
 
@@ -33,7 +33,7 @@ struct LazyBFSSSReachAlgorithm::CheshireCat {
     DiGraph *graph;
     Vertex *source;
     std::deque<Vertex*> queue;
-    PropertyMap<bool> discovered;
+    FastPropertyMap<bool> discovered;
 
     CheshireCat()
         : inititialized(false) { discovered.setDefaultValue(false); }

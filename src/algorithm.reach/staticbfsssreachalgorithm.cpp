@@ -21,6 +21,7 @@
  */
 
 #include "staticbfsssreachalgorithm.h"
+#include "property/fastpropertymap.h"
 
 #include "algorithm.basic/breadthfirstsearch.h"
 
@@ -47,7 +48,7 @@ bool StaticBFSSSReachAlgorithm::query(const Vertex *t)
     if (t == source) {
         return true;
     }
-    BreadthFirstSearch bfs(false);
+    BreadthFirstSearch<FastPropertyMap> bfs(false);
     bfs.setStartVertex(source);
     bool reachable = false;
     bfs.setArcStopCondition([&](const Arc *a) {

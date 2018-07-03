@@ -25,7 +25,7 @@
 
 #include "algorithm.reach/dynamicssreachalgorithm.h"
 #include "algorithm.basic/breadthfirstsearch.h"
-#include "property/propertymap.h"
+#include "property/fastpropertymap.h"
 
 namespace Algora {
 
@@ -58,8 +58,8 @@ protected:
     virtual void onSourceSet() override;
 
 private:
-    BreadthFirstSearch bfs;
-    PropertyMap<int> levels;
+    BreadthFirstSearch<> bfs;
+    FastPropertyMap<int> levels;
     bool initialized;
 };
 

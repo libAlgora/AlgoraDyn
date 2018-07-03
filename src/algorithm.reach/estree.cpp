@@ -30,6 +30,7 @@
 #include "algorithm.basic/breadthfirstsearch.h"
 #include "algorithm/digraphalgorithmexception.h"
 #include "datastructure/bucketqueue.h"
+#include "property/fastpropertymap.h"
 
 //#define DEBUG_ESTREE
 
@@ -153,7 +154,7 @@ void printQueue(PriorityQueue q) {
 }
 #endif
 
-unsigned int process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queue, const FastPropertyMap<ESTree::VertexData*> &data, PropertyMap<bool> &reachable);
+unsigned int process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queue, const FastPropertyMap<ESTree::VertexData*> &data, FastPropertyMap<bool> &reachable);
 
 ESTree::ESTree()
     : DynamicSSReachAlgorithm(), root(nullptr), initialized(false),
@@ -177,11 +178,11 @@ void ESTree::run()
     PRINT_DEBUG("Initializing ESTree...")
 
     data.resetAll(diGraph->getSize());
-    reachable.resetAll();
+    reachable.resetAll(diGraph->getSize());
     movesDown = 0U;
     movesUp = 0U;
 
-   BreadthFirstSearch bfs(false);
+   BreadthFirstSearch<FastPropertyMap> bfs(false);
    root = source;
    if (root == nullptr) {
        root = diGraph->getAnyVertex();
@@ -310,7 +311,7 @@ void ESTree::onArcAdd(Arc *a)
     std::vector<VertexData*> verticesToProcess;
     verticesToProcess.push_back(hd);
 
-    BreadthFirstSearch bfs(false);
+    BreadthFirstSearch<FastPropertyMap> bfs(false);
     bfs.setStartVertex(head);
     bfs.onArcDiscover([&](const Arc *a) {
         PRINT_DEBUG( "Discovering arc (" << a->getTail() << ", " << a->getHead() << ")...");
@@ -472,7 +473,7 @@ void ESTree::cleanup()
     //incNonTreeArc = 0U;
 }
 
-unsigned int process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queue, const FastPropertyMap<ESTree::VertexData *> &data, PropertyMap<bool> &reachable) {
+unsigned int process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queue, const FastPropertyMap<ESTree::VertexData *> &data, FastPropertyMap<bool> &reachable) {
 
     if (vd->level == 0UL) {
         PRINT_DEBUG("No need to process source vertex " << vd << ".");
