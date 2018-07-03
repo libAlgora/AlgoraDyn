@@ -29,7 +29,7 @@ CachingBFSSSReachAlgorithm::CachingBFSSSReachAlgorithm()
     : DynamicSSReachAlgorithm(), initialized(false)
 {
     levels.setDefaultValue(-1);
-    bfs.usePropertyMap(&levels);
+    bfs.useModifiableProperty(&levels);
     bfs.orderAsValues(false);
 }
 
