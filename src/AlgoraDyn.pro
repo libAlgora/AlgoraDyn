@@ -26,6 +26,13 @@ TARGET = AlgoraDyn
 TEMPLATE = lib
 CONFIG += staticlib
 
+ADINFOHDR = $$PWD/algoradyn_info.h
+adinfotarget.target =  $$ADINFOHDR
+adinfotarget.commands = '$$PWD/../updateInfoHeader $$ADINFOHDR'
+adinfotarget.depends = FORCE
+PRE_TARGETDEPS += $$ADINFOHDR
+QMAKE_EXTRA_TARGETS += adinfotarget
+
 QMAKE_CXXFLAGS_DEBUG += -std=c++11 -O0
 QMAKE_CXXFLAGS_RELEASE += -O3 -std=c++11 -DNDEBUG
 
@@ -58,6 +65,12 @@ unix {
 INCLUDEPATH += $$PWD/../../AlgoraCore/src
 
 DEPENDPATH += $$PWD/../../AlgoraCore/src
+
+HEADERS += \
+    $$PWD/algoradyn_info.h
+
+SOURCES += \
+    $$PWD/algoradyn_info.cpp
 
 include(graph.dyn/graph.dyn.pri)
 include(algorithm/algorithm.pri)
