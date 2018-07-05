@@ -48,6 +48,7 @@ struct Operation {
     virtual ~Operation() {}
     virtual void apply(IncidenceListGraph *graph) = 0;
     virtual Type getType() const = 0;
+    virtual void reset() { }
 };
 
 struct OperationSet : public Operation {
@@ -64,6 +65,11 @@ struct OperationSet : public Operation {
         }
     }
     virtual Type getType() const override { return MULTIPLE; }
+    virtual void reset() override {
+        for (auto op : operations) {
+            op->reset();
+        }
+    }
 };
 
 struct AddVertexOperation : public Operation {
@@ -78,6 +84,7 @@ struct AddVertexOperation : public Operation {
         vertex->setName(std::to_string(vertexId));
     }
     virtual Type getType() const override { return VERTEX_ADDITION; }
+    virtual void reset() override { vertex = nullptr; }
 };
 
 struct RemoveVertexOperation : public Operation {
@@ -104,6 +111,7 @@ struct AddArcOperation : public Operation {
         arc = graph->addArc(tail->vertex, head->vertex);
     }
     virtual Type getType() const override { return ARC_ADDITION; }
+    virtual void reset() override { arc = nullptr; }
 };
 
 struct RemoveArcOperation : public Operation {
@@ -142,6 +150,10 @@ struct DynamicDiGraph::CheshireCat {
         timeIndex = 0U;
         opIndex = 0U;
         dynGraph.clear();
+
+        for (auto op : operations) {
+            op->reset();
+        }
     }
 
     void init() {
@@ -422,6 +434,13 @@ struct DynamicDiGraph::CheshireCat {
         timestamps.erase(timestamps.cbegin() + squashOn + 1, timestamps.cbegin() + squashMax);
         offset.erase(offset.cbegin() + squashOn + 1, offset.cbegin() + squashMax);
     }
+
+    Vertex *vertexForId(unsigned int vertexId) const {
+        if (vertexId >= vertices.size() || vertices.at(vertexId) == nullptr) {
+            return nullptr;
+        }
+        return vertices.at(vertexId)->vertex;
+    }
 };
 
 DynamicDiGraph::DynamicDiGraph()
@@ -514,6 +533,11 @@ bool DynamicDiGraph::applyNextOperation()
 bool DynamicDiGraph::applyNextDelta()
 {
     return grin->nextDelta();
+}
+
+Vertex *DynamicDiGraph::getCurrentVertexForId(unsigned int vertexId) const
+{
+    return grin->vertexForId(vertexId);
 }
 
 unsigned int DynamicDiGraph::countVertexAdditions(unsigned int timeFrom, unsigned int timeUntil) const

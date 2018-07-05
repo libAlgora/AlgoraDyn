@@ -26,6 +26,7 @@
 namespace Algora {
 
 class DiGraph;
+class Vertex;
 
 class DynamicDiGraph
 {
@@ -51,6 +52,7 @@ public:
     void resetToBigBang();
     bool applyNextOperation();
     bool applyNextDelta();
+    Vertex *getCurrentVertexForId(unsigned int vertexId) const;
 
     unsigned int countVertexAdditions(unsigned int timeFrom, unsigned int timeUntil) const;
     unsigned int countVertexRemovals(unsigned int timeFrom, unsigned int timeUntil) const;
