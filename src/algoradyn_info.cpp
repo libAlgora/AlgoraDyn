@@ -26,5 +26,6 @@ namespace Algora {
 
 constexpr char AlgoraDynInfo::GIT_REVISION[];
 constexpr char AlgoraDynInfo::GIT_DATE[];
+constexpr char AlgoraDynInfo::GIT_TIMESTAMP[];
 
 }

@@ -28,6 +28,7 @@ namespace Algora {
 struct AlgoraDynInfo {
   static constexpr char GIT_REVISION[] = "unknown";
   static constexpr char GIT_DATE[] = "unknown";
+  static constexpr char GIT_TIMESTAMP[] = "unknown";
 };
 }
 

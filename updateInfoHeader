@@ -22,25 +22,40 @@
 #   http://algora.xaikal.org                                           #
 ########################################################################
 
-if [ $# -lt 1 ]
+print_usage() {
+	echo "Usage: $0 [-f] <PATH_TO_HEADER_FILE>"
+}
+
+FORCE=0
+
+if [ "$1" == "-f" ]
 then
-	echo "Usage: $0 <PATH_TO_HEADER_FILE>"
-	exit 1
+	FORCE=1
+	shift
 fi
 
 VERSION_HEADER=$1
+
+if [ -z "${VERSION_HEADER}" ]
+then
+	print_usage
+	exit 1
+fi
+
 [ -f "${VERSION_HEADER}" ] || eval 'echo "Version header file ${VERSION_HEADER} not found." 1>&2; exit 1'
 
 [ -z "${GIT_CMD}" ] && GIT_CMD=$(which git 2>/dev/null)
 [ -n "${GIT_CMD}" ] || eval 'echo Binary "git" not found. Please specify its location explicitly via the GIT_CMD variable." 1>&2; exit 1'
 
 GIT_REVISION=$(${GIT_CMD} log --pretty=format:'%H' -n 1)
-GIT_DATE=$(${GIT_CMD} log --pretty=format:'%ai' -n 1)
+GIT_DATE=$(${GIT_CMD} log --pretty=format:'%aI' -n 1)
+GIT_TIMESTAMP=$(${GIT_CMD} log --pretty=format:'%at' -n 1)
 
 echo "Git revision: ${GIT_REVISION}"
 echo "Git date: ${GIT_DATE}"
+echo "Git timestamp: ${GIT_TIMESTAMP}"
 
-if grep -q $GIT_REVISION $VERSION_HEADER && grep -q "$GIT_DATE" $VERSION_HEADER
+if [ "${FORCE}" -eq "0" ] && grep -q $GIT_REVISION $VERSION_HEADER && grep -q "$GIT_TIMESTAMP" $VERSION_HEADER
 then
 	echo "Git revision unchanged. No update required."
 	exit 0
@@ -48,6 +63,11 @@ fi
 
 GIT_REVISION_IN_HEADER="  static constexpr char GIT_REVISION[] = \"${GIT_REVISION}\";"
 GIT_DATE_IN_HEADER="  static constexpr char GIT_DATE[] = \"${GIT_DATE}\";"
+GIT_TS_IN_HEADER="  static constexpr char GIT_TIMESTAMP[] = \"${GIT_TIMESTAMP}\";"
 
-sed -i -e "s/^.*GIT_REVISION.*$/${GIT_REVISION_IN_HEADER}/" -e "s/^.*GIT_DATE.*$/${GIT_DATE_IN_HEADER}/" $VERSION_HEADER
+sed -i \
+	-e "s/^.*GIT_REVISION.*$/${GIT_REVISION_IN_HEADER}/" \
+	-e "s/^.*GIT_DATE.*$/${GIT_DATE_IN_HEADER}/" \
+	-e "s/^.*GIT_TIMESTAMP.*$/${GIT_TS_IN_HEADER}/" \
+	$VERSION_HEADER
 
