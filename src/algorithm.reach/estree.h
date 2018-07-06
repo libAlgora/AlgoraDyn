@@ -44,6 +44,7 @@ public:
     virtual std::string getProfilingInfo() const override;
 
 protected:
+    virtual void onDiGraphSet() override;
     virtual void onDiGraphUnset() override;
 
     // DynamicDiGraphAlgorithm interface
@@ -78,7 +79,6 @@ private:
 
     void restoreTree(VertexData *rd);
     void cleanup();
-
 };
 
 }

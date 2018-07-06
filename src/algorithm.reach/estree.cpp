@@ -256,6 +256,19 @@ std::string ESTree::getProfilingInfo() const
     return ss.str();
 }
 
+void ESTree::onDiGraphSet()
+{
+    DynamicSSReachAlgorithm::onDiGraphSet();
+    cleanup();
+
+    movesDown = 0U;
+    movesUp = 0U;
+    decUnreachableHead = 0U;
+    decNonTreeArc = 0U;
+    incUnreachableTail = 0U;
+    incNonTreeArc = 0U;
+}
+
 void ESTree::onDiGraphUnset()
 {
     cleanup();
@@ -451,9 +464,6 @@ void ESTree::restoreTree(ESTree::VertexData *rd)
 
 void ESTree::cleanup()
 {
-    //for (auto i = data.cbegin(); i != data.cend(); i++) {
-    //    delete i->second;
-    //}
     for (auto i = data.cbegin(); i != data.cend(); i++) {
         if ((*i)) {
             delete (*i);
@@ -464,13 +474,6 @@ void ESTree::cleanup()
     reachable.resetAll();
 
     initialized = false;
-
-    //movesDown = 0U;
-    //movesUp = 0U;
-    //decUnreachableHead = 0U;
-    //decNonTreeArc = 0U;
-    //incUnreachableTail = 0U;
-    //incNonTreeArc = 0U;
 }
 
 unsigned int process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queue, const FastPropertyMap<ESTree::VertexData *> &data, FastPropertyMap<bool> &reachable) {
