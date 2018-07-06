@@ -24,7 +24,7 @@
 
 #include "property/fastpropertymap.h"
 
-#include <deque>
+#include <boost/circular_buffer.hpp>
 
 namespace Algora {
 
@@ -32,7 +32,7 @@ struct LazyBFSSSReachAlgorithm::CheshireCat {
     bool inititialized;
     DiGraph *graph;
     Vertex *source;
-    std::deque<Vertex*> queue;
+    boost::circular_buffer<Vertex*> queue;
     FastPropertyMap<bool> discovered;
 
     CheshireCat()
@@ -41,6 +41,7 @@ struct LazyBFSSSReachAlgorithm::CheshireCat {
     void searchOn(const Vertex *t) {
         if (!inititialized) {
             queue.clear();
+            queue.set_capacity(graph->getSize());
             queue.push_back(source);
             discovered.resetAll();
             discovered[source] = true;
