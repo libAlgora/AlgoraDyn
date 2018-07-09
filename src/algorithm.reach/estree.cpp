@@ -158,7 +158,10 @@ unsigned int process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queu
 
 ESTree::ESTree()
     : DynamicSSReachAlgorithm(), root(nullptr), initialized(false),
-      movesDown(0U), movesUp(0U)
+      movesDown(0U), movesUp(0U),
+      levelIncrease(0U), levelDecrease(0U),
+      decUnreachableHead(0U), decNonTreeArc(0U),
+      incUnreachableTail(0U), incNonTreeArc(0U)
 {
     data.setDefaultValue(nullptr);
     reachable.setDefaultValue(false);
@@ -246,14 +249,29 @@ void ESTree::run()
 std::string ESTree::getProfilingInfo() const
 {
     std::stringstream ss;
-    ss << "#moves down: " << movesDown << std::endl;
-    ss << "#level increases: " << levelIncrease << std::endl;
-    ss << "#moves up: " << movesUp << std::endl;
+    ss << "#moves down (level increase): " << movesDown << std::endl;
+    ss << "#moves up (level decrease): " << movesUp << std::endl;
+    ss << "sum of level increase: " << levelIncrease << std::endl;
+    ss << "sum of level decrease: " << levelDecrease << std::endl;
     ss << "#unreachable head (dec): " << decUnreachableHead << std::endl;
     ss << "#non-tree arcs (dec): " << decNonTreeArc << std::endl;
     ss << "#unreachable tail (inc): " << incUnreachableTail << std::endl;
     ss << "#non-tree arcs (inc): " << incNonTreeArc << std::endl;
     return ss.str();
+}
+
+DynamicSSReachAlgorithm::Profile ESTree::getProfile() const
+{
+    Profile profile;
+    profile.push_back(std::make_pair(std::string("num_vertices_moved_down"), movesDown));
+    profile.push_back(std::make_pair(std::string("num_vertices_moved_up"), movesUp));
+    profile.push_back(std::make_pair(std::string("sum_level_inc"), levelIncrease));
+    profile.push_back(std::make_pair(std::string("sum_level_dec"), levelDecrease));
+    profile.push_back(std::make_pair(std::string("dec_head_ur"), decUnreachableHead));
+    profile.push_back(std::make_pair(std::string("dec_nontree"), decNonTreeArc));
+    profile.push_back(std::make_pair(std::string("inc_tail_ur"), incUnreachableTail));
+    profile.push_back(std::make_pair(std::string("inc_nontree"), incNonTreeArc));
+    return profile;
 }
 
 void ESTree::onDiGraphSet()
@@ -263,6 +281,8 @@ void ESTree::onDiGraphSet()
 
     movesDown = 0U;
     movesUp = 0U;
+    levelIncrease = 0U;
+    levelDecrease = 0U;
     decUnreachableHead = 0U;
     decNonTreeArc = 0U;
     incUnreachableTail = 0U;
@@ -316,8 +336,12 @@ void ESTree::onArcAdd(Arc *a)
         return;
     } else {
         movesUp++;
+        if (!hd->isReachable()) {
+            levelDecrease += diGraph->getSize() -  (td->level + 1);
+        } else {
+            levelDecrease += hd->level - (td->level + 1);
+        }
         hd->level = td->level + 1;
-        movesUp++;
         reachable[head] = true;
     }
 
@@ -334,9 +358,14 @@ void ESTree::onArcAdd(Arc *a)
         VertexData *ahd = data(ah);
 
         if (!ahd->isReachable() ||  atd->level + 1 < ahd->level) {
+            movesUp++;
+            if (!ahd->isReachable()) {
+                levelDecrease += diGraph->getSize() -  (atd->level + 1);
+            } else {
+                levelDecrease += ahd->level - (atd->level + 1);
+            }
             ahd->level = atd->level + 1;
             ahd->parentIndex = 0;
-            movesUp++;
             reachable[ah] = true;
             verticesToProcess.push_back(ahd);
             PRINT_DEBUG( "(" << at << ", " << ah << ")" << " replaces a tree arc.");

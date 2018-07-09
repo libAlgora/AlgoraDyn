@@ -42,6 +42,7 @@ public:
     virtual std::string getName() const noexcept override { return "ES-Tree Single-Source Reachability Algorithm"; }
     virtual std::string getShortName() const noexcept override { return "EST-DSSReach"; }
     virtual std::string getProfilingInfo() const override;
+    virtual Profile getProfile() const override;
 
 protected:
     virtual void onDiGraphSet() override;
@@ -72,6 +73,7 @@ private:
     unsigned int movesDown;
     unsigned int movesUp;
     unsigned int levelIncrease;
+    unsigned int levelDecrease;
     unsigned int decUnreachableHead;
     unsigned int decNonTreeArc;
     unsigned int incUnreachableTail;

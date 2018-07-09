@@ -32,6 +32,8 @@ namespace Algora {
 class DynamicSSReachAlgorithm : public DynamicDiGraphAlgorithm
 {
 public:
+    typedef std::vector<std::pair<std::string, unsigned int>> Profile;
+
     explicit DynamicSSReachAlgorithm() : DynamicDiGraphAlgorithm(), source(nullptr) { }
     virtual ~DynamicSSReachAlgorithm() { }
 
@@ -39,6 +41,7 @@ public:
     virtual bool query(const Vertex *t) = 0;
 
     virtual void dumpData(std::ostream&) { }
+    virtual Profile getProfile() const { return Profile(); }
 
     // DiGraphAlgorithm interface
 public:
