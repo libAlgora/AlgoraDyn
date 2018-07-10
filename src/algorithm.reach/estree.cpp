@@ -377,7 +377,6 @@ void ESTree::onArcAdd(Arc *a)
     });
     runAlgorithm(bfs, diGraph);
 
-    //restoreTree(hd);
     for (auto vd : verticesToProcess) {
         restoreTree(vd);
     }
@@ -467,7 +466,6 @@ void ESTree::dumpData(std::ostream &os)
         os << "uninitialized" << std::endl;
     }  else {
         for (auto i = data.cbegin(); i != data.cend(); i++) {
-            //os << i->first->toString() << ": " << i-> second << std::endl;
             os << (*i) << std::endl;
         }
     }
