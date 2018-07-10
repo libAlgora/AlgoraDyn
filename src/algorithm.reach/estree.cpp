@@ -554,7 +554,7 @@ unsigned int process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queu
             PRINT_DEBUG("  Advancing parent index to " << vd->parentIndex << ".")
 
             if (vd->parentIndex >= vd->inNeighbors.size()) {
-                if ((vd->level + 1 >= graph->getSize()) || (levelChanged && !inNeighborFound)) {
+                if ((vd->level + 1 >= graph->getSize()) || (levelChanged && (!inNeighborFound || minimumParentLevel == UINT_MAX))) {
                     PRINT_DEBUG("    Vertex " << v << " is unreachable (source: " << (levelChanged ? (inNeighborFound ? "no" : "yes" ) : "?") << ").")
                     vd->setUnreachable();
                     reachable.resetToDefault(v);
@@ -562,9 +562,14 @@ unsigned int process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queu
                     levelChanged = true;
                     levelDiff = n - oldVLevel;
                 } else {
-                    vd->level++;
-                    levelDiff++;
-                    levelChanged = true;
+                    if (levelChanged) {
+                        levelDiff = minimumParentLevel + 1 - oldVLevel;
+                        vd->level = minimumParentLevel + 1;
+                    } else {
+                        vd->level++;
+                        levelDiff++;
+                        levelChanged = true;
+                    }
                     PRINT_DEBUG("  Maximum parent index exceeded, increasing level to " << vd->level << ".")
                     vd->parentIndex = 0;
                 }
