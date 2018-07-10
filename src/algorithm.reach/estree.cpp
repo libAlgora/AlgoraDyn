@@ -117,6 +117,13 @@ struct ESTree::VertexData {
 
         assert(found);
     }
+
+    bool isParent(VertexData *p) {
+        if (parentIndex >= inNeighbors.size()) {
+            return false;
+        }
+        return inNeighbors[parentIndex] == p;
+    }
 };
 
 unsigned int ESTree::VertexData::graphSize = 0U;
@@ -425,6 +432,7 @@ void ESTree::onArcRemove(Arc *a)
     }
 
     VertexData *td = data(tail);
+    bool isParent = hd->isParent(td);
     hd->findAndRemoveInNeighbor(td);
 
     if (!hd->isReachable()) {
@@ -433,8 +441,7 @@ void ESTree::onArcRemove(Arc *a)
         return;
     }
 
-    // todo: we can do more here
-    if (hd->level <= td->level) {
+    if (hd->level <= td->level || !isParent) {
         PRINT_DEBUG("Arc is not a tree arc. Nothing to do.")
         decNonTreeArc++;
         return;
@@ -515,7 +522,10 @@ unsigned int process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queu
     Vertex *v = vd->vertex;
     bool reachV = vd->isReachable();
     bool levelChanged = false;
-    unsigned int oldVLevel = reachV ? vd->level : graph->getSize();
+    size_t n = graph->getSize();
+    unsigned int oldVLevel = vd->level;
+    unsigned int levelDiff = 0U;
+
 
     // todo... correct?
     if (vd->inNeighbors.empty()) {
@@ -525,6 +535,7 @@ unsigned int process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queu
             vd->setUnreachable();
             reachable[v] = false;
             levelChanged = true;
+            levelDiff = n - oldVLevel;
             PRINT_DEBUG("Level changed.");
         }
     } else {
@@ -549,8 +560,10 @@ unsigned int process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queu
                     reachable.resetToDefault(v);
                     reachV = false;
                     levelChanged = true;
+                    levelDiff = n - oldVLevel;
                 } else {
                     vd->level++;
+                    levelDiff++;
                     levelChanged = true;
                     PRINT_DEBUG("  Maximum parent index exceeded, increasing level to " << vd->level << ".")
                     vd->parentIndex = 0;
@@ -577,7 +590,7 @@ unsigned int process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queu
         });
     }
 
-    return vd->level - oldVLevel;
+    return levelDiff;
 }
 
 }
