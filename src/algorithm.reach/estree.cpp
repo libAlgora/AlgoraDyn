@@ -310,6 +310,7 @@ void ESTree::onArcAdd(Arc *a)
 
     Vertex *tail = a->getTail();
     Vertex *head = a->getHead();
+
     if (tail == head) {
         PRINT_DEBUG("Arc is a loop.")
         return;
@@ -514,7 +515,7 @@ unsigned int process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queu
     Vertex *v = vd->vertex;
     bool reachV = vd->isReachable();
     bool levelChanged = false;
-    unsigned int oldVLevel = vd->level;
+    unsigned int oldVLevel = reachV ? vd->level : graph->getSize();
 
     // todo... correct?
     if (vd->inNeighbors.empty()) {
