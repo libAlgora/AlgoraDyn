@@ -521,7 +521,10 @@ unsigned int process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queu
     Vertex *v = vd->vertex;
     bool reachV = vd->isReachable();
     bool levelChanged = false;
-    unsigned int oldVLevel = reachV ? vd->level : graph->getSize();
+    size_t n = graph->getSize();
+    unsigned int oldVLevel = vd->level;
+    unsigned int levelDiff = 0U;
+
 
     // todo... correct?
     if (vd->inNeighbors.empty()) {
@@ -531,6 +534,7 @@ unsigned int process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queu
             vd->setUnreachable();
             reachable[v] = false;
             levelChanged = true;
+            levelDiff = n - oldVLevel;
             PRINT_DEBUG("Level changed.");
         }
     } else {
@@ -555,8 +559,10 @@ unsigned int process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queu
                     reachable.resetToDefault(v);
                     reachV = false;
                     levelChanged = true;
+                    levelDiff = n - oldVLevel;
                 } else {
                     vd->level++;
+                    levelDiff++;
                     levelChanged = true;
                     PRINT_DEBUG("  Maximum parent index exceeded, increasing level to " << vd->level << ".")
                     vd->parentIndex = 0;
@@ -583,8 +589,7 @@ unsigned int process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queu
         });
     }
 
-    unsigned int newVLevel = reachV ? vd->level : graph->getSize();
-    return newVLevel - oldVLevel;
+    return levelDiff;
 }
 
 }
