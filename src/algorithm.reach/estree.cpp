@@ -117,6 +117,13 @@ struct ESTree::VertexData {
 
         assert(found);
     }
+
+    bool isParent(VertexData *p) {
+        if (parentIndex >= inNeighbors.size()) {
+            return false;
+        }
+        return inNeighbors[parentIndex] == p;
+    }
 };
 
 unsigned int ESTree::VertexData::graphSize = 0U;
@@ -424,6 +431,7 @@ void ESTree::onArcRemove(Arc *a)
     }
 
     VertexData *td = data(tail);
+    bool isParent = hd->isParent(td);
     hd->findAndRemoveInNeighbor(td);
 
     if (!hd->isReachable()) {
@@ -432,8 +440,7 @@ void ESTree::onArcRemove(Arc *a)
         return;
     }
 
-    // todo: we can do more here
-    if (hd->level <= td->level) {
+    if (hd->level <= td->level || !isParent) {
         PRINT_DEBUG("Arc is not a tree arc. Nothing to do.")
         decNonTreeArc++;
         return;
