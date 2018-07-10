@@ -521,7 +521,7 @@ unsigned int process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queu
     Vertex *v = vd->vertex;
     bool reachV = vd->isReachable();
     bool levelChanged = false;
-    unsigned int oldVLevel = vd->level;
+    unsigned int oldVLevel = reachV ? vd->level : graph->getSize();
 
     // todo... correct?
     if (vd->inNeighbors.empty()) {
@@ -583,7 +583,8 @@ unsigned int process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queu
         });
     }
 
-    return vd->level - oldVLevel;
+    unsigned int newVLevel = reachV ? vd->level : graph->getSize();
+    return newVLevel - oldVLevel;
 }
 
 }
