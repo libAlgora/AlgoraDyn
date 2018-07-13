@@ -74,6 +74,8 @@ private:
     unsigned int movesUp;
     unsigned long long int levelIncrease;
     unsigned long long int levelDecrease;
+    unsigned int maxLevelIncrease;
+    unsigned int maxLevelDecrease;
     unsigned int decUnreachableHead;
     unsigned int decNonTreeArc;
     unsigned int incUnreachableTail;

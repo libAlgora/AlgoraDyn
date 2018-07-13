@@ -167,6 +167,7 @@ ESTree::ESTree()
     : DynamicSSReachAlgorithm(), root(nullptr), initialized(false),
       movesDown(0U), movesUp(0U),
       levelIncrease(0U), levelDecrease(0U),
+      maxLevelIncrease(0U), maxLevelDecrease(0U),
       decUnreachableHead(0U), decNonTreeArc(0U),
       incUnreachableTail(0U), incNonTreeArc(0U)
 {
@@ -258,8 +259,10 @@ std::string ESTree::getProfilingInfo() const
     std::stringstream ss;
     ss << "#moves down (level increase): " << movesDown << std::endl;
     ss << "#moves up (level decrease): " << movesUp << std::endl;
-    ss << "sum of level increase: " << levelIncrease << std::endl;
-    ss << "sum of level decrease: " << levelDecrease << std::endl;
+    ss << "total level increase: " << levelIncrease << std::endl;
+    ss << "total level decrease: " << levelDecrease << std::endl;
+    ss << "maximum level increase: " << maxLevelIncrease << std::endl;
+    ss << "maximum level decrease: " << maxLevelDecrease << std::endl;
     ss << "#unreachable head (dec): " << decUnreachableHead << std::endl;
     ss << "#non-tree arcs (dec): " << decNonTreeArc << std::endl;
     ss << "#unreachable tail (inc): " << incUnreachableTail << std::endl;
@@ -270,13 +273,15 @@ std::string ESTree::getProfilingInfo() const
 DynamicSSReachAlgorithm::Profile ESTree::getProfile() const
 {
     Profile profile;
-    profile.push_back(std::make_pair(std::string("num_vertices_moved_down"), movesDown));
-    profile.push_back(std::make_pair(std::string("num_vertices_moved_up"), movesUp));
-    profile.push_back(std::make_pair(std::string("sum_level_inc"), levelIncrease));
-    profile.push_back(std::make_pair(std::string("sum_level_dec"), levelDecrease));
-    profile.push_back(std::make_pair(std::string("dec_head_ur"), decUnreachableHead));
+    profile.push_back(std::make_pair(std::string("vertices_moved_down"), movesDown));
+    profile.push_back(std::make_pair(std::string("vertices_moved_up"), movesUp));
+    profile.push_back(std::make_pair(std::string("total_level_increase"), levelIncrease));
+    profile.push_back(std::make_pair(std::string("total_level_decrease"), levelDecrease));
+    profile.push_back(std::make_pair(std::string("max_level_increase"), maxLevelIncrease));
+    profile.push_back(std::make_pair(std::string("max_level_decrease"), maxLevelDecrease));
+    profile.push_back(std::make_pair(std::string("dec_head_unreachable"), decUnreachableHead));
     profile.push_back(std::make_pair(std::string("dec_nontree"), decNonTreeArc));
-    profile.push_back(std::make_pair(std::string("inc_tail_ur"), incUnreachableTail));
+    profile.push_back(std::make_pair(std::string("inc_tail_unreachable"), incUnreachableTail));
     profile.push_back(std::make_pair(std::string("inc_nontree"), incNonTreeArc));
     return profile;
 }
@@ -367,10 +372,15 @@ void ESTree::onArcAdd(Arc *a)
 
         if (!ahd->isReachable() ||  atd->level + 1 < ahd->level) {
             movesUp++;
+            unsigned int dec;
             if (!ahd->isReachable()) {
-                levelDecrease += diGraph->getSize() -  (atd->level + 1);
+                dec = diGraph->getSize() - (atd->level + 1);
             } else {
-                levelDecrease += ahd->level - (atd->level + 1);
+                dec = ahd->level - (atd->level + 1);
+            }
+            levelDecrease += dec;
+            if (dec > maxLevelDecrease) {
+                maxLevelDecrease = dec;
             }
             ahd->level = atd->level + 1;
             ahd->parentIndex = 0;
@@ -493,6 +503,9 @@ void ESTree::restoreTree(ESTree::VertexData *rd)
         if (levels > 0) {
             movesDown++;
             levelIncrease += levels;
+            if (levels > maxLevelIncrease) {
+                maxLevelIncrease = levels;
+            }
         }
     }
 }
