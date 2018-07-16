@@ -6,11 +6,17 @@ HEADERS += \
     $$PWD/estree.h \
     $$PWD/cachingbfsssreachalgorithm.h \
     $$PWD/lazybfsssreachalgorithm.h \
-    $$PWD/staticbfsssreachalgorithm.h
+    $$PWD/staticbfsssreachalgorithm.h \
+    $$PWD/cachingdfsssreachalgorithm.h \
+    $$PWD/lazydfsssreachalgorithm.h \
+    $$PWD/staticdfsssreachalgorithm.h
 
 SOURCES += \
     $$PWD/simpleincssreachalgorithm.cpp \
     $$PWD/estree.cpp \
     $$PWD/cachingbfsssreachalgorithm.cpp \
     $$PWD/lazybfsssreachalgorithm.cpp \
-    $$PWD/staticbfsssreachalgorithm.cpp
+    $$PWD/staticbfsssreachalgorithm.cpp \
+    $$PWD/cachingdfsssreachalgorithm.cpp \
+    $$PWD/lazydfsssreachalgorithm.cpp \
+    $$PWD/staticdfsssreachalgorithm.cpp
