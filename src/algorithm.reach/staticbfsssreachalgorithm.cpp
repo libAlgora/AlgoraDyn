@@ -23,7 +23,7 @@
 #include "staticbfsssreachalgorithm.h"
 #include "property/fastpropertymap.h"
 
-#include "algorithm.basic/breadthfirstsearch.h"
+#include "algorithm.basic.traversal/breadthfirstsearch.h"
 
 namespace Algora {
 

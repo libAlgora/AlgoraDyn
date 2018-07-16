@@ -24,7 +24,7 @@
 #define CACHINGBFSSSREACHALGORITHM_H
 
 #include "algorithm.reach/dynamicssreachalgorithm.h"
-#include "algorithm.basic/breadthfirstsearch.h"
+#include "algorithm.basic.traversal/breadthfirstsearch.h"
 #include "property/fastpropertymap.h"
 
 namespace Algora {

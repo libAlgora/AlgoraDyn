@@ -22,7 +22,7 @@
 
 #include "simpleincssreachalgorithm.h"
 
-#include "algorithm.basic/breadthfirstsearch.h"
+#include "algorithm.basic.traversal/breadthfirstsearch.h"
 #include "algorithm/digraphalgorithmexception.h"
 #include "property/fastpropertymap.h"
 #include "graph/vertex.h"
