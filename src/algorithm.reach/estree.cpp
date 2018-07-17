@@ -161,7 +161,9 @@ void printQueue(PriorityQueue q) {
 }
 #endif
 
-unsigned int process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queue, const FastPropertyMap<ESTree::VertexData*> &data, FastPropertyMap<bool> &reachable,
+unsigned int process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queue,
+                     const FastPropertyMap<ESTree::VertexData*> &data,
+                     FastPropertyMap<bool> &reachable,
                      FastPropertyMap<bool> &inQueue);
 
 ESTree::ESTree()
@@ -343,6 +345,7 @@ void ESTree::onArcAdd(Arc *a)
         return;
     }
 
+    auto n = diGraph->getSize();
     //update...
     if (hd->level <= td->level + 1) {
         // arc does not change anything
@@ -351,9 +354,9 @@ void ESTree::onArcAdd(Arc *a)
     } else {
         movesUp++;
         if (!hd->isReachable()) {
-            levelDecrease += diGraph->getSize() -  (td->level + 1);
+            levelDecrease += (n - (td->level + 1));
         } else {
-            levelDecrease += hd->level - (td->level + 1);
+            levelDecrease += (hd->level - (td->level + 1));
         }
         hd->level = td->level + 1;
         reachable[head] = true;
@@ -361,6 +364,7 @@ void ESTree::onArcAdd(Arc *a)
 
     std::vector<VertexData*> verticesToProcess;
     verticesToProcess.push_back(hd);
+
 
     BreadthFirstSearch<FastPropertyMap> bfs(false);
     bfs.setStartVertex(head);
@@ -377,16 +381,17 @@ void ESTree::onArcAdd(Arc *a)
         if (!ahd->isReachable() ||  atd->level + 1 < ahd->level) {
             movesUp++;
             unsigned int dec;
+            auto newLevel = atd->level + 1;
             if (!ahd->isReachable()) {
-                dec = diGraph->getSize() - (atd->level + 1);
+                dec = n - newLevel;
             } else {
-                dec = ahd->level - (atd->level + 1);
+                dec = ahd->level - newLevel;
             }
             levelDecrease += dec;
             if (dec > maxLevelDecrease) {
                 maxLevelDecrease = dec;
             }
-            ahd->level = atd->level + 1;
+            ahd->level = newLevel;
             ahd->parentIndex = 0;
             reachable[ah] = true;
             verticesToProcess.push_back(ahd);
@@ -542,10 +547,16 @@ unsigned int process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queu
     }
 
     PRINT_DEBUG("Processing vertex " << vd << ".");
+
+    if (!vd->isReachable()) {
+        PRINT_DEBUG("vertex is already unreachable.");
+        return 0U;
+    }
+
     Vertex *v = vd->vertex;
-    bool reachV = vd->isReachable();
+    bool reachV = true;
     bool levelChanged = false;
-    size_t n = graph->getSize();
+    auto n = graph->getSize();
     unsigned int oldVLevel = vd->level;
     unsigned int levelDiff = 0U;
 
@@ -571,7 +582,6 @@ unsigned int process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queu
 
         PRINT_DEBUG("Parent is " << parent);
 
-
         while (reachV && (parent == nullptr || vd->level <= parent->level)) {
             vd->parentIndex++;
             PRINT_DEBUG("  Advancing parent index to " << vd->parentIndex << ".")
@@ -586,6 +596,7 @@ unsigned int process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queu
                     levelDiff = n - oldVLevel;
                 } else {
                     if (levelChanged) {
+                        assert(oldVLevel < minimumParentLevel + 1);
                         levelDiff = minimumParentLevel + 1 - oldVLevel;
                         vd->level = minimumParentLevel + 1;
                     } else {
