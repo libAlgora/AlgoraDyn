@@ -72,7 +72,6 @@ void CachingDFSSSReachAlgorithm::onDiGraphSet()
 
 void CachingDFSSSReachAlgorithm::onDiGraphUnset()
 {
-    dfs.setGraph(diGraph);
     dfs.unsetGraph();
     initialized = false;
     DynamicSSReachAlgorithm::onDiGraphUnset();

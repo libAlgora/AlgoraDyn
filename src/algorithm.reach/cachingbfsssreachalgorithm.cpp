@@ -73,7 +73,6 @@ void CachingBFSSSReachAlgorithm::onDiGraphSet()
 
 void CachingBFSSSReachAlgorithm::onDiGraphUnset()
 {
-    bfs.setGraph(diGraph);
     bfs.unsetGraph();
     initialized = false;
     DynamicSSReachAlgorithm::onDiGraphUnset();
