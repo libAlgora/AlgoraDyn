@@ -54,7 +54,11 @@ struct SimpleESTree::VertexData {
     unsigned int level;
 
     VertexData(Vertex *v, VertexData *p = nullptr, unsigned int l = UINT_MAX)
-        : vertex(v), parent(p), level(l) { }
+        : vertex(v), parent(p), level(l) {
+        if (p != nullptr) {
+            level = p->level + 1;
+        }
+    }
 
     void setUnreachable() {
         parent = nullptr;
@@ -83,8 +87,14 @@ std::ostream& operator<<(std::ostream& os, const SimpleESTree::VertexData *vd) {
     }
 
     os << vd->vertex << ": ";
-    os << "N-: [ ";
-    os << "] ; parent: " << vd->parent << " ; level: " << vd->level;
+    //os << "parent: [" << vd->parent << "] ; level: " << vd->level;
+    os << "parent: [";
+    if (vd->parent) {
+      os << vd->parent->vertex << ", level: " << vd->parent->level;
+    } else {
+        os << "null";
+    }
+    os << "] ; level: " << vd->level;
     return os;
 }
 
@@ -263,6 +273,7 @@ void SimpleESTree::onArcAdd(Arc *a)
         }
         hd->level = td->level + 1;
         reachable[head] = true;
+        hd->parent = td;
     }
 
     //std::vector<VertexData*> verticesToProcess;
@@ -272,6 +283,10 @@ void SimpleESTree::onArcAdd(Arc *a)
     bfs.setStartVertex(head);
     bfs.onArcDiscover([&](const Arc *a) {
         PRINT_DEBUG( "Discovering arc (" << a->getTail() << ", " << a->getHead() << ")...");
+        if (a->isLoop()) {
+            PRINT_DEBUG( "Loop ignored.");
+            return false;
+        }
         Vertex *at = a->getTail();
         Vertex *ah = a->getHead();
         VertexData *atd = data(at);
@@ -440,36 +455,58 @@ unsigned int process(DiGraph *graph, SimpleESTree::VertexData *vd, PriorityQueue
     Vertex *v = vd->vertex;
 
     auto oldParent = vd->parent;
+
+    if (oldParent != nullptr && oldParent->level + 1 == vd->level) {
+        PRINT_DEBUG("Parent still valid. No further processing required.");
+        return 0U;
+    }
+
     auto parent = oldParent;
     unsigned int oldVLevel = vd->level;
     unsigned int minParentLevel = parent == nullptr ? SimpleESTree::VertexData::UNREACHABLE : parent->level;
+
+    PRINT_DEBUG("Min parent level is " << minParentLevel << ".");
+
     graph->mapIncomingArcsUntil(v, [&](Arc *a) {
+        if (a->isLoop()) {
+            PRINT_DEBUG( "Loop ignored.");
+            return;
+        }
         auto pd = data[a->getTail()];
         auto pLevel = pd->level;
         if (pLevel < minParentLevel) {
             minParentLevel = pLevel;
             parent = pd;
+            PRINT_DEBUG("Update: Min parent level now is " << minParentLevel << ", parent " << parent);
             assert (minParentLevel + 1 >= oldVLevel);
         }
     }, [&oldVLevel, &minParentLevel](const Arc *) { return minParentLevel + 1 == oldVLevel; });
 
     unsigned int levelDiff = 0U;
-    if (parent != oldParent) {
+
+    if ((parent == nullptr || minParentLevel >= graph->getSize())
+            && vd->isReachable()) {
+        vd->setUnreachable();
+        reachable.resetToDefault(v);
+        levelDiff = graph->getSize() - oldVLevel;
+        PRINT_DEBUG("No parent or parent is unreachable. Vertex is unreachable. Level diff " << levelDiff);
+    } else if (parent != oldParent || oldVLevel <= minParentLevel) {
         assert(parent->isReachable());
         assert(minParentLevel != SimpleESTree::VertexData::UNREACHABLE);
         vd->level = minParentLevel + 1;
         vd->parent = parent;
         assert (vd->level >= oldVLevel);
         levelDiff = vd->level - oldVLevel;
-    } else if ((parent == nullptr || !parent->isReachable())
-               && vd->isReachable()) {
-        vd->setUnreachable();
-        reachable.resetToDefault(v);
-        levelDiff = graph->getSize() - oldVLevel;
+        PRINT_DEBUG("Parent has changed, new parent is " << parent);
     }
 
     if (levelDiff > 0U) {
+        PRINT_DEBUG("Updating children...");
         graph->mapOutgoingArcs(vd->vertex, [&](Arc *a) {
+            if (!a->isValid()) {
+                PRINT_DEBUG("Invalid arc ignored.");
+                return;
+            }
             Vertex *head = a->getHead();
             auto *hd = data(head);
             if (hd->isParent(vd)) {
