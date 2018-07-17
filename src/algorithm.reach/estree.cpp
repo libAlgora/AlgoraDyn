@@ -161,7 +161,8 @@ void printQueue(PriorityQueue q) {
 }
 #endif
 
-unsigned int process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queue, const FastPropertyMap<ESTree::VertexData*> &data, FastPropertyMap<bool> &reachable);
+unsigned int process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queue, const FastPropertyMap<ESTree::VertexData*> &data, FastPropertyMap<bool> &reachable,
+                     FastPropertyMap<bool> &inQueue);
 
 ESTree::ESTree()
     : DynamicSSReachAlgorithm(), root(nullptr), initialized(false),
@@ -209,11 +210,11 @@ void ESTree::run()
         PRINT_DEBUG( "(" << t << ", " << h << ")" << " is a tree arc.")
    });
    bfs.onNonTreeArcDiscover([&](Arc *a) {
-        Vertex *t = a->getTail();
-        Vertex *h = a->getHead();
-        if (t == h) {
+        if (a->isLoop()) {
             return;
         }
+        Vertex *t = a->getTail();
+        Vertex *h = a->getHead();
         VertexData *td = data(t);
         VertexData *hd = data(h);
         hd->inNeighbors.push_back(td);
@@ -222,11 +223,11 @@ void ESTree::run()
    runAlgorithm(bfs, diGraph);
 
    diGraph->mapArcs([&](Arc *a) {
-       Vertex *t = a->getTail();
-       Vertex *h = a->getHead();
-       if (t == h) {
+       if (a->isLoop()) {
            return;
        }
+       Vertex *t = a->getTail();
+       Vertex *h = a->getHead();
        VertexData *td = data(t);
        VertexData *hd = data(h);
        if (td == nullptr) {
@@ -365,6 +366,9 @@ void ESTree::onArcAdd(Arc *a)
     bfs.setStartVertex(head);
     bfs.onArcDiscover([&](const Arc *a) {
         PRINT_DEBUG( "Discovering arc (" << a->getTail() << ", " << a->getHead() << ")...");
+        if (a->isLoop()) {
+            return false;
+        }
         Vertex *at = a->getTail();
         Vertex *ah = a->getHead();
         VertexData *atd = data(at);
@@ -492,19 +496,24 @@ void ESTree::dumpData(std::ostream &os)
 void ESTree::restoreTree(ESTree::VertexData *rd)
 {
     PriorityQueue queue;
+    FastPropertyMap<bool> inQueue(false);
     queue.push(rd);
+    inQueue[rd->vertex] = true;
     PRINT_DEBUG("Initialized queue with " << rd << ".")
 
     while (!queue.empty()) {
         IF_DEBUG(printQueue(queue))
         auto vd = queue.bot();
         queue.popBot();
-        unsigned int levels = process(diGraph, vd, queue, data, reachable);
+        inQueue[vd->vertex] = false;
+        unsigned int levels = process(diGraph, vd, queue, data, reachable, inQueue);
         if (levels > 0) {
             movesDown++;
             levelIncrease += levels;
+            PRINT_DEBUG("total level increase " << levelIncrease);
             if (levels > maxLevelIncrease) {
                 maxLevelIncrease = levels;
+                PRINT_DEBUG("new max level increase " << maxLevelIncrease);
             }
         }
     }
@@ -524,7 +533,8 @@ void ESTree::cleanup()
     initialized = false;
 }
 
-unsigned int process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queue, const FastPropertyMap<ESTree::VertexData *> &data, FastPropertyMap<bool> &reachable) {
+unsigned int process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queue, const FastPropertyMap<ESTree::VertexData *> &data, FastPropertyMap<bool> &reachable,
+                     FastPropertyMap<bool> &inQueue) {
 
     if (vd->level == 0UL) {
         PRINT_DEBUG("No need to process source vertex " << vd << ".");
@@ -601,12 +611,26 @@ unsigned int process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queu
     }
     if (levelChanged) {
         graph->mapOutgoingArcs(vd->vertex, [&](Arc *a) {
+            if (a->isLoop()) {
+              PRINT_DEBUG("    Ignoring loop.");
+              return;
+            }
             Vertex *head = a->getHead();
+            if (inQueue[head]) {
+              PRINT_DEBUG("    Out-neighbor " << head << " is already in queue.");
+              return;
+            }
             auto *hd = data(head);
-            PRINT_DEBUG("    Adding child " << hd << " to queue...")
-            queue.push(hd);
+            if (hd->isParent(vd)) {
+              PRINT_DEBUG("    Adding child " << hd << " to queue...")
+              queue.push(hd);
+              inQueue[head] = true;
+            } else {
+              PRINT_DEBUG("    NOT adding " << hd << " to queue: not a child of " << vd)
+            }
         });
     }
+    PRINT_DEBUG("Returning level diff " << levelDiff  << " for " << v  << ".")
 
     return levelDiff;
 }
