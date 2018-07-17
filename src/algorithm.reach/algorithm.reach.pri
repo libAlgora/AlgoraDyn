@@ -4,6 +4,7 @@ HEADERS += \
     $$PWD/dynamicssreachalgorithm.h \
     $$PWD/simpleincssreachalgorithm.h \
     $$PWD/estree.h \
+    $$PWD/simpleestree.h \
     $$PWD/cachingbfsssreachalgorithm.h \
     $$PWD/lazybfsssreachalgorithm.h \
     $$PWD/staticbfsssreachalgorithm.h \
@@ -14,6 +15,7 @@ HEADERS += \
 SOURCES += \
     $$PWD/simpleincssreachalgorithm.cpp \
     $$PWD/estree.cpp \
+    $$PWD/simpleestree.cpp \
     $$PWD/cachingbfsssreachalgorithm.cpp \
     $$PWD/lazybfsssreachalgorithm.cpp \
     $$PWD/staticbfsssreachalgorithm.cpp \
