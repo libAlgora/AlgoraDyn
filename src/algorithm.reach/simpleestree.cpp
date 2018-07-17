@@ -34,6 +34,7 @@
 
 //#define DEBUG_SIMPLEESTREE
 
+#include <iostream>
 #ifdef DEBUG_SIMPLEESTREE
 #include <iostream>
 #define PRINT_DEBUG(msg) std::cout << msg << std::endl;
@@ -76,6 +77,10 @@ struct SimpleESTree::VertexData {
     bool isParent(VertexData *p) {
         return p == parent;
     }
+
+    bool hasValidParent() const {
+        return parent != nullptr && parent->level + 1 == level;
+    }
 };
 
 unsigned int SimpleESTree::VertexData::graphSize = 0U;
@@ -113,7 +118,8 @@ void printQueue(PriorityQueue q) {
 #endif
 
 unsigned int process(DiGraph *graph, SimpleESTree::VertexData *vd, PriorityQueue &queue,
-                     FastPropertyMap<SimpleESTree::VertexData*> &data, FastPropertyMap<bool> &reachable);
+                     FastPropertyMap<SimpleESTree::VertexData*> &data, FastPropertyMap<bool> &reachable,
+                     FastPropertyMap<bool> &inQueue);
 
 SimpleESTree::SimpleESTree()
     : DynamicSSReachAlgorithm(), root(nullptr), initialized(false),
@@ -276,8 +282,7 @@ void SimpleESTree::onArcAdd(Arc *a)
         hd->parent = td;
     }
 
-    //std::vector<VertexData*> verticesToProcess;
-    //verticesToProcess.push_back(hd);
+    auto n = diGraph->getSize();
 
     BreadthFirstSearch<FastPropertyMap> bfs(false);
     bfs.setStartVertex(head);
@@ -294,11 +299,12 @@ void SimpleESTree::onArcAdd(Arc *a)
 
         if (!ahd->isReachable() ||  atd->level + 1 < ahd->level) {
             movesUp++;
+            auto newLevel = atd->level + 1;
             unsigned int dec;
             if (!ahd->isReachable()) {
-                dec = diGraph->getSize() - (atd->level + 1);
+                dec = n - newLevel;
             } else {
-                dec = ahd->level - (atd->level + 1);
+                dec = ahd->level - newLevel;
             }
             levelDecrease += dec;
             if (dec > maxLevelDecrease) {
@@ -307,7 +313,6 @@ void SimpleESTree::onArcAdd(Arc *a)
             ahd->level = atd->level + 1;
             ahd->parent = atd;
             reachable[ah] = true;
-    //        verticesToProcess.push_back(ahd);
             PRINT_DEBUG( "(" << at << ", " << ah << ")" << " replaces a tree arc.");
             return true;
         } else {
@@ -316,10 +321,6 @@ void SimpleESTree::onArcAdd(Arc *a)
         return false;
     });
     runAlgorithm(bfs, diGraph);
-
-    //for (auto vd : verticesToProcess) {
-    //    restoreTree(vd);
-    //}
 }
 
 void SimpleESTree::onVertexRemove(Vertex *v)
@@ -344,14 +345,15 @@ void SimpleESTree::onArcRemove(Arc *a)
         return;
     }
 
+    if (a->isLoop()) {
+        PRINT_DEBUG("Arc is a loop.")
+        return;
+    }
+
     Vertex *tail= a->getTail();
     Vertex *head = a->getHead();
 
     PRINT_DEBUG("An arc is about to be removed: (" << tail << ", " << head << ")");
-    if (tail == head) {
-        PRINT_DEBUG("Arc is a loop.")
-        return;
-    }
 
     PRINT_DEBUG("Stored data of tail: " << data(tail));
     PRINT_DEBUG("Stored data of head: " << data(head));
@@ -411,14 +413,17 @@ void SimpleESTree::dumpData(std::ostream &os)
 void SimpleESTree::restoreTree(SimpleESTree::VertexData *rd)
 {
     PriorityQueue queue;
+    FastPropertyMap<bool> inQueue(false);
     queue.push(rd);
+    inQueue[rd->vertex] = true;
     PRINT_DEBUG("Initialized queue with " << rd << ".")
 
     while (!queue.empty()) {
         IF_DEBUG(printQueue(queue))
         auto vd = queue.bot();
         queue.popBot();
-        unsigned int levels = process(diGraph, vd, queue, data, reachable);
+        inQueue.resetToDefault(vd->vertex);
+        unsigned int levels = process(diGraph, vd, queue, data, reachable, inQueue);
         if (levels > 0) {
             movesDown++;
             levelIncrease += levels;
@@ -444,7 +449,8 @@ void SimpleESTree::cleanup()
 }
 
 unsigned int process(DiGraph *graph, SimpleESTree::VertexData *vd, PriorityQueue &queue,
-                     FastPropertyMap<SimpleESTree::VertexData *> &data, FastPropertyMap<bool> &reachable) {
+                     FastPropertyMap<SimpleESTree::VertexData *> &data, FastPropertyMap<bool> &reachable,
+                     FastPropertyMap<bool> &inQueue) {
 
     if (vd->level == 0UL) {
         PRINT_DEBUG("No need to process source vertex " << vd << ".");
@@ -456,8 +462,11 @@ unsigned int process(DiGraph *graph, SimpleESTree::VertexData *vd, PriorityQueue
 
     auto oldParent = vd->parent;
 
-    if (oldParent != nullptr && oldParent->level + 1 == vd->level) {
+    if (vd->hasValidParent()) {
         PRINT_DEBUG("Parent still valid. No further processing required.");
+        return 0U;
+    } else if (!vd->isReachable()) {
+        PRINT_DEBUG("Vertex is already unreachable.");
         return 0U;
     }
 
@@ -483,12 +492,13 @@ unsigned int process(DiGraph *graph, SimpleESTree::VertexData *vd, PriorityQueue
     }, [&oldVLevel, &minParentLevel](const Arc *) { return minParentLevel + 1 == oldVLevel; });
 
     unsigned int levelDiff = 0U;
+    auto n = graph->getSize();
 
-    if ((parent == nullptr || minParentLevel >= graph->getSize())
+    if ((parent == nullptr || minParentLevel >= n - 1)
             && vd->isReachable()) {
         vd->setUnreachable();
         reachable.resetToDefault(v);
-        levelDiff = graph->getSize() - oldVLevel;
+        levelDiff = n - oldVLevel;
         PRINT_DEBUG("No parent or parent is unreachable. Vertex is unreachable. Level diff " << levelDiff);
     } else if (parent != oldParent || oldVLevel <= minParentLevel) {
         assert(parent->isReachable());
@@ -503,11 +513,14 @@ unsigned int process(DiGraph *graph, SimpleESTree::VertexData *vd, PriorityQueue
     if (levelDiff > 0U) {
         PRINT_DEBUG("Updating children...");
         graph->mapOutgoingArcs(vd->vertex, [&](Arc *a) {
-            if (!a->isValid()) {
-                PRINT_DEBUG("Invalid arc ignored.");
+            if (a->isLoop()) {
                 return;
             }
             Vertex *head = a->getHead();
+            if (inQueue[head]) {
+                PRINT_DEBUG("    Out-neighbor " << head << " already in queue.")
+                return;
+            }
             auto *hd = data(head);
             if (hd->isParent(vd)) {
                 PRINT_DEBUG("    Adding child " << hd << " to queue...")
