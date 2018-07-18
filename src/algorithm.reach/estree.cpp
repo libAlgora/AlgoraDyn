@@ -119,10 +119,25 @@ struct ESTree::VertexData {
     }
 
     bool isParent(VertexData *p) {
-        if (parentIndex >= inNeighbors.size()) {
+        if (parentIndex >= inNeighbors.size() || !isReachable()) {
             return false;
         }
         return inNeighbors[parentIndex] == p;
+    }
+
+    VertexData *getParentData() const {
+        if (parentIndex >= inNeighbors.size() || !isReachable()) {
+            return nullptr;
+        }
+        return inNeighbors[parentIndex];
+    }
+
+    Vertex *getParent() const {
+        auto p = getParentData();
+        if (p == nullptr) {
+            return nullptr;
+        }
+        return p->vertex;
     }
 };
 
@@ -212,7 +227,7 @@ void ESTree::run()
         PRINT_DEBUG( "(" << t << ", " << h << ")" << " is a tree arc.")
    });
    bfs.onNonTreeArcDiscover([&](Arc *a) {
-        if (a->isLoop()) {
+        if (a->isLoop() || a->getHead() == source) {
             return;
         }
         Vertex *t = a->getTail();
@@ -225,13 +240,14 @@ void ESTree::run()
    runAlgorithm(bfs, diGraph);
 
    diGraph->mapArcs([&](Arc *a) {
-       if (a->isLoop()) {
+       if (a->isLoop() || a->getHead() == source) {
            return;
        }
        Vertex *t = a->getTail();
        Vertex *h = a->getHead();
        VertexData *td = data(t);
        VertexData *hd = data(h);
+
        if (td == nullptr) {
            td = new VertexData(t);
            data[t] = td;
@@ -255,6 +271,10 @@ void ESTree::run()
    VertexData::graphSize = diGraph->getSize();
    initialized = true;
     PRINT_DEBUG("Initializing completed.")
+
+    std::cerr.flush();
+    dumpTree(std::cerr);
+    std::cerr.flush();
 }
 
 std::string ESTree::getProfilingInfo() const
@@ -322,14 +342,21 @@ void ESTree::onArcAdd(Arc *a)
         return;
     }
     PRINT_DEBUG("An arc has been added: (" << a->getTail() << ", " << a->getHead() << ")")
+    std::cerr << "An arc has been added: (" << a->getTail() << ", " << a->getHead() << ")" << std::endl;
 
     Vertex *tail = a->getTail();
     Vertex *head = a->getHead();
 
-    if (tail == head) {
+    if (a->isLoop()) {
         PRINT_DEBUG("Arc is a loop.")
         return;
     }
+
+    if (head == source) {
+        PRINT_DEBUG("Head is source.")
+        return;
+    }
+
     VertexData *td = data(tail);
     VertexData *hd = data(head);
 
@@ -380,8 +407,8 @@ void ESTree::onArcAdd(Arc *a)
 
         if (!ahd->isReachable() ||  atd->level + 1 < ahd->level) {
             movesUp++;
-            unsigned int dec;
             auto newLevel = atd->level + 1;
+            unsigned int dec;
             if (!ahd->isReachable()) {
                 dec = n - newLevel;
             } else {
@@ -404,9 +431,15 @@ void ESTree::onArcAdd(Arc *a)
     });
     runAlgorithm(bfs, diGraph);
 
+    auto oldLevelInc = levelIncrease;
     for (auto vd : verticesToProcess) {
         restoreTree(vd);
     }
+    assert(oldLevelInc == levelIncrease);
+
+    std::cerr.flush();
+    dumpTree(std::cerr);
+    std::cerr.flush();
 }
 
 void ESTree::onVertexRemove(Vertex *v)
@@ -431,14 +464,21 @@ void ESTree::onArcRemove(Arc *a)
         return;
     }
 
-    Vertex *tail= a->getTail();
-    Vertex *head = a->getHead();
-
-    PRINT_DEBUG("An arc is about to be removed: (" << tail << ", " << head << ")");
-    if (tail == head) {
+    if (a->isLoop()) {
         PRINT_DEBUG("Arc is a loop.")
         return;
     }
+
+    Vertex *tail= a->getTail();
+    Vertex *head = a->getHead();
+
+    if (head == source) {
+        PRINT_DEBUG("Head is source.")
+        return;
+    }
+
+    PRINT_DEBUG("An arc is about to be removed: (" << tail << ", " << head << ")");
+    std::cerr << "An arc is about to be removed: (" << tail << ", " << head << ")" << std::endl;
 
     PRINT_DEBUG("Stored data of tail: " << data(tail));
     PRINT_DEBUG("Stored data of head: " << data(head));
@@ -450,23 +490,26 @@ void ESTree::onArcRemove(Arc *a)
         return;
     }
 
-    VertexData *td = data(tail);
-    bool isParent = hd->isParent(td);
-    hd->findAndRemoveInNeighbor(td);
-
     if (!hd->isReachable()) {
         PRINT_DEBUG("Head of arc is already unreachable. Nothing to do.")
         decUnreachableHead++;
         return;
     }
 
+    VertexData *td = data(tail);
+    bool isParent = hd->isParent(td);
+    hd->findAndRemoveInNeighbor(td);
+
     if (hd->level <= td->level || !isParent) {
-        PRINT_DEBUG("Arc is not a tree arc. Nothing to do.")
+        PRINT_DEBUG("Arc is not a tree arc. Nothing to do.");
         decNonTreeArc++;
-        return;
+    } else {
+        restoreTree(hd);
     }
 
-    restoreTree(hd);
+    std::cerr.flush();
+    dumpTree(std::cerr);
+    std::cerr.flush();
 }
 
 void ESTree::onSourceSet()
@@ -498,6 +541,18 @@ void ESTree::dumpData(std::ostream &os)
     }
 }
 
+void ESTree::dumpTree(std::ostream &os)
+{
+    if (!initialized) {
+        os << "uninitialized" << std::endl;
+    }  else {
+        diGraph->mapVertices([&](Vertex *v) {
+          auto vd = data[v];
+          os << v << ": L " << vd->level << ", P " << vd->getParent() << '\n';
+        });
+    }
+}
+
 void ESTree::restoreTree(ESTree::VertexData *rd)
 {
     PriorityQueue queue;
@@ -512,6 +567,7 @@ void ESTree::restoreTree(ESTree::VertexData *rd)
         queue.popBot();
         inQueue[vd->vertex] = false;
         unsigned int levels = process(diGraph, vd, queue, data, reachable, inQueue);
+        //std::cerr << vd->vertex << ": ^L " << levels << std::endl;
         if (levels > 0) {
             movesDown++;
             levelIncrease += levels;
@@ -522,6 +578,7 @@ void ESTree::restoreTree(ESTree::VertexData *rd)
             }
         }
     }
+    std::cerr << "^L " << levelIncrease << std::endl;
 }
 
 void ESTree::cleanup()
@@ -560,8 +617,6 @@ unsigned int process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queu
     unsigned int oldVLevel = vd->level;
     unsigned int levelDiff = 0U;
 
-
-    // todo... correct?
     if (vd->inNeighbors.empty()) {
         PRINT_DEBUG("Vertex is a source.");
         if (reachV) {
@@ -573,9 +628,9 @@ unsigned int process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queu
             PRINT_DEBUG("Level changed.");
         }
     } else {
-        ESTree::VertexData *parent = vd->inNeighbors[vd->parentIndex];
+        auto *parent = vd->getParentData();
 
-        PRINT_DEBUG("Size of graph is " << graph->getSize() << ".");
+        PRINT_DEBUG("Size of graph is " << n << ".");
 
         bool inNeighborFound = parent != nullptr;
         unsigned int minimumParentLevel = parent != nullptr ? parent->level : UINT_MAX;
@@ -609,7 +664,7 @@ unsigned int process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queu
                 }
             }
             if (reachV)  {
-                parent = vd->inNeighbors[vd->parentIndex];
+                parent = vd->getParentData();
                 inNeighborFound |= parent != nullptr;
                 if (parent && parent->level < minimumParentLevel) {
                     minimumParentLevel = parent->level;
@@ -627,12 +682,8 @@ unsigned int process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queu
               return;
             }
             Vertex *head = a->getHead();
-            if (inQueue[head]) {
-              PRINT_DEBUG("    Out-neighbor " << head << " is already in queue.");
-              return;
-            }
             auto *hd = data(head);
-            if (hd->isParent(vd)) {
+            if (hd->isParent(vd) && !inQueue[head]) {
               PRINT_DEBUG("    Adding child " << hd << " to queue...")
               queue.push(hd);
               inQueue[head] = true;
@@ -641,6 +692,7 @@ unsigned int process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queu
             }
         });
     }
+
     PRINT_DEBUG("Returning level diff " << levelDiff  << " for " << v  << ".")
 
     return levelDiff;

@@ -81,6 +81,13 @@ struct SimpleESTree::VertexData {
     bool hasValidParent() const {
         return parent != nullptr && parent->level + 1 == level;
     }
+
+    Vertex *getParent() const {
+        if (parent == nullptr) {
+            return nullptr;
+        }
+        return parent->vertex;
+    }
 };
 
 unsigned int SimpleESTree::VertexData::graphSize = 0U;
@@ -178,6 +185,10 @@ void SimpleESTree::run()
    VertexData::graphSize = diGraph->getSize();
    initialized = true;
     PRINT_DEBUG("Initializing completed.")
+
+    std::cerr.flush();
+    dumpTree(std::cerr);
+    std::cerr.flush();
 }
 
 std::string SimpleESTree::getProfilingInfo() const
@@ -245,14 +256,21 @@ void SimpleESTree::onArcAdd(Arc *a)
         return;
     }
     PRINT_DEBUG("An arc has been added: (" << a->getTail() << ", " << a->getHead() << ")")
+    std::cerr << "An arc has been added: (" << a->getTail() << ", " << a->getHead() << ")" << std::endl;
 
     Vertex *tail = a->getTail();
     Vertex *head = a->getHead();
 
-    if (tail == head) {
+    if (a->isLoop()) {
         PRINT_DEBUG("Arc is a loop.")
         return;
     }
+
+    if (head == source) {
+        PRINT_DEBUG("Head is source.")
+        return;
+    }
+
     VertexData *td = data(tail);
     VertexData *hd = data(head);
 
@@ -265,6 +283,8 @@ void SimpleESTree::onArcAdd(Arc *a)
         return;
     }
 
+    auto n = diGraph->getSize();
+
     //update...
     if (hd->level <= td->level + 1) {
         // arc does not change anything
@@ -275,16 +295,14 @@ void SimpleESTree::onArcAdd(Arc *a)
         PRINT_DEBUG("Is a new tree arc.")
         movesUp++;
         if (!hd->isReachable()) {
-            levelDecrease += diGraph->getSize() -  (td->level + 1);
+            levelDecrease += (n -  (td->level + 1));
         } else {
-            levelDecrease += hd->level - (td->level + 1);
+            levelDecrease += (hd->level - (td->level + 1));
         }
         hd->level = td->level + 1;
         reachable[head] = true;
         hd->parent = td;
     }
-
-    auto n = diGraph->getSize();
 
     BreadthFirstSearch<FastPropertyMap> bfs(false);
     bfs.setStartVertex(head);
@@ -323,6 +341,10 @@ void SimpleESTree::onArcAdd(Arc *a)
         return false;
     });
     runAlgorithm(bfs, diGraph);
+
+    std::cerr.flush();
+    dumpTree(std::cerr);
+    std::cerr.flush();
 }
 
 void SimpleESTree::onVertexRemove(Vertex *v)
@@ -355,7 +377,13 @@ void SimpleESTree::onArcRemove(Arc *a)
     Vertex *tail= a->getTail();
     Vertex *head = a->getHead();
 
+    if (head == source) {
+        PRINT_DEBUG("Head is source.")
+        return;
+    }
+
     PRINT_DEBUG("An arc is about to be removed: (" << tail << ", " << head << ")");
+    std::cerr << "An arc is about to be removed: (" << tail << ", " << head << ")" << std::endl;
 
     PRINT_DEBUG("Stored data of tail: " << data(tail));
     PRINT_DEBUG("Stored data of head: " << data(head));
@@ -381,6 +409,10 @@ void SimpleESTree::onArcRemove(Arc *a)
         PRINT_DEBUG("Arc is not a tree arc. Nothing to do.")
         decNonTreeArc++;
     }
+
+    std::cerr.flush();
+    dumpTree(std::cerr);
+    std::cerr.flush();
 }
 
 void SimpleESTree::onSourceSet()
@@ -415,6 +447,19 @@ void SimpleESTree::dumpData(std::ostream &os)
     }
 }
 
+void SimpleESTree::dumpTree(std::ostream &os)
+{
+    if (!initialized) {
+        os << "uninitialized" << std::endl;
+    }  else {
+        diGraph->mapVertices([&](Vertex *v) {
+          auto vd = data[v];
+          os << v << ": L " << vd->level << ", P " << vd->getParent() << '\n';
+        });
+    }
+}
+
+
 void SimpleESTree::restoreTree(SimpleESTree::VertexData *rd)
 {
     PriorityQueue queue;
@@ -437,6 +482,7 @@ void SimpleESTree::restoreTree(SimpleESTree::VertexData *rd)
             }
         }
     }
+    std::cerr << "^L " << levelIncrease << std::endl;
 }
 
 void SimpleESTree::cleanup()
