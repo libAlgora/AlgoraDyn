@@ -37,10 +37,10 @@
 #include <iostream>
 #ifdef DEBUG_SIMPLEESTREE
 #include <iostream>
-#define PRINT_DEBUG(msg) std::cout << msg << std::endl;
+#define PRINT_DEBUG(msg) std::cerr << msg << std::endl;
 #define IF_DEBUG(cmd) cmd;
 #else
-#define PRINT_DEBUG(msg)
+#define PRINT_DEBUG(msg) ((void)0)
 #define IF_DEBUG(cmd)
 #endif
 
@@ -108,12 +108,12 @@ typedef BucketQueue<SimpleESTree::VertexData*, ESNode_Priority> PriorityQueue;
 
 #ifdef DEBUG_SIMPLEESTREE
 void printQueue(PriorityQueue q) {
-    std::cout << "PriorityQueue: ";
+    std::cerr << "PriorityQueue: ";
     while(!q.empty()) {
-        std::cout << q.bot()->vertex << "[" << q.bot()->level << "]" << ", ";
+        std::cerr << q.bot()->vertex << "[" << q.bot()->level << "]" << ", ";
         q.popBot();
     }
-    std::cout << std::endl;
+    std::cerr << std::endl;
 }
 #endif
 
@@ -269,8 +269,10 @@ void SimpleESTree::onArcAdd(Arc *a)
     if (hd->level <= td->level + 1) {
         // arc does not change anything
         incNonTreeArc++;
+        PRINT_DEBUG("Not a tree arc.")
         return;
     } else {
+        PRINT_DEBUG("Is a new tree arc.")
         movesUp++;
         if (!hd->isReachable()) {
             levelDecrease += diGraph->getSize() -  (td->level + 1);
@@ -313,7 +315,7 @@ void SimpleESTree::onArcAdd(Arc *a)
             ahd->level = atd->level + 1;
             ahd->parent = atd;
             reachable[ah] = true;
-            PRINT_DEBUG( "(" << at << ", " << ah << ")" << " replaces a tree arc.");
+            PRINT_DEBUG( "(" << at << ", " << ah << ")" << " is a new tree arc.");
             return true;
         } else {
             PRINT_DEBUG( "(" << at << ", " << ah << ")" << " is a non-tree arc.")
@@ -388,14 +390,17 @@ void SimpleESTree::onSourceSet()
 
 bool SimpleESTree::query(const Vertex *t)
 {
+    PRINT_DEBUG("Querying reachability of " << t);
     if (t == source) {
+        PRINT_DEBUG("TRUE");
         return true;
     }
 
     if (!initialized) {
-        std::cout << "Query in uninitialized state." << std::endl;
+        PRINT_DEBUG("Query in uninitialized state.");
         run();
     }
+    PRINT_DEBUG((reachable[t] ? "TRUE" : "FALSE"));
     return reachable(t);
 }
 
