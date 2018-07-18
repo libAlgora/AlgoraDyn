@@ -522,14 +522,11 @@ unsigned int process(DiGraph *graph, SimpleESTree::VertexData *vd, PriorityQueue
                 return;
             }
             Vertex *head = a->getHead();
-            if (inQueue[head]) {
-                PRINT_DEBUG("    Out-neighbor " << head << " already in queue.")
-                return;
-            }
             auto *hd = data(head);
-            if (hd->isParent(vd)) {
+            if (hd->isParent(vd) && !inQueue[head]) {
                 PRINT_DEBUG("    Adding child " << hd << " to queue...")
                 queue.push(hd);
+                inQueue[head] = true;
             }
         });
     }
