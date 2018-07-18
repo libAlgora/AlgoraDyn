@@ -58,7 +58,7 @@ protected:
     virtual void onSourceSet() override;
 
 private:
-    DepthFirstSearch<> dfs;
+    DepthFirstSearch<FastPropertyMap> dfs;
     FastPropertyMap<DFSResult> dfsResults;
     bool initialized;
 };

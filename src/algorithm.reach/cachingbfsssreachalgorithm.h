@@ -58,7 +58,7 @@ protected:
     virtual void onSourceSet() override;
 
 private:
-    BreadthFirstSearch<> bfs;
+    BreadthFirstSearch<FastPropertyMap> bfs;
     FastPropertyMap<int> levels;
     bool initialized;
 };
