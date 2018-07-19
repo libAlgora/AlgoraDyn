@@ -84,6 +84,7 @@ private:
     void restoreTree(VertexData *rd);
     void cleanup();
     void dumpTree(std::ostream &os);
+    bool checkTree();
 };
 
 }

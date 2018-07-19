@@ -81,9 +81,10 @@ private:
     unsigned int incUnreachableTail;
     unsigned int incNonTreeArc;
 
-    void restoreTree(VertexData *rd);
+    void restoreTree(const std::vector<VertexData *> vds);
     void cleanup();
     void dumpTree(std::ostream &os);
+    bool checkTree();
 };
 
 }

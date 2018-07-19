@@ -36,7 +36,6 @@
 
 #include <iostream>
 #ifdef DEBUG_SIMPLEESTREE
-#include <iostream>
 #define PRINT_DEBUG(msg) std::cerr << msg << std::endl;
 #define IF_DEBUG(cmd) cmd;
 #else
@@ -184,11 +183,15 @@ void SimpleESTree::run()
 
    VertexData::graphSize = diGraph->getSize();
    initialized = true;
-    PRINT_DEBUG("Initializing completed.")
+   PRINT_DEBUG("Initializing completed.");
 
-    std::cerr.flush();
-    dumpTree(std::cerr);
-    std::cerr.flush();
+   IF_DEBUG(
+    if (!checkTree()) {
+        std::cerr.flush();
+        dumpTree(std::cerr);
+        std::cerr.flush();
+   });
+   assert(checkTree());
 }
 
 std::string SimpleESTree::getProfilingInfo() const
@@ -256,7 +259,6 @@ void SimpleESTree::onArcAdd(Arc *a)
         return;
     }
     PRINT_DEBUG("An arc has been added: (" << a->getTail() << ", " << a->getHead() << ")")
-    std::cerr << "An arc has been added: (" << a->getTail() << ", " << a->getHead() << ")" << std::endl;
 
     Vertex *tail = a->getTail();
     Vertex *head = a->getHead();
@@ -342,9 +344,13 @@ void SimpleESTree::onArcAdd(Arc *a)
     });
     runAlgorithm(bfs, diGraph);
 
-    std::cerr.flush();
-    dumpTree(std::cerr);
-    std::cerr.flush();
+   IF_DEBUG(
+    if (!checkTree()) {
+        std::cerr.flush();
+        dumpTree(std::cerr);
+        std::cerr.flush();
+   });
+   assert(checkTree());
 }
 
 void SimpleESTree::onVertexRemove(Vertex *v)
@@ -383,7 +389,6 @@ void SimpleESTree::onArcRemove(Arc *a)
     }
 
     PRINT_DEBUG("An arc is about to be removed: (" << tail << ", " << head << ")");
-    std::cerr << "An arc is about to be removed: (" << tail << ", " << head << ")" << std::endl;
 
     PRINT_DEBUG("Stored data of tail: " << data(tail));
     PRINT_DEBUG("Stored data of head: " << data(head));
@@ -410,9 +415,13 @@ void SimpleESTree::onArcRemove(Arc *a)
         decNonTreeArc++;
     }
 
-    std::cerr.flush();
-    dumpTree(std::cerr);
-    std::cerr.flush();
+   IF_DEBUG(
+    if (!checkTree()) {
+        std::cerr.flush();
+        dumpTree(std::cerr);
+        std::cerr.flush();
+   });
+   assert(checkTree());
 }
 
 void SimpleESTree::onSourceSet()
@@ -459,6 +468,27 @@ void SimpleESTree::dumpTree(std::ostream &os)
     }
 }
 
+bool SimpleESTree::checkTree()
+{
+   BreadthFirstSearch<FastPropertyMap> bfs;
+   bfs.setStartVertex(source);
+   bfs.levelAsValues(true);
+   FastPropertyMap<int> levels(-1);
+   levels.resetAll(diGraph->getSize());
+   bfs.useModifiableProperty(&levels);
+   runAlgorithm(bfs, diGraph);
+
+   bool ok = true;
+   diGraph->mapVertices([&](Vertex *v) {
+       auto bfsLevel = levels[v] < 0 ? SimpleESTree::VertexData::UNREACHABLE : levels[v];
+       if (data[v]->level != bfsLevel) {
+           std::cerr << "Level mismatch for vertex " << data[v]
+                        << ": expected level " << bfsLevel << std::endl;
+           ok = false;
+       }
+   });
+   return ok;
+}
 
 void SimpleESTree::restoreTree(SimpleESTree::VertexData *rd)
 {
@@ -482,7 +512,6 @@ void SimpleESTree::restoreTree(SimpleESTree::VertexData *rd)
             }
         }
     }
-    std::cerr << "^L " << levelIncrease << std::endl;
 }
 
 void SimpleESTree::cleanup()
