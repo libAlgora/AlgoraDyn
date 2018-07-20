@@ -50,6 +50,8 @@ public:
                         :  ( searchForward ? "Simple-ISSReach-SF"
                                             : "Simple-ISSReach");
     }
+    virtual std::string getProfilingInfo() const override;
+    virtual Profile getProfile() const override;
 
 protected:
     virtual void onDiGraphUnset() override;

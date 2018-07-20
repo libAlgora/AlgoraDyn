@@ -56,7 +56,20 @@ struct SimpleIncSSReachAlgorithm::Reachability {
     bool reverse;
     bool searchForward;
 
-    Reachability(bool r, bool sf) : reverse(r), searchForward(sf) {
+    unsigned long numUnreached;
+    unsigned long numRereached;
+    unsigned long numUnknown;
+    unsigned long numReached;
+    unsigned long numTracebacks;
+    unsigned long maxUnreached;
+    unsigned long maxRereached;
+    unsigned long maxUnknown;
+    unsigned long maxReached;
+    unsigned long maxTracebacks;
+
+    Reachability(bool r, bool sf) : reverse(r), searchForward(sf),
+      numUnreached(0UL), numRereached(0UL), numUnknown(0UL), numReached(0UL), numTracebacks(0UL),
+      maxUnreached(0UL), maxRereached(0UL), maxUnknown(0UL), maxReached(0UL), maxTracebacks(0UL) {
         reachability.setDefaultValue(State::UNREACHABLE);
         source = nullptr;
     }
@@ -69,7 +82,7 @@ struct SimpleIncSSReachAlgorithm::Reachability {
         }
     }
 
-    void propagate(const Vertex *from, DiGraph *diGraph, State s) {
+    unsigned int propagate(const Vertex *from, DiGraph *diGraph, State s) {
         PRINT_DEBUG("Propagating " << printState(s) << " from " << from << ".");
         reachability[from] = s;
         if (s == State::UNKNOWN) {
@@ -95,7 +108,7 @@ struct SimpleIncSSReachAlgorithm::Reachability {
             throw DiGraphAlgorithmException(nullptr, "Could not prepare BFS algorithm.");
         }
         bfs.run();
-        bfs.deliver();
+        return bfs.deliver();
     }
 
     bool checkReachability(const Vertex *u, DiGraph *diGraph) {
@@ -130,7 +143,11 @@ struct SimpleIncSSReachAlgorithm::Reachability {
     }
 
     void reachFrom(const Vertex *from, DiGraph *diGraph) {
-        propagate(from, diGraph, State::REACHABLE);
+        auto reached = propagate(from, diGraph, State::REACHABLE);
+        if (reached > maxReached) {
+            maxReached = reached;
+        }
+        numReached += reached;
     }
 
     void unReachFrom(const Vertex *from, DiGraph *diGraph) {
@@ -139,23 +156,48 @@ struct SimpleIncSSReachAlgorithm::Reachability {
         }
         unknownStateVertices.clear();
         propagate(from, diGraph, State::UNKNOWN);
-        // TODO: does this help?
+
         if (reverse) {
             std::reverse(unknownStateVertices.begin(), unknownStateVertices.end());
         }
+        auto unknown = unknownStateVertices.size();
+        auto rereached = 0UL;
+        auto tracebacks = 0UL;
         while (!unknownStateVertices.empty()) {
            const Vertex *u = unknownStateVertices.back();
            unknownStateVertices.pop_back();
            if (reachability(u) == State::UNKNOWN) {
+               tracebacks++;
                if (checkReachability(u, diGraph)) {
                    if (searchForward) {
-                       // TODO: does this help?
                        reachFrom(u, diGraph);
                    } else {
                        reachability[u] = State::REACHABLE;
                    }
                }
            }
+           if (reachability(u) == State::REACHABLE) {
+               rereached++;
+           }
+        }
+
+        assert(unknown >= rereached);
+        auto unreached = unknown - rereached;
+        numUnreached += unreached;
+        numRereached += rereached;
+        numUnknown += unknown;
+        numTracebacks += tracebacks;
+        if (maxUnreached < unreached) {
+            maxUnreached = unreached;
+        }
+        if (maxRereached < rereached) {
+            maxRereached = rereached;
+        }
+        if (maxUnknown < unknown) {
+            maxUnknown = unknown;
+        }
+        if (maxTracebacks < tracebacks) {
+            maxTracebacks = tracebacks;
         }
     }
 
@@ -203,6 +245,39 @@ void SimpleIncSSReachAlgorithm::run()
     data->reset(source);
     data->reachFrom(source, diGraph);
     initialized = true;
+}
+
+std::string SimpleIncSSReachAlgorithm::getProfilingInfo() const
+{
+    std::stringstream ss;
+    ss << "total reached vertices: " << data->numReached << std::endl;
+    ss << "total unknown state vertices: " << data->numUnknown << std::endl;
+    ss << "total unreached vertices: " << data->numUnreached << std::endl;
+    ss << "total rereached vertices: " << data->numRereached << std::endl;
+    ss << "total tracebacks: " << data->numTracebacks << std::endl;
+    ss << "maximum reached vertices: " << data->maxReached << std::endl;
+    ss << "maximum unreached vertices: " << data->maxUnreached << std::endl;
+    ss << "maximum rereached vertices: " << data->maxRereached << std::endl;
+    ss << "maximum unknown state vertices: " << data->maxUnknown << std::endl;
+    ss << "maximum tracebacks: " << data->maxTracebacks << std::endl;
+    return ss.str();
+}
+
+DynamicSSReachAlgorithm::Profile SimpleIncSSReachAlgorithm::getProfile() const
+{
+    Profile profile;
+    profile.push_back(std::make_pair(std::string("total_reached"), data->numReached));
+    profile.push_back(std::make_pair(std::string("total_unknown"), data->numUnknown));
+    profile.push_back(std::make_pair(std::string("total_unreached"), data->numUnreached));
+    profile.push_back(std::make_pair(std::string("total_rereached"), data->numRereached));
+    profile.push_back(std::make_pair(std::string("total_tracebacks"), data->numTracebacks));
+    profile.push_back(std::make_pair(std::string("max_reached"), data->maxReached));
+    profile.push_back(std::make_pair(std::string("max_unknown"), data->maxUnknown));
+    profile.push_back(std::make_pair(std::string("max_unreached"), data->maxUnreached));
+    profile.push_back(std::make_pair(std::string("max_rereached"), data->maxRereached));
+    profile.push_back(std::make_pair(std::string("max_tracebacks"), data->maxTracebacks));
+
+    return profile;
 }
 
 void SimpleIncSSReachAlgorithm::onDiGraphUnset() {
