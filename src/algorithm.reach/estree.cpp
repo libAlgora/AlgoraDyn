@@ -66,30 +66,36 @@ struct ESTree::VertexData {
     void setUnreachable() {
         parentIndex = 0;
         level = UNREACHABLE;
-        // free at least some space
-        cleanupInNeighbors(false);
+        // compact list
+        cleanupInNeighbors();
     }
 
-    void cleanupInNeighbors(bool updateParentIndex) {
-        std::vector<VertexData*> neighbors;
-        for (auto n : inNeighbors) {
+    void cleanupInNeighbors() {
+        assert(parentIndex < inNeighbors.size() || parentIndex == 0);
+        auto nSize = 0U;
+        auto lost = 0U;
+        for (auto i = 0U; i < inNeighbors.size(); i++) {
+           assert(nSize <= i);
+           auto n = inNeighbors[i];
             if (n) {
-                neighbors.push_back(n);
-            }
-        }
-        if (updateParentIndex) {
-            unsigned int nullsBeforeParent = 0U;
-            for (unsigned int i = 0U; i < parentIndex; i++) {
-                if (!inNeighbors[i]) {
-                    nullsBeforeParent++;
+                if (i != nSize) {
+                    inNeighbors[nSize] = n;
+                    inNeighbors[i] = nullptr;
+                    if (i == parentIndex) {
+                        parentIndex = nSize;
+                    }
                 }
-            }
-            parentIndex -= nullsBeforeParent;
-            if (parentIndex >= neighbors.size()) {
-                parentIndex = 0U;
+                nSize++;
+            } else {
+                lost++;
             }
         }
-        inNeighbors.swap(neighbors);
+        assert(lost == inNeighborsLost);
+        assert(lost + nSize == inNeighbors.size());
+        inNeighbors.erase(inNeighbors.cbegin() + nSize, inNeighbors.cend());
+        if (parentIndex >= nSize) {
+            parentIndex = 0;
+        }
         inNeighborsLost = 0U;
     }
 
@@ -111,8 +117,8 @@ struct ESTree::VertexData {
                inNeighborsLost++;
             }
         }
-        if (inNeighborsLost > inNeighbors.size() / 4) {
-            cleanupInNeighbors(true);
+        if (inNeighborsLost > 4 && inNeighborsLost > inNeighbors.size() / 4) {
+            cleanupInNeighbors();
         }
 
         assert(found);
