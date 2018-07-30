@@ -33,8 +33,8 @@ adinfotarget.depends = FORCE
 PRE_TARGETDEPS += $$ADINFOHDR
 QMAKE_EXTRA_TARGETS += adinfotarget
 
-QMAKE_CXXFLAGS_DEBUG += -std=c++11 -O0
-QMAKE_CXXFLAGS_RELEASE += -O3 -std=c++11 -DNDEBUG
+QMAKE_CXXFLAGS_DEBUG += -std=c++17 -O0
+QMAKE_CXXFLAGS_RELEASE += -O3 -std=c++17 -DNDEBUG
 
 zmiy {
   QMAKE_CXXFLAGS_RELEASE += -march=haswell -mmmx -msse -msse2 -msse3 -mssse3 \
