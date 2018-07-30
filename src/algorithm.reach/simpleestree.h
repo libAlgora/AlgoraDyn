@@ -26,6 +26,7 @@
 #include "dynamicssreachalgorithm.h"
 #include "property/propertymap.h"
 #include "property/fastpropertymap.h"
+#include <climits>
 
 namespace Algora {
 
@@ -33,8 +34,11 @@ class SimpleESTree : public DynamicSSReachAlgorithm
 {
 public:
     struct VertexData;
-    explicit SimpleESTree();
+    explicit SimpleESTree(unsigned int requeueLimit = UINT_MAX);
     virtual ~SimpleESTree();
+    void setRequeueLimit(unsigned int limit) {
+        requeueLimit = limit;
+    }
 
     // DiGraphAlgorithm interface
 public:
@@ -69,6 +73,7 @@ private:
     FastPropertyMap<bool> reachable;
     Vertex *root;
     bool initialized;
+    unsigned int requeueLimit;
 
     unsigned int movesDown;
     unsigned int movesUp;
@@ -80,11 +85,14 @@ private:
     unsigned int decNonTreeArc;
     unsigned int incUnreachableTail;
     unsigned int incNonTreeArc;
+    unsigned int reruns;
+    unsigned int maxReQueued;
 
     void restoreTree(VertexData *rd);
     void cleanup();
     void dumpTree(std::ostream &os);
     bool checkTree();
+    void rerun();
 };
 
 }

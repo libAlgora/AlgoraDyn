@@ -60,6 +60,14 @@ struct SimpleESTree::VertexData {
         }
     }
 
+    void reset(VertexData *p = nullptr, unsigned int l = UINT_MAX) {
+        parent = p;
+        level = l;
+        if (p != nullptr) {
+            level = p->level + 1;
+        }
+    }
+
     void setUnreachable() {
         parent = nullptr;
         level = UNREACHABLE;
@@ -124,16 +132,20 @@ void printQueue(PriorityQueue q) {
 #endif
 
 unsigned int process(DiGraph *graph, SimpleESTree::VertexData *vd, PriorityQueue &queue,
-                     FastPropertyMap<SimpleESTree::VertexData*> &data, FastPropertyMap<bool> &reachable,
-                     FastPropertyMap<bool> &inQueue);
+                     const FastPropertyMap<SimpleESTree::VertexData*> &data,
+                     FastPropertyMap<bool> &reachable,
+                     FastPropertyMap<bool> &inQueue,
+                     FastPropertyMap<unsigned int> &timesInQueue, unsigned int limit, bool &limitReached, unsigned int &maxRequeued);
 
-SimpleESTree::SimpleESTree()
-    : DynamicSSReachAlgorithm(), root(nullptr), initialized(false),
+SimpleESTree::SimpleESTree(unsigned int requeueLimit)
+    : DynamicSSReachAlgorithm(), root(nullptr),
+      initialized(false), requeueLimit(requeueLimit),
       movesDown(0U), movesUp(0U),
       levelIncrease(0U), levelDecrease(0U),
       maxLevelIncrease(0U), maxLevelDecrease(0U),
       decUnreachableHead(0U), decNonTreeArc(0U),
-      incUnreachableTail(0U), incNonTreeArc(0U)
+      incUnreachableTail(0U), incNonTreeArc(0U),
+      reruns(0U), maxReQueued(0U)
 {
     data.setDefaultValue(nullptr);
     reachable.setDefaultValue(false);
@@ -152,7 +164,7 @@ void SimpleESTree::run()
 
     PRINT_DEBUG("Initializing SimpleESTree...")
 
-    data.resetAll(diGraph->getSize());
+    //data.resetAll(diGraph->getSize());
     reachable.resetAll(diGraph->getSize());
     movesDown = 0U;
     movesUp = 0U;
@@ -163,12 +175,20 @@ void SimpleESTree::run()
        root = diGraph->getAnyVertex();
    }
    bfs.setStartVertex(root);
-   data[root] = new VertexData(root, nullptr, 0);
+   if (data[root] == nullptr) {
+      data[root] = new VertexData(root, nullptr, 0);
+   } else {
+       data[root]->reset(nullptr, 0);
+   }
    reachable[root] = true;
    bfs.onTreeArcDiscover([&](Arc *a) {
         Vertex *t = a->getTail();
         Vertex *h = a->getHead();
-        data[h] = new VertexData(h, data(t));
+        if (data[h] == nullptr) {
+            data[h] = new VertexData(h, data(t));
+        } else {
+            data[h]->reset(data(t));
+        }
         reachable[h] = true;
         PRINT_DEBUG( "(" << t << ", " << h << ")" << " is a tree arc.")
    });
@@ -207,6 +227,8 @@ std::string SimpleESTree::getProfilingInfo() const
     ss << "#non-tree arcs (dec): " << decNonTreeArc << std::endl;
     ss << "#unreachable tail (inc): " << incUnreachableTail << std::endl;
     ss << "#non-tree arcs (inc): " << incNonTreeArc << std::endl;
+    ss << "maximum #requeuings: " << maxReQueued << std::endl;
+    ss << "#reruns: " << reruns << std::endl;
     return ss.str();
 }
 
@@ -223,6 +245,8 @@ DynamicSSReachAlgorithm::Profile SimpleESTree::getProfile() const
     profile.push_back(std::make_pair(std::string("dec_nontree"), decNonTreeArc));
     profile.push_back(std::make_pair(std::string("inc_tail_unreachable"), incUnreachableTail));
     profile.push_back(std::make_pair(std::string("inc_nontree"), incNonTreeArc));
+    profile.push_back(std::make_pair(std::string("max_requeued"), maxReQueued));
+    profile.push_back(std::make_pair(std::string("rerun"), reruns));
     return profile;
 }
 
@@ -239,6 +263,10 @@ void SimpleESTree::onDiGraphSet()
     decNonTreeArc = 0U;
     incUnreachableTail = 0U;
     incNonTreeArc = 0U;
+    reruns = 0U;
+    maxReQueued = 0U;
+    data.resetAll(diGraph->getSize());
+    reachable.resetAll(diGraph->getSize());
 }
 
 void SimpleESTree::onDiGraphUnset()
@@ -490,21 +518,38 @@ bool SimpleESTree::checkTree()
    return ok;
 }
 
+void SimpleESTree::rerun()
+{
+    reruns++;
+    diGraph->mapVertices([&](Vertex *v) {
+        data[v]->reset();
+    });
+    initialized = false;
+    run();
+}
+
 void SimpleESTree::restoreTree(SimpleESTree::VertexData *rd)
 {
     PriorityQueue queue;
-    FastPropertyMap<bool> inQueue(false);
+    FastPropertyMap<bool> inQueue(false, "", diGraph->getSize());
+    FastPropertyMap<unsigned int> timesInQueue(0U, "", diGraph->getSize());
     queue.push(rd);
     inQueue[rd->vertex] = true;
+		timesInQueue[rd->vertex]++;
     PRINT_DEBUG("Initialized queue with " << rd << ".")
+    bool limitReached = false;
 
     while (!queue.empty()) {
         IF_DEBUG(printQueue(queue))
         auto vd = queue.bot();
         queue.popBot();
         inQueue.resetToDefault(vd->vertex);
-        unsigned int levels = process(diGraph, vd, queue, data, reachable, inQueue);
-        if (levels > 0) {
+        unsigned int levels = process(diGraph, vd, queue, data, reachable, inQueue, timesInQueue, requeueLimit,
+                                      limitReached, maxReQueued);
+        if (limitReached) {
+            rerun();
+            break;
+        } else if (levels > 0) {
             movesDown++;
             levelIncrease += levels;
             if (levels > maxLevelIncrease) {
@@ -529,8 +574,10 @@ void SimpleESTree::cleanup()
 }
 
 unsigned int process(DiGraph *graph, SimpleESTree::VertexData *vd, PriorityQueue &queue,
-                     FastPropertyMap<SimpleESTree::VertexData *> &data, FastPropertyMap<bool> &reachable,
-                     FastPropertyMap<bool> &inQueue) {
+                     const FastPropertyMap<SimpleESTree::VertexData *> &data,
+                     FastPropertyMap<bool> &reachable,
+                     FastPropertyMap<bool> &inQueue,
+                     FastPropertyMap<unsigned int> &timesInQueue, unsigned int limit, bool &limitReached, unsigned int &maxRequeued) {
 
     if (vd->level == 0UL) {
         PRINT_DEBUG("No need to process source vertex " << vd << ".");
@@ -561,7 +608,7 @@ unsigned int process(DiGraph *graph, SimpleESTree::VertexData *vd, PriorityQueue
             PRINT_DEBUG( "Loop ignored.");
             return;
         }
-        auto pd = data[a->getTail()];
+        auto pd = data(a->getTail());
         auto pLevel = pd->level;
         if (pLevel < minParentLevel) {
             minParentLevel = pLevel;
@@ -592,18 +639,28 @@ unsigned int process(DiGraph *graph, SimpleESTree::VertexData *vd, PriorityQueue
 
     if (levelDiff > 0U) {
         PRINT_DEBUG("Updating children...");
-        graph->mapOutgoingArcs(vd->vertex, [&](Arc *a) {
+        graph->mapOutgoingArcsUntil(vd->vertex, [&](Arc *a) {
             if (a->isLoop()) {
                 return;
             }
             Vertex *head = a->getHead();
             auto *hd = data(head);
             if (hd->isParent(vd) && !inQueue[head]) {
-                PRINT_DEBUG("    Adding child " << hd << " to queue...")
-                queue.push(hd);
-                inQueue[head] = true;
+                if (timesInQueue[head] < limit) {
+                    PRINT_DEBUG("    Adding child " << hd << " to queue...");
+                    timesInQueue[head]++;
+                    if (timesInQueue[head] > maxRequeued) {
+                        maxRequeued = timesInQueue[head];
+                    }
+                    queue.push(hd);
+                    inQueue[head] = true;
+                } else {
+                    timesInQueue[head]++;
+                    limitReached = true;
+                    PRINT_DEBUG("Limit reached for vertex " << head << ".");
+                }
             }
-        });
+        }, [&limitReached](const Arc *) { return limitReached; });
     }
 
     return levelDiff;
