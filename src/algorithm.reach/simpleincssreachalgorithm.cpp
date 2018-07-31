@@ -51,7 +51,7 @@ struct SimpleIncSSReachAlgorithm::Reachability {
     enum struct State : std::int8_t { REACHABLE, UNREACHABLE, UNKNOWN };
     FastPropertyMap<State> reachability;
     Vertex *source;
-    std::vector<const Vertex*> unknownStateVertices;
+    std::vector<const Vertex*> changedStateVertices;
 
     bool reverse;
     bool searchForward;
@@ -82,11 +82,11 @@ struct SimpleIncSSReachAlgorithm::Reachability {
         }
     }
 
-    unsigned int propagate(const Vertex *from, DiGraph *diGraph, State s) {
+    unsigned int propagate(const Vertex *from, DiGraph *diGraph, State s, bool collectVertices) {
         PRINT_DEBUG("Propagating " << printState(s) << " from " << from << ".");
         reachability[from] = s;
-        if (s == State::UNKNOWN) {
-            unknownStateVertices.push_back(from);
+        if (collectVertices) {
+            changedStateVertices.push_back(from);
         }
         BreadthFirstSearch<FastPropertyMap> bfs(false);
         bfs.setGraph(diGraph);
@@ -99,8 +99,8 @@ struct SimpleIncSSReachAlgorithm::Reachability {
             }
             reachability[v] = s;
             PRINT_DEBUG(v << " gets new state.");
-            if (s == State::UNKNOWN) {
-                unknownStateVertices.push_back(v);
+            if (collectVertices) {
+                changedStateVertices.push_back(v);
             }
             return true;
         });
@@ -143,7 +143,7 @@ struct SimpleIncSSReachAlgorithm::Reachability {
     }
 
     void reachFrom(const Vertex *from, DiGraph *diGraph) {
-        auto reached = propagate(from, diGraph, State::REACHABLE);
+        auto reached = propagate(from, diGraph, State::REACHABLE, false);
         if (reached > maxReached) {
             maxReached = reached;
         }
@@ -154,19 +154,19 @@ struct SimpleIncSSReachAlgorithm::Reachability {
         if (from == source) {
             return;
         }
-        unknownStateVertices.clear();
-        propagate(from, diGraph, State::UNKNOWN);
+        changedStateVertices.clear();
+        propagate(from, diGraph, State::UNREACHABLE, true);
 
         if (reverse) {
-            std::reverse(unknownStateVertices.begin(), unknownStateVertices.end());
+            std::reverse(changedStateVertices.begin(), changedStateVertices.end());
         }
-        auto unknown = unknownStateVertices.size();
+        auto unknown = changedStateVertices.size();
         auto rereached = 0UL;
         auto tracebacks = 0UL;
-        while (!unknownStateVertices.empty()) {
-           const Vertex *u = unknownStateVertices.back();
-           unknownStateVertices.pop_back();
-           if (reachability(u) == State::UNKNOWN) {
+        while (!changedStateVertices.empty()) {
+           const Vertex *u = changedStateVertices.back();
+           changedStateVertices.pop_back();
+           if (reachability(u) != State::REACHABLE) {
                tracebacks++;
                if (checkReachability(u, diGraph)) {
                    if (searchForward) {
