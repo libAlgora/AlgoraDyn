@@ -48,7 +48,7 @@ namespace Algora {
 struct ESTree::VertexData {
     static const unsigned int UNREACHABLE = UINT_MAX;
     static unsigned int graphSize;
-    static unsigned int CLEANUP_AFTER;
+    static double CLEANUP_AFTER;
     static unsigned int cleanups;
 
     Vertex *vertex;
@@ -136,7 +136,7 @@ struct ESTree::VertexData {
                inNeighborsLost++;
             }
         }
-        if (inNeighborsLost > 4 && inNeighborsLost > inNeighbors.size() / CLEANUP_AFTER) {
+        if (inNeighborsLost > 4 && inNeighborsLost > inNeighbors.size() * CLEANUP_AFTER) {
             cleanupInNeighbors();
         }
 
@@ -172,7 +172,7 @@ struct ESTree::VertexData {
 };
 
 unsigned int ESTree::VertexData::graphSize = 0U;
-unsigned int ESTree::VertexData::CLEANUP_AFTER = 1U;
+double ESTree::VertexData::CLEANUP_AFTER = 1.0;
 unsigned int ESTree::VertexData::cleanups = 0U;
 
 std::ostream& operator<<(std::ostream& os, const ESTree::VertexData *vd) {
@@ -214,7 +214,7 @@ unsigned int process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queu
                      FastPropertyMap<bool> &inQueue,
                      FastPropertyMap<unsigned int> &timesInQueue, unsigned int limit, bool &limitReached, unsigned int &maxRequeued);
 
-ESTree::ESTree(unsigned int requeueLimit, unsigned int cleanupAfter)
+ESTree::ESTree(double cleanupAfter, unsigned int requeueLimit)
     : DynamicSSReachAlgorithm(), root(nullptr),
       initialized(false), requeueLimit(requeueLimit),
       cleanupAfter(cleanupAfter),
