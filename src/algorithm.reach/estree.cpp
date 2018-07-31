@@ -231,10 +231,7 @@ void ESTree::run()
 
     PRINT_DEBUG("Initializing ESTree...")
 
-    //data.resetAll(diGraph->getSize());
     reachable.resetAll(diGraph->getSize());
-    movesDown = 0U;
-    movesUp = 0U;
 
    BreadthFirstSearch<FastPropertyMap> bfs(false);
    root = source;
@@ -676,7 +673,7 @@ void ESTree::restoreTree(const std::vector<ESTree::VertexData *> vds)
         if (limitReached) {
             rerun();
             break;
-        } else if (levels > 0) {
+        } else if (levels > 0U) {
             movesDown++;
             levelIncrease += levels;
             PRINT_DEBUG("total level increase " << levelIncrease);

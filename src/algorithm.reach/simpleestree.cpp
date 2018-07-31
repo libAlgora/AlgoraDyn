@@ -164,10 +164,7 @@ void SimpleESTree::run()
 
     PRINT_DEBUG("Initializing SimpleESTree...")
 
-    //data.resetAll(diGraph->getSize());
     reachable.resetAll(diGraph->getSize());
-    movesDown = 0U;
-    movesUp = 0U;
 
    BreadthFirstSearch<FastPropertyMap> bfs(false);
    root = source;
@@ -549,7 +546,7 @@ void SimpleESTree::restoreTree(SimpleESTree::VertexData *rd)
         if (limitReached) {
             rerun();
             break;
-        } else if (levels > 0) {
+        } else if (levels > 0U) {
             movesDown++;
             levelIncrease += levels;
             if (levels > maxLevelIncrease) {
