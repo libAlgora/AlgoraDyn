@@ -34,7 +34,7 @@ class ESTree : public DynamicSSReachAlgorithm
 {
 public:
     struct VertexData;
-    explicit ESTree(unsigned int requeueLimit = UINT_MAX);
+    explicit ESTree(unsigned int requeueLimit = UINT_MAX, unsigned int cleanupAfter = 1U);
     virtual ~ESTree();
     void setRequeueLimit(unsigned int limit) {
         requeueLimit = limit;
@@ -74,6 +74,7 @@ private:
     Vertex *root;
     bool initialized;
     unsigned int requeueLimit;
+    unsigned int cleanupAfter;
 
     unsigned int movesDown;
     unsigned int movesUp;
