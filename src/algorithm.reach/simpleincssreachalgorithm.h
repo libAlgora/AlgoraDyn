@@ -32,7 +32,7 @@ namespace Algora {
 class SimpleIncSSReachAlgorithm : public DynamicSSReachAlgorithm
 {
 public:
-    explicit SimpleIncSSReachAlgorithm(bool reverse = false, bool searchForward = false);
+    explicit SimpleIncSSReachAlgorithm(bool reverse = false, bool searchForward = false, double maxUS = 1.0);
     virtual ~SimpleIncSSReachAlgorithm();
 
     // DiGraphAlgorithm interface
@@ -54,6 +54,7 @@ public:
     virtual Profile getProfile() const override;
 
 protected:
+    virtual void onDiGraphSet() override;
     virtual void onDiGraphUnset() override;
 
     // DynamicDiGraphAlgorithm interface
