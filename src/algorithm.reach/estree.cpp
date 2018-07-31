@@ -83,29 +83,34 @@ struct ESTree::VertexData {
 
     void cleanupInNeighbors() {
         assert(parentIndex < inNeighbors.size() || parentIndex == 0);
-        auto nSize = 0U;
-        auto lost = 0U;
-        for (auto i = 0U; i < inNeighbors.size(); i++) {
-           assert(nSize <= i);
-           auto n = inNeighbors[i];
-            if (n) {
-                if (i != nSize) {
-                    inNeighbors[nSize] = n;
-                    inNeighbors[i] = nullptr;
-                    if (i == parentIndex) {
-                        parentIndex = nSize;
+        if (inNeighborsLost < inNeighbors.size()) {
+            auto nSize = 0U;
+            auto lost = 0U;
+            for (auto i = 0U; i < inNeighbors.size(); i++) {
+                assert(nSize <= i);
+                auto n = inNeighbors[i];
+                if (n) {
+                    if (i != nSize) {
+                        inNeighbors[nSize] = n;
+                        inNeighbors[i] = nullptr;
+                        if (i == parentIndex) {
+                            parentIndex = nSize;
+                        }
                     }
+                    nSize++;
+                } else {
+                    lost++;
                 }
-                nSize++;
-            } else {
-                lost++;
             }
-        }
-        assert(lost == inNeighborsLost);
-        assert(lost + nSize == inNeighbors.size());
-        inNeighbors.erase(inNeighbors.cbegin() + nSize, inNeighbors.cend());
-        if (parentIndex >= nSize) {
-            parentIndex = 0;
+            assert(lost == inNeighborsLost);
+            assert(lost + nSize == inNeighbors.size());
+            inNeighbors.erase(inNeighbors.cbegin() + nSize, inNeighbors.cend());
+            if (parentIndex >= nSize) {
+                parentIndex = 0;
+            }
+        } else {
+            inNeighbors.clear();
+            parentIndex = 0U;
         }
         inNeighborsLost = 0U;
     }
