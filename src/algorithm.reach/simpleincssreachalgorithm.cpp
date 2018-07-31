@@ -70,7 +70,7 @@ struct SimpleIncSSReachAlgorithm::Reachability {
     unsigned long maxTracebacks;
     unsigned long numReReachFromSource;
 
-    Reachability(bool r, bool sf, double maxUS = 1.0)
+    Reachability(bool r, bool sf, double maxUS)
         : reverse(r), searchForward(sf), maxUnknownStateRatio(maxUS), numReachable(0U),
           numUnreached(0UL), numRereached(0UL), numUnknown(0UL), numReached(0UL), numTracebacks(0UL),
           maxUnreached(0UL), maxRereached(0UL), maxUnknown(0UL), maxReached(0UL), maxTracebacks(0UL),
@@ -105,6 +105,7 @@ struct SimpleIncSSReachAlgorithm::Reachability {
             if (s == State::REACHABLE) {
                 numReachable++;
             } else if (s == State::UNREACHABLE) {
+                assert(numReachable > 0U);
                 numReachable--;
             }
             reachability[from] = s;
@@ -126,6 +127,7 @@ struct SimpleIncSSReachAlgorithm::Reachability {
                 if (s == State::REACHABLE) {
                     numReachable++;
                 } else if (s == State::UNREACHABLE) {
+                    assert(numReachable > 0U);
                     numReachable--;
                 }
                 PRINT_DEBUG(v << " gets new state.");
@@ -166,12 +168,17 @@ struct SimpleIncSSReachAlgorithm::Reachability {
         bfs.run();
         bfs.deliver();
         if (reach) {
-            reachability[u] = State::REACHABLE;
-            numReachable++;
+            if (reachability[u] != State::REACHABLE) {
+                reachability[u] = State::REACHABLE;
+                numReachable++;
+            }
             return true;
         }
-        reachability[u] = State::UNREACHABLE;
-        numReachable--;
+        if (reachability[u] != State::UNREACHABLE) {
+            reachability[u] = State::UNREACHABLE;
+            assert(numReachable > 0U);
+            numReachable--;
+        }
         return false;
     }
 
@@ -192,8 +199,8 @@ struct SimpleIncSSReachAlgorithm::Reachability {
 
         auto unknown = changedStateVertices.size();
 
-        if (maxUnknownStateRatio > 1U && unknown > diGraph->getSize() / maxUnknownStateRatio) {
-            //std::cout << "Rereaching from source: "  << unknown << " / " << diGraph->getSize() << " " << numReachable << std::endl;
+        if (unknown > diGraph->getSize() * maxUnknownStateRatio) {
+        //if (unknown > numReachable * maxUnknownStateRatio) {
             numReReachFromSource++;
             reachFrom(source, diGraph, true);
             return;
