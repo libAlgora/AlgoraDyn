@@ -224,6 +224,7 @@ std::string SimpleESTree::getProfilingInfo() const
     ss << "#non-tree arcs (dec): " << decNonTreeArc << std::endl;
     ss << "#unreachable tail (inc): " << incUnreachableTail << std::endl;
     ss << "#non-tree arcs (inc): " << incNonTreeArc << std::endl;
+    ss << "requeue limit: " << requeueLimit << std::endl;
     ss << "maximum #requeuings: " << maxReQueued << std::endl;
     ss << "#reruns: " << reruns << std::endl;
     return ss.str();
@@ -242,6 +243,7 @@ DynamicSSReachAlgorithm::Profile SimpleESTree::getProfile() const
     profile.push_back(std::make_pair(std::string("dec_nontree"), decNonTreeArc));
     profile.push_back(std::make_pair(std::string("inc_tail_unreachable"), incUnreachableTail));
     profile.push_back(std::make_pair(std::string("inc_nontree"), incNonTreeArc));
+    profile.push_back(std::make_pair(std::string("requeue_limit"), requeueLimit));
     profile.push_back(std::make_pair(std::string("max_requeued"), maxReQueued));
     profile.push_back(std::make_pair(std::string("rerun"), reruns));
     return profile;
