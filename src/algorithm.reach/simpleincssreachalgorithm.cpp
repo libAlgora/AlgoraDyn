@@ -29,6 +29,7 @@
 
 #include <vector>
 #include <climits>
+#include <cmath>
 #include <cstdint>
 #include <cassert>
 #include <algorithm>
@@ -56,6 +57,9 @@ struct SimpleIncSSReachAlgorithm::Reachability {
     bool reverse;
     bool searchForward;
     double maxUnknownStateRatio;
+    bool maxUSSqrt;
+    bool maxUSLog;
+    bool relateToReachable;
 
     unsigned int numReachable;
     unsigned long numUnreached;
@@ -71,7 +75,8 @@ struct SimpleIncSSReachAlgorithm::Reachability {
     unsigned long numReReachFromSource;
 
     Reachability(bool r, bool sf, double maxUS)
-        : reverse(r), searchForward(sf), maxUnknownStateRatio(maxUS), numReachable(0U),
+        : reverse(r), searchForward(sf), maxUnknownStateRatio(maxUS), maxUSSqrt(false), maxUSLog(false),
+          relateToReachable(false), numReachable(0U),
           numUnreached(0UL), numRereached(0UL), numUnknown(0UL), numReached(0UL), numTracebacks(0UL),
           maxUnreached(0UL), maxRereached(0UL), maxUnknown(0UL), maxReached(0UL), maxTracebacks(0UL),
           numReReachFromSource(0U) {
@@ -199,8 +204,11 @@ struct SimpleIncSSReachAlgorithm::Reachability {
 
         auto unknown = changedStateVertices.size();
 
-        if (unknown > diGraph->getSize() * maxUnknownStateRatio) {
-        //if (unknown > numReachable * maxUnknownStateRatio) {
+        auto relateTo = relateToReachable ? numReachable : diGraph->getSize();
+        auto compareTo = maxUSSqrt ? floor(sqrt(relateTo))
+                                   : (maxUSLog ?
+                                          floor(log2(relateTo)) : floor(maxUnknownStateRatio * relateTo));
+        if (unknown > compareTo) {
             numReReachFromSource++;
             reachFrom(source, diGraph, true);
             return;
@@ -276,13 +284,31 @@ struct SimpleIncSSReachAlgorithm::Reachability {
 
 SimpleIncSSReachAlgorithm::SimpleIncSSReachAlgorithm(bool reverse, bool searchForward, double maxUS)
     : DynamicSSReachAlgorithm(), data(new Reachability(reverse, searchForward, maxUS)), initialized(false),
-      reverse(reverse), searchForward(searchForward)
+      reverse(reverse), searchForward(searchForward), maxUnknownStateRatio(maxUS)
 
 { }
 
 SimpleIncSSReachAlgorithm::~SimpleIncSSReachAlgorithm()
 {
     delete data;
+}
+
+void SimpleIncSSReachAlgorithm::setMaxUnknownStateSqrt()
+{
+    maxUSSqrt = true;
+    data->maxUSSqrt = true;
+}
+
+void SimpleIncSSReachAlgorithm::setMaxUnknownStateLog()
+{
+    maxUSLog = true;
+    data->maxUSLog = true;
+}
+
+void SimpleIncSSReachAlgorithm::relateToReachableVertices(bool relReachable)
+{
+    relateToReachable = relReachable;
+    data->relateToReachable = relReachable;
 }
 
 void SimpleIncSSReachAlgorithm::run()

@@ -24,6 +24,7 @@
 #define SIMPLEINCSSREACHALGORITHM_H
 
 #include "dynamicssreachalgorithm.h"
+#include <sstream>
 
 #include "property/propertymap.h"
 
@@ -34,21 +35,43 @@ class SimpleIncSSReachAlgorithm : public DynamicSSReachAlgorithm
 public:
     explicit SimpleIncSSReachAlgorithm(bool reverse = false, bool searchForward = false, double maxUS = 1.0);
     virtual ~SimpleIncSSReachAlgorithm();
+    void setMaxUnknownStateSqrt();
+    void setMaxUnknownStateLog();
+    /** relate unknown state ratio to #reachable vertices or #all vertices **/
+    void relateToReachableVertices(bool relReachable);
 
     // DiGraphAlgorithm interface
 public:
     virtual void run() override;
     virtual std::string getName() const noexcept override {
-        return reverse ? ( searchForward ? "Simple Incremental Single-Source Reachability Algorithm (reverse, search forward)"
-                                            : "Simple Incremental Single-Source Reachability Algorithm (reverse)")
-                        :  ( searchForward ? "Simple Incremental Single-Source Reachability Algorithm (search forward)"
-                                            : "Simple Incremental Single-Source Reachability Algorithm");
+        std::stringstream ss;
+        ss << "Simple Incremental Single-Source Reachability Algorithm ("
+            << (reverse ? "reverse" : "non-reverse") << "/"
+            << (searchForward ? "forward search" : "no forward search") << "/";
+        if (maxUSSqrt) {
+            ss << "SQRT";
+        } else if (maxUSLog) {
+            ss << "LOG";
+        } else {
+            ss << maxUnknownStateRatio;
+        }
+        ss << " w.r.t. " << (relateToReachable ? "#reachable" : "#vertices") << ")";
+        return ss.str();
     }
     virtual std::string getShortName() const noexcept override {
-       return  reverse ? ( searchForward ? "Simple-ISSReach-R-SF"
-                                            : "Simple-ISSReach-R")
-                        :  ( searchForward ? "Simple-ISSReach-SF"
-                                            : "Simple-ISSReach");
+        std::stringstream ss;
+        ss << "Simple-ISSR("
+            << (reverse ? "R" : "NR") << "/"
+            << (searchForward ? "SF" : "NSF") << "/";
+        if (maxUSSqrt) {
+            ss << "SQRT";
+        } else if (maxUSLog) {
+            ss << "LOG";
+        } else {
+            ss << maxUnknownStateRatio;
+        }
+        ss << "~" << (relateToReachable ? "R" : "G") << ")";
+        return ss.str();
     }
     virtual std::string getProfilingInfo() const override;
     virtual Profile getProfile() const override;
@@ -80,6 +103,10 @@ private:
 
     bool reverse;
     bool searchForward;
+    double maxUnknownStateRatio;
+    bool maxUSSqrt;
+    bool maxUSLog;
+    bool relateToReachable;
 };
 
 }
