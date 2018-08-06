@@ -61,6 +61,7 @@ public:
     unsigned int countArcRemovals(unsigned int timeFrom, unsigned int timeUntil) const;
 
     void squashTimes(unsigned int timeFrom, unsigned int timeUntil);
+    void secondArcIsRemoval(bool sir);
 
 private:
     class CheshireCat;

@@ -126,6 +126,7 @@ struct RemoveArcOperation : public Operation {
 };
 
 struct DynamicDiGraph::CheshireCat {
+    bool doubleArcIsRemoval;
     IncidenceListGraph dynGraph;
     IncidenceListGraph constructionGraph;
 
@@ -502,7 +503,11 @@ void DynamicDiGraph::removeVertex(unsigned int vertexId, unsigned int timestamp)
 
 void DynamicDiGraph::addArc(unsigned int tailId, unsigned int headId, unsigned int timestamp, bool antedateVertexAdditions)
 {
-    grin->addArc(tailId, headId, timestamp, antedateVertexAdditions);
+    if (grin->doubleArcIsRemoval && hasArc(tailId, headId)) {
+        grin->removeArc(tailId, headId, timestamp, antedateVertexAdditions);
+    } else {
+        grin->addArc(tailId, headId, timestamp, antedateVertexAdditions);
+    }
 }
 
 void DynamicDiGraph::removeArc(unsigned int tailId, unsigned int headId, unsigned int timestamp, bool removeIsolatedEnds)
@@ -569,6 +574,11 @@ void DynamicDiGraph::squashTimes(unsigned int timeFrom, unsigned int timeUntil)
 {
     grin->reset();
     grin->squashTimes(timeFrom, timeUntil);
+}
+
+void DynamicDiGraph::secondArcIsRemoval(bool sir)
+{
+    grin->doubleArcIsRemoval = sir;
 }
 
 }
