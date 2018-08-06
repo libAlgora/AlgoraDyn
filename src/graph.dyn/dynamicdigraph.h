@@ -53,6 +53,7 @@ public:
     bool applyNextOperation();
     bool applyNextDelta();
     Vertex *getCurrentVertexForId(unsigned int vertexId) const;
+    unsigned int idOfIthVertex(unsigned int i) const;
 
     unsigned int countVertexAdditions(unsigned int timeFrom, unsigned int timeUntil) const;
     unsigned int countVertexRemovals(unsigned int timeFrom, unsigned int timeUntil) const;

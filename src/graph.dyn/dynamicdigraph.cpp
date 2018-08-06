@@ -540,6 +540,11 @@ Vertex *DynamicDiGraph::getCurrentVertexForId(unsigned int vertexId) const
     return grin->vertexForId(vertexId);
 }
 
+unsigned int DynamicDiGraph::idOfIthVertex(unsigned int i) const
+{
+	return grin->dynGraph.vertexAt(i)->getId();
+}
+
 unsigned int DynamicDiGraph::countVertexAdditions(unsigned int timeFrom, unsigned int timeUntil) const
 {
     return grin->countOperations(timeFrom, timeUntil, Operation::Type::VERTEX_ADDITION);
