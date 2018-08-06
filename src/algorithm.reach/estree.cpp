@@ -212,12 +212,12 @@ unsigned int process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queu
                      const FastPropertyMap<ESTree::VertexData*> &data,
                      FastPropertyMap<bool> &reachable,
                      FastPropertyMap<bool> &inQueue,
-                     FastPropertyMap<unsigned int> &timesInQueue, unsigned int limit, bool &limitReached, unsigned int &maxRequeued);
+                     FastPropertyMap<unsigned int> &timesInQueue, unsigned int requeueLimit, bool &limitReached, unsigned int &maxRequeued);
 
-ESTree::ESTree(double cleanupAfter, unsigned int requeueLimit)
+ESTree::ESTree(double cleanupAfter, unsigned int requeueLimit, double maxAffectedRatio)
     : DynamicSSReachAlgorithm(), root(nullptr),
       initialized(false), requeueLimit(requeueLimit),
-      cleanupAfter(cleanupAfter),
+      maxAffectedRatio(maxAffectedRatio), cleanupAfter(cleanupAfter),
       movesDown(0U), movesUp(0U),
       levelIncrease(0U), levelDecrease(0U),
       maxLevelIncrease(0U), maxLevelDecrease(0U),
@@ -338,6 +338,7 @@ std::string ESTree::getProfilingInfo() const
     ss << "#non-tree arcs (inc): " << incNonTreeArc << std::endl;
     ss << "requeue limit: " << requeueLimit << std::endl;
     ss << "maximum #requeuings: " << maxReQueued << std::endl;
+    ss << "maximum ratio of affected vertices: " << maxAffectedRatio << std::endl;
     ss << "#reruns: " << reruns << std::endl;
     ss << "cleanup after: " << cleanupAfter << std::endl;
     ss << "#cleanups: " << VertexData::cleanups << std::endl;
@@ -358,6 +359,7 @@ DynamicSSReachAlgorithm::Profile ESTree::getProfile() const
     profile.push_back(std::make_pair(std::string("inc_tail_unreachable"), incUnreachableTail));
     profile.push_back(std::make_pair(std::string("inc_nontree"), incNonTreeArc));
     profile.push_back(std::make_pair(std::string("requeue_limit"), requeueLimit));
+    profile.push_back(std::make_pair(std::string("max_affected"), maxAffectedRatio));
     profile.push_back(std::make_pair(std::string("max_requeued"), maxReQueued));
     profile.push_back(std::make_pair(std::string("rerun"), reruns));
     profile.push_back(std::make_pair(std::string("cleanup_after"), cleanupAfter));
@@ -681,6 +683,8 @@ void ESTree::restoreTree(const std::vector<ESTree::VertexData *> vds)
     }
     PRINT_DEBUG("Initialized queue with " << vds.size() << " vertices.");
     bool limitReached = false;
+		auto affected = 0U;
+		auto maxAffected = maxAffectedRatio * VertexData::graphSize;
 
     while (!queue.empty()) {
         IF_DEBUG(printQueue(queue))
@@ -689,10 +693,11 @@ void ESTree::restoreTree(const std::vector<ESTree::VertexData *> vds)
         inQueue[vd->vertex] = false;
         unsigned int levels = process(diGraph, vd, queue, data, reachable, inQueue, timesInQueue, requeueLimit,
                                       limitReached, maxReQueued);
-        if (limitReached) {
+        if (limitReached || affected > maxAffected) {
             rerun();
             break;
         } else if (levels > 0U) {
+						affected++;
             movesDown++;
             levelIncrease += levels;
             PRINT_DEBUG("total level increase " << levelIncrease);
@@ -722,7 +727,7 @@ unsigned int process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queu
                      const FastPropertyMap<ESTree::VertexData *> &data,
                      FastPropertyMap<bool> &reachable,
                      FastPropertyMap<bool> &inQueue,
-                     FastPropertyMap<unsigned int> &timesInQueue, unsigned int limit, bool &limitReached, unsigned int &maxRequeued) {
+                     FastPropertyMap<unsigned int> &timesInQueue, unsigned int requeueLimit, bool &limitReached, unsigned int &maxRequeued) {
 
     if (vd->level == 0UL) {
         PRINT_DEBUG("No need to process source vertex " << vd << ".");
@@ -810,7 +815,7 @@ unsigned int process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queu
             Vertex *head = a->getHead();
             auto *hd = data(head);
             if (hd->isParent(vd) && !inQueue[head]) {
-              if (timesInQueue[head] < limit) {
+              if (timesInQueue[head] < requeueLimit) {
                 PRINT_DEBUG("    Adding child " << hd << " to queue...")
                 timesInQueue[head]++;
                 if (timesInQueue[head] > maxRequeued) {

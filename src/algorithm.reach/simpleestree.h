@@ -27,6 +27,7 @@
 #include "property/propertymap.h"
 #include "property/fastpropertymap.h"
 #include <climits>
+#include <sstream>
 
 namespace Algora {
 
@@ -34,17 +35,30 @@ class SimpleESTree : public DynamicSSReachAlgorithm
 {
 public:
     struct VertexData;
-    explicit SimpleESTree(unsigned int requeueLimit = UINT_MAX);
+    explicit SimpleESTree(unsigned int requeueLimit = UINT_MAX, double maxAffectedRatio = 1.0);
     virtual ~SimpleESTree();
     void setRequeueLimit(unsigned int limit) {
         requeueLimit = limit;
+    }
+    void setMaxAffectedRatio(double ratio) {
+        maxAffectedRatio = ratio;
     }
 
     // DiGraphAlgorithm interface
 public:
     virtual void run() override;
-    virtual std::string getName() const noexcept override { return "Simple ES-Tree Single-Source Reachability Algorithm"; }
-    virtual std::string getShortName() const noexcept override { return "Simple-EST-DSSReach"; }
+    virtual std::string getName() const noexcept override {
+      std::stringstream ss;
+			ss << "Simple ES-Tree Single-Source Reachability Algorithm (";
+      ss << requeueLimit << "/" << maxAffectedRatio << ")";
+      return ss.str();
+		}
+    virtual std::string getShortName() const noexcept override {
+      std::stringstream ss;
+			ss << "Simple-EST-DSSReach(";
+      ss << requeueLimit << "/" << maxAffectedRatio << ")";
+      return ss.str();
+		}
     virtual std::string getProfilingInfo() const override;
     virtual Profile getProfile() const override;
 
@@ -74,6 +88,7 @@ private:
     Vertex *root;
     bool initialized;
     unsigned int requeueLimit;
+    double maxAffectedRatio;
 
     unsigned int movesDown;
     unsigned int movesUp;

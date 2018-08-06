@@ -137,10 +137,10 @@ unsigned int process(DiGraph *graph, SimpleESTree::VertexData *vd, PriorityQueue
                      FastPropertyMap<bool> &inQueue,
                      FastPropertyMap<unsigned int> &timesInQueue, unsigned int limit, bool &limitReached, unsigned int &maxRequeued);
 
-SimpleESTree::SimpleESTree(unsigned int requeueLimit)
+SimpleESTree::SimpleESTree(unsigned int requeueLimit, double maxAffectedRatio)
     : DynamicSSReachAlgorithm(), root(nullptr),
       initialized(false), requeueLimit(requeueLimit),
-      movesDown(0U), movesUp(0U),
+      maxAffectedRatio(maxAffectedRatio), movesDown(0U), movesUp(0U),
       levelIncrease(0U), levelDecrease(0U),
       maxLevelIncrease(0U), maxLevelDecrease(0U),
       decUnreachableHead(0U), decNonTreeArc(0U),
@@ -226,6 +226,7 @@ std::string SimpleESTree::getProfilingInfo() const
     ss << "#non-tree arcs (inc): " << incNonTreeArc << std::endl;
     ss << "requeue limit: " << requeueLimit << std::endl;
     ss << "maximum #requeuings: " << maxReQueued << std::endl;
+    ss << "maximum ratio of affected vertices: " << maxAffectedRatio << std::endl;
     ss << "#reruns: " << reruns << std::endl;
     return ss.str();
 }
@@ -245,6 +246,7 @@ DynamicSSReachAlgorithm::Profile SimpleESTree::getProfile() const
     profile.push_back(std::make_pair(std::string("inc_nontree"), incNonTreeArc));
     profile.push_back(std::make_pair(std::string("requeue_limit"), requeueLimit));
     profile.push_back(std::make_pair(std::string("max_requeued"), maxReQueued));
+    profile.push_back(std::make_pair(std::string("max_affected"), maxAffectedRatio));
     profile.push_back(std::make_pair(std::string("rerun"), reruns));
     return profile;
 }
@@ -537,6 +539,8 @@ void SimpleESTree::restoreTree(SimpleESTree::VertexData *rd)
 		timesInQueue[rd->vertex]++;
     PRINT_DEBUG("Initialized queue with " << rd << ".")
     bool limitReached = false;
+		auto affected = 0U;
+		auto maxAffected = maxAffectedRatio * VertexData::graphSize;
 
     while (!queue.empty()) {
         IF_DEBUG(printQueue(queue))
@@ -545,10 +549,11 @@ void SimpleESTree::restoreTree(SimpleESTree::VertexData *rd)
         inQueue.resetToDefault(vd->vertex);
         unsigned int levels = process(diGraph, vd, queue, data, reachable, inQueue, timesInQueue, requeueLimit,
                                       limitReached, maxReQueued);
-        if (limitReached) {
+        if (limitReached || affected > maxAffected) {
             rerun();
             break;
         } else if (levels > 0U) {
+						affected++;
             movesDown++;
             levelIncrease += levels;
             if (levels > maxLevelIncrease) {
