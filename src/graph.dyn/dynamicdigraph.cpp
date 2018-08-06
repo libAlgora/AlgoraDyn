@@ -542,7 +542,7 @@ Vertex *DynamicDiGraph::getCurrentVertexForId(unsigned int vertexId) const
 
 unsigned int DynamicDiGraph::idOfIthVertex(unsigned int i) const
 {
-	return grin->dynGraph.vertexAt(i)->getId();
+    return stoul(grin->dynGraph.vertexAt(i)->getName());
 }
 
 unsigned int DynamicDiGraph::countVertexAdditions(unsigned int timeFrom, unsigned int timeUntil) const
