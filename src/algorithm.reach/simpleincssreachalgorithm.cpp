@@ -199,6 +199,15 @@ struct SimpleIncSSReachAlgorithm::Reachability {
         if (from == source) {
             return;
         }
+
+        if (!maxUSSqrt && !maxUSLog && maxUnknownStateRatio == 1.0) {
+            reachability.resetAll();
+            numReachable = 0U;
+            numReReachFromSource++;
+            reachFrom(source, diGraph, false);
+            return;
+        }
+
         changedStateVertices.clear();
         propagate(from, diGraph, State::UNREACHABLE, true);
 
@@ -266,6 +275,7 @@ struct SimpleIncSSReachAlgorithm::Reachability {
         // arcs must have already been removed
         assert(!reachable(v));
         reachability.resetToDefault(v);
+        numReachable--;
     }
 
     char printState(const State &s){
