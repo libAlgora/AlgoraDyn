@@ -87,9 +87,9 @@ struct SimpleIncSSReachAlgorithm::Reachability {
     void reset(Vertex *src = nullptr) {
         source = src;
         reachability.resetAll();
-        if (source != nullptr) {
-            reachability[source] = State::REACHABLE;
-        }
+        //if (source != nullptr) {
+        //    reachability[source] = State::REACHABLE;
+        //}
         numReachable = 0UL;
         numUnreached = 0UL;
         numRereached = 0UL;
@@ -106,25 +106,13 @@ struct SimpleIncSSReachAlgorithm::Reachability {
 
     unsigned int propagate(const Vertex *from, DiGraph *diGraph, State s, bool collectVertices, bool force = false) {
         PRINT_DEBUG("Propagating " << printState(s) << " from " << from << ".");
-        if (reachability[from] != s) {
-            if (s == State::REACHABLE) {
-                numReachable++;
-            } else if (s == State::UNREACHABLE) {
-                assert(numReachable > 0U);
-                numReachable--;
-            }
-            reachability[from] = s;
-            if (collectVertices) {
-                changedStateVertices.push_back(from);
-            }
-        }
         BreadthFirstSearch<FastPropertyMap> bfs(false);
         bfs.setGraph(diGraph);
         bfs.setStartVertex(from);
         bfs.onVertexDiscover([&](const Vertex *v) {
             PRINT_DEBUG("Reaching " << v << " with state " << printState(reachability(v)) );
-            if ((!force && reachability(v) == s) || v == source) {
-                PRINT_DEBUG(v << " already had this state, no update of successors.");
+            if ((!force && reachability(v) == s) || (v == source && source != from)) {
+                PRINT_DEBUG(v << " already had this state and update was not forced, no update of successors.");
                 return false;
             }
             if (reachability[v] != s) {
@@ -149,7 +137,7 @@ struct SimpleIncSSReachAlgorithm::Reachability {
         return bfs.deliver();
     }
 
-    bool checkReachability(const Vertex *u, DiGraph *diGraph) {
+    bool checkReachability(const Vertex *u, DiGraph *diGraph, std::vector<const Vertex*> &visited) const {
         assert (u != source);
         PRINT_DEBUG("Trying to find reachable predecessor of " << u << ".");
         bool reach = false;
@@ -158,11 +146,12 @@ struct SimpleIncSSReachAlgorithm::Reachability {
         bfs.reverseArcDirection(true);
         bfs.setStartVertex(u);
         bfs.onVertexDiscover([&](const Vertex *v) {
-            PRINT_DEBUG("Exploring " << v << " with state " << printState(reachability(v)) );
+            PRINT_DEBUG("Exploring " << v->getName() << " with state " << printState(reachability(v)) );
             if (reachable(v)) {
                 reach = true;
                 return false;
             }
+            visited.push_back(v);
             return true;
         });
         bfs.setArcStopCondition([&](const Arc*) { return reach; });
@@ -172,19 +161,7 @@ struct SimpleIncSSReachAlgorithm::Reachability {
         }
         bfs.run();
         bfs.deliver();
-        if (reach) {
-            if (reachability[u] != State::REACHABLE) {
-                reachability[u] = State::REACHABLE;
-                numReachable++;
-            }
-            return true;
-        }
-        if (reachability[u] != State::UNREACHABLE) {
-            reachability[u] = State::UNREACHABLE;
-            assert(numReachable > 0U);
-            numReachable--;
-        }
-        return false;
+        return reach;
     }
 
     void reachFrom(const Vertex *from, DiGraph *diGraph, bool force = false) {
@@ -200,7 +177,8 @@ struct SimpleIncSSReachAlgorithm::Reachability {
             return;
         }
 
-        if (!maxUSSqrt && !maxUSLog && maxUnknownStateRatio == 1.0) {
+        if (!maxUSSqrt && !maxUSLog && maxUnknownStateRatio == 0.0) {
+            PRINT_DEBUG("Maximum allowed unknown state ratio is 0, recomputing immediately.");
             reachability.resetAll();
             numReachable = 0U;
             numReReachFromSource++;
@@ -209,17 +187,26 @@ struct SimpleIncSSReachAlgorithm::Reachability {
         }
 
         changedStateVertices.clear();
-        propagate(from, diGraph, State::UNREACHABLE, true);
+        propagate(from, diGraph, State::UNKNOWN, true);
 
         auto unknown = changedStateVertices.size();
+        numReachable -= unknown;
+        PRINT_DEBUG( unknown << " vertices have unknown state.");
 
         auto relateTo = relateToReachable ? numReachable : diGraph->getSize();
         auto compareTo = maxUSSqrt ? floor(sqrt(relateTo))
                                    : (maxUSLog ?
                                           floor(log2(relateTo)) : floor(maxUnknownStateRatio * relateTo));
         if (unknown > compareTo) {
+            PRINT_DEBUG("Maximum allowed unknown state ratio exceeded, " << unknown << " > " << compareTo << ", recomputing.");
             numReReachFromSource++;
             reachFrom(source, diGraph, true);
+            for (auto v : changedStateVertices) {
+                if (reachability[v] != State::REACHABLE) {
+                    PRINT_DEBUG("Setting remaining vertex " << v << " with unknown state unreachable.");
+                    reachability[v] = State::UNREACHABLE;
+                }
+            }
             return;
         }
 
@@ -228,23 +215,36 @@ struct SimpleIncSSReachAlgorithm::Reachability {
         }
         auto rereached = 0UL;
         auto tracebacks = 0UL;
+        std::vector<const Vertex*> backwardsReached;
         while (!changedStateVertices.empty()) {
-           const Vertex *u = changedStateVertices.back();
-           changedStateVertices.pop_back();
-           if (reachability(u) != State::REACHABLE) {
-               tracebacks++;
-               if (checkReachability(u, diGraph)) {
-                   if (searchForward) {
-                       reachFrom(u, diGraph);
-                   } else {
-                       assert(reachability[u] == State::REACHABLE);
-                       //reachability[u] = State::REACHABLE;
-                   }
-               }
-           }
-           if (reachability(u) == State::REACHABLE) {
-               rereached++;
-           }
+            const Vertex *u = changedStateVertices.back();
+            changedStateVertices.pop_back();
+            if (reachability(u) == State::UNKNOWN) {
+                tracebacks++;
+                backwardsReached.clear();
+                if (checkReachability(u, diGraph, backwardsReached)) {
+                    PRINT_DEBUG( u << " is reachable.");
+                    if (searchForward) {
+                        reachFrom(u, diGraph);
+                    } else {
+                        //assert(reachability[u] == State::REACHABLE);
+                        reachability[u] = State::REACHABLE;
+                        numReachable++;
+                    }
+                    assert(reachability[u] == State::REACHABLE);
+                } else {
+                    PRINT_DEBUG( u << " is unreachable.");
+                    for (auto v : backwardsReached) {
+                        PRINT_DEBUG("Setting backwards reached vertex " << v << " unreachable.");
+                        assert(!reachable(v));
+                        reachability[v] = State::UNREACHABLE;
+                    }
+                    assert(reachability[u] == State::UNREACHABLE);
+                }
+            }
+            if (reachability(u) == State::REACHABLE) {
+                rereached++;
+            }
         }
 
         assert(unknown >= rereached);
@@ -267,7 +267,8 @@ struct SimpleIncSSReachAlgorithm::Reachability {
         }
     }
 
-    bool reachable(const Vertex *v) {
+    bool reachable(const Vertex *v) const {
+        assert(reachability(source) == State::REACHABLE);
         return reachability(v) == State::REACHABLE;
     }
 
@@ -278,7 +279,7 @@ struct SimpleIncSSReachAlgorithm::Reachability {
         numReachable--;
     }
 
-    char printState(const State &s){
+    char printState(const State &s) const {
         switch (s) {
         case SimpleIncSSReachAlgorithm::Reachability::State::REACHABLE:
             return 'R';
