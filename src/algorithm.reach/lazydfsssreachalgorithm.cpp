@@ -29,17 +29,20 @@
 namespace Algora {
 
 struct LazyDFSSSReachAlgorithm::CheshireCat {
-    bool inititialized;
+    bool initialized;
+    bool arcAdded;
+    bool arcRemoved;
+    bool exhausted;
     DiGraph *graph;
     Vertex *source;
     std::vector<Arc*> stack;
     FastPropertyMap<bool> discovered;
 
     CheshireCat()
-        : inititialized(false) { discovered.setDefaultValue(false); }
+        : initialized(false), arcAdded(false), arcRemoved(false), exhausted(false) { discovered.setDefaultValue(false); }
 
     bool searchOn(const Vertex *t) {
-        if (!inititialized) {
+        if (!initialized) {
             stack.clear();
             graph->mapOutgoingArcs(source, [&](Arc *a) {
                 stack.push_back(a);
@@ -70,8 +73,23 @@ struct LazyDFSSSReachAlgorithm::CheshireCat {
                 }
             });
         }
-        inititialized = true;
+        initialized = true;
+        arcAdded = false;
+        arcRemoved = false;
+        exhausted = stack.empty();
         return stop;
+    }
+
+    bool query(const Vertex *t) {
+        if (t == source || (initialized && !arcRemoved && discovered(t))) {
+            return true;
+        } else if (exhausted && !arcAdded && !discovered(t)) {
+            return false;
+        }
+        if (arcAdded || arcRemoved) {
+            initialized = false;
+        }
+        return searchOn(t) || discovered(t);
     }
 };
 
@@ -94,32 +112,32 @@ void LazyDFSSSReachAlgorithm::run()
 void LazyDFSSSReachAlgorithm::onDiGraphSet()
 {
     DynamicSSReachAlgorithm::onDiGraphSet();
-    grin->inititialized = false;
+    grin->initialized = false;
+    grin->arcAdded = false;
     grin->graph = diGraph;
 }
 
 void LazyDFSSSReachAlgorithm::onArcAdd(Arc *)
 {
-    grin->inititialized = false;
+    grin->arcAdded = true;
 }
 
 void LazyDFSSSReachAlgorithm::onArcRemove(Arc *)
 {
-    grin->inititialized = false;
+    grin->arcRemoved = true;
 }
 
 bool LazyDFSSSReachAlgorithm::query(const Vertex *t)
 {
-    if (t == source || (grin->inititialized && grin->discovered(t))) {
-        return true;
-    }
-    return grin->searchOn(t) || grin->discovered(t);
+    return grin->query(t);
 }
 
 void LazyDFSSSReachAlgorithm::onSourceSet()
 {
     DynamicSSReachAlgorithm::onSourceSet();
-    grin->inititialized = false;
+    grin->initialized = false;
+    grin->arcAdded = false;
+    grin->arcRemoved = false;
     grin->source = source;
 }
 
