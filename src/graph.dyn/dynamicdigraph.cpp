@@ -349,24 +349,28 @@ struct DynamicDiGraph::CheshireCat {
         }
     }
 
-    bool advance() {
+    bool advance(bool sameTime = false) {
         if (opIndex >= operations.size()) {
             PRINT_DEBUG("Cannot advance further.")
             return false;
+        }
+
+        if (timeIndex + 1 < timestamps.size() && opIndex == offset[timeIndex + 1]) {
+            if (sameTime) {
+                return false;
+            }
+            timeIndex++;
         }
 
         if (opIndex == 0) {
             init();
         }
 
-        if (timeIndex + 1 < timestamps.size() && opIndex == offset[timeIndex + 1]) {
-            timeIndex++;
-        }
         return true;
     }
 
-    bool nextOp() {
-        if (!advance()) {
+    bool nextOp(bool sameTime = false) {
+        if (!advance(sameTime)) {
             return false;
         }
         operations[opIndex]->apply(&dynGraph);
@@ -397,6 +401,21 @@ struct DynamicDiGraph::CheshireCat {
             tIndex++;
         }
         return tIndex;
+    }
+
+    bool lastOpHadType(Operation::Type type) const {
+        if (opIndex == 0U) {
+            return false;
+        }
+        auto op = operations[opIndex - 1];
+        if (op->getType() == type) {
+            return true;
+        } else if (op->getType() == Operation::Type::MULTIPLE) {
+            OperationSet *os = dynamic_cast<OperationSet*>(op);
+            assert(os);
+            return os->operations.back()->getType() == type;
+        }
+        return false;
     }
 
     unsigned int countOperations(unsigned int timeFrom, unsigned int timeUntil, Operation::Type type) const {
@@ -530,14 +549,39 @@ void DynamicDiGraph::resetToBigBang()
     grin->reset();
 }
 
-bool DynamicDiGraph::applyNextOperation()
+bool DynamicDiGraph::applyNextOperation(bool sameTimestamp)
 {
-    return grin->nextOp();
+    return grin->nextOp(sameTimestamp);
 }
 
 bool DynamicDiGraph::applyNextDelta()
 {
     return grin->nextDelta();
+}
+
+bool DynamicDiGraph::lastOpWasVertexAddition() const
+{
+    return grin->lastOpHadType(Operation::Type::VERTEX_ADDITION);
+}
+
+bool DynamicDiGraph::lastOpWasVertexRemoval() const
+{
+    return grin->lastOpHadType(Operation::Type::VERTEX_REMOVAL);
+}
+
+bool DynamicDiGraph::lastOpWasArcAddition() const
+{
+    return grin->lastOpHadType(Operation::Type::ARC_ADDITION);
+}
+
+bool DynamicDiGraph::lastOpWasArcRemoval() const
+{
+    return grin->lastOpHadType(Operation::Type::ARC_REMOVAL);
+}
+
+bool DynamicDiGraph::lastOpWasMultiple() const
+{
+    return grin->lastOpHadType(Operation::Type::MULTIPLE);
 }
 
 Vertex *DynamicDiGraph::getCurrentVertexForId(unsigned int vertexId) const

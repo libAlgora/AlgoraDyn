@@ -50,8 +50,13 @@ public:
     void clear();
 
     void resetToBigBang();
-    bool applyNextOperation();
+    bool applyNextOperation(bool sameTimestamp = false);
     bool applyNextDelta();
+    bool lastOpWasVertexAddition() const;
+    bool lastOpWasVertexRemoval() const;
+    bool lastOpWasArcAddition() const;
+    bool lastOpWasArcRemoval() const;
+    bool lastOpWasMultiple() const;
     Vertex *getCurrentVertexForId(unsigned int vertexId) const;
     unsigned int idOfIthVertex(unsigned int i) const;
 
