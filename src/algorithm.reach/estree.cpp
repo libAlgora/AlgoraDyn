@@ -409,8 +409,10 @@ void ESTree::onArcAdd(Arc *a)
     Vertex *tail = a->getTail();
     Vertex *head = a->getHead();
 
+    IF_DEBUG(
     std::stringstream ss;
     dumpTree(ss);
+    )
 
     if (a->isLoop()) {
         PRINT_DEBUG("Arc is a loop.")
