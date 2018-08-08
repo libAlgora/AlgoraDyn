@@ -55,7 +55,7 @@ public:
 		}
     virtual std::string getShortName() const noexcept override {
       std::stringstream ss;
-			ss << "EST-DSSReach(";
+            ss << "EST-DSSR(";
       ss << cleanupAfter << "/" << requeueLimit << "/" << maxAffectedRatio << ")";
       return ss.str();
 		}
