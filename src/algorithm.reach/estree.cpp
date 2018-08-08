@@ -750,6 +750,23 @@ unsigned int process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queu
     unsigned int oldVLevel = vd->level;
     unsigned int levelDiff = 0U;
 
+    auto enqueue = [&](ESTree::VertexData *vd) {
+        auto vertex = vd->vertex;
+        if (timesInQueue[vertex] < requeueLimit) {
+            PRINT_DEBUG("    Adding " << vd << " to queue...")
+                    timesInQueue[vertex]++;
+            if (timesInQueue[vertex] > maxRequeued) {
+                maxRequeued = timesInQueue[vertex];
+            }
+            queue.push(vd);
+            inQueue[vertex] = true;
+        } else {
+            timesInQueue[vertex]++;
+            limitReached = true;
+            PRINT_DEBUG("Limit reached for vertex " << vertex << ".");
+        }
+    };
+
     if (vd->inNeighbors.empty()) {
         PRINT_DEBUG("Vertex is a source.");
         if (reachV) {
@@ -765,48 +782,63 @@ unsigned int process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queu
 
         PRINT_DEBUG("Size of graph is " << n << ".");
 
-        bool inNeighborFound = parent != nullptr;
-        unsigned int minimumParentLevel = parent != nullptr ? parent->level : UINT_MAX;
+        //bool inNeighborFound = parent != nullptr;
+        //unsigned int minimumParentLevel = parent != nullptr ? parent->level : UINT_MAX;
 
         PRINT_DEBUG("Parent is " << parent);
 
-        while (reachV && (parent == nullptr || vd->level <= parent->level)) {
+        while (reachV && (parent == nullptr || vd->level <= parent->level) && !levelChanged) {
             vd->parentIndex++;
             PRINT_DEBUG("  Advancing parent index to " << vd->parentIndex << ".")
 
             if (vd->parentIndex >= vd->inNeighbors.size()) {
-                if ((vd->level + 1 >= graph->getSize()) || (levelChanged && (!inNeighborFound || minimumParentLevel == UINT_MAX))) {
-                    PRINT_DEBUG("    Vertex " << v << " is unreachable (source: " << (levelChanged ? (inNeighborFound ? "no" : "yes" ) : "?") << ").")
+                //if ((vd->level + 1 >= graph->getSize()) || (levelChanged && (!inNeighborFound || minimumParentLevel == UINT_MAX))) {
+                //    PRINT_DEBUG("    Vertex " << v << " is unreachable (source: " << (levelChanged ? (inNeighborFound ? "no" : "yes" ) : "?") << ").")
+                //    vd->setUnreachable();
+                //    reachable.resetToDefault(v);
+                //    reachV = false;
+                //    levelChanged = true;
+                //    levelDiff = n - oldVLevel;
+                //} else {
+                //    if (levelChanged) {
+                //        assert(oldVLevel < minimumParentLevel + 1);
+                //        levelDiff = minimumParentLevel + 1 - oldVLevel;
+                //        vd->level = minimumParentLevel + 1;
+                //    } else {
+                //        vd->level++;
+                //        levelDiff++;
+                //        levelChanged = true;
+                //    }
+                //    PRINT_DEBUG("  Maximum parent index exceeded, increasing level to " << vd->level << ".")
+                //    vd->parentIndex = 0;
+                //}
+                if (vd->level + 1 >= graph->getSize()) {
+                    //PRINT_DEBUG("    Vertex " << v << " is unreachable (source: " << (levelChanged ? (inNeighborFound ? "no" : "yes" ) : "?") << ").")
+                    PRINT_DEBUG("    Vertex " << v << " is unreachable.")
                     vd->setUnreachable();
                     reachable.resetToDefault(v);
                     reachV = false;
                     levelChanged = true;
                     levelDiff = n - oldVLevel;
                 } else {
-                    if (levelChanged) {
-                        assert(oldVLevel < minimumParentLevel + 1);
-                        levelDiff = minimumParentLevel + 1 - oldVLevel;
-                        vd->level = minimumParentLevel + 1;
-                    } else {
-                        vd->level++;
-                        levelDiff++;
-                        levelChanged = true;
-                    }
+                    vd->level++;
+                    levelDiff++;
+                    levelChanged = true;
                     PRINT_DEBUG("  Maximum parent index exceeded, increasing level to " << vd->level << ".")
                     vd->parentIndex = 0;
+                    enqueue(vd);
                 }
             }
-            if (reachV)  {
+            if (reachV && !levelChanged)  {
                 parent = vd->getParentData();
-                inNeighborFound |= parent != nullptr;
-                if (parent && parent->level < minimumParentLevel) {
-                    minimumParentLevel = parent->level;
-                    PRINT_DEBUG("  Minimum parent level is now " << minimumParentLevel << ".")
-                }
+                //inNeighborFound |= parent != nullptr;
+                //if (parent && parent->level < minimumParentLevel) {
+                //    minimumParentLevel = parent->level;
+                //    PRINT_DEBUG("  Minimum parent level is now " << minimumParentLevel << ".")
+                //}
                 PRINT_DEBUG("  Trying " << parent << " as parent.")
             }
         }
-
     }
     if (levelChanged) {
         graph->mapOutgoingArcsUntil(vd->vertex, [&](Arc *a) {
@@ -817,19 +849,7 @@ unsigned int process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queu
             Vertex *head = a->getHead();
             auto *hd = data(head);
             if (hd->isParent(vd) && !inQueue[head]) {
-              if (timesInQueue[head] < requeueLimit) {
-                PRINT_DEBUG("    Adding child " << hd << " to queue...")
-                timesInQueue[head]++;
-                if (timesInQueue[head] > maxRequeued) {
-                    maxRequeued = timesInQueue[head];
-                }
-                queue.push(hd);
-                inQueue[head] = true;
-              } else {
-                timesInQueue[head]++;
-                limitReached = true;
-                PRINT_DEBUG("Limit reached for vertex " << head << ".");
-              }
+                enqueue(hd);
             } else {
               PRINT_DEBUG("    NOT adding " << hd << " to queue: not a child of " << vd)
             }
@@ -838,7 +858,7 @@ unsigned int process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queu
 
     PRINT_DEBUG("Returning level diff " << levelDiff  << " for " << vd << ".");
 
-    assert(vd->checkIntegrity());
+    //assert(vd->checkIntegrity());
 
     return levelDiff;
 }
