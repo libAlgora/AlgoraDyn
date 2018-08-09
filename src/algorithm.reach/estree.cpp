@@ -53,25 +53,36 @@ struct ESTree::VertexData {
 
     Vertex *vertex;
     std::vector<VertexData*> inNeighbors;
+    std::vector<unsigned int> inNeighborsTimes;
     unsigned int parentIndex;
     unsigned int level;
     unsigned int inNeighborsLost = 0U;
+    // offset 1
+    FastPropertyMap<unsigned int> inNeighborIndices;
 
     VertexData(Vertex *v, VertexData *p = nullptr, unsigned int l = UINT_MAX)
         : vertex(v), parentIndex(0), level(l), inNeighborsLost(0U) {
+        inNeighborIndices.setDefaultValue(0U);
+        inNeighborIndices.resetAll(graphSize);
         if (p != nullptr) {
+            inNeighborIndices[p->vertex] = 1U;
             inNeighbors.push_back(p);
+            inNeighborsTimes.push_back(1U);
             level = p->level + 1;
         }
     }
 
     void reset(VertexData *p = nullptr, unsigned int l = UINT_MAX) {
         inNeighbors.clear();
+        inNeighborsTimes.clear();
         inNeighborsLost = 0U;
         parentIndex = 0U;
+        inNeighborIndices.resetAll(graphSize);
         level = l;
         if (p != nullptr) {
+            inNeighborIndices[p->vertex] = 1U;
             inNeighbors.push_back(p);
+            inNeighborsTimes.push_back(1U);
             level = p->level + 1;
         }
     }
@@ -79,43 +90,6 @@ struct ESTree::VertexData {
     void setUnreachable() {
         parentIndex = 0;
         level = UNREACHABLE;
-        // compact list
-        cleanupInNeighbors();
-    }
-
-    void cleanupInNeighbors() {
-        cleanups++;
-        assert(parentIndex < inNeighbors.size() || parentIndex == 0);
-        if (inNeighborsLost < inNeighbors.size()) {
-            auto nSize = 0U;
-            auto lost = 0U;
-            for (auto i = 0U; i < inNeighbors.size(); i++) {
-                assert(nSize <= i);
-                auto n = inNeighbors[i];
-                if (n) {
-                    if (i != nSize) {
-                        inNeighbors[nSize] = n;
-                        inNeighbors[i] = nullptr;
-                        if (i == parentIndex) {
-                            parentIndex = nSize;
-                        }
-                    }
-                    nSize++;
-                } else {
-                    lost++;
-                }
-            }
-            assert(lost == inNeighborsLost);
-            assert(lost + nSize == inNeighbors.size());
-            inNeighbors.erase(inNeighbors.cbegin() + nSize, inNeighbors.cend());
-            if (parentIndex >= nSize) {
-                parentIndex = 0;
-            }
-        } else {
-            inNeighbors.clear();
-            parentIndex = 0U;
-        }
-        inNeighborsLost = 0U;
     }
 
     bool isReachable() const {
@@ -126,21 +100,67 @@ struct ESTree::VertexData {
         return isReachable() ? level : graphSize + 1U;
     }
 
-    void findAndRemoveInNeighbor(VertexData *in) {
-        bool found = false;
-        for (auto i = inNeighbors.begin(); i != inNeighbors.end() && !found; i++) {
-            if ((*i) != nullptr && (*i) == in) {
-               *i = nullptr;
-               PRINT_DEBUG("Removed " << in->vertex << " in N- of " << vertex);
-               found = true;
-               inNeighborsLost++;
+    bool addInNeighbor(VertexData *in) {
+        auto index = inNeighborIndices[in->vertex];
+        PRINT_DEBUG("Index of " << in->vertex << " is " << index);
+        if (index == 0U) {
+            // try to find an empty place
+            bool inserted = false;
+            for (int i = inNeighbors.size() - 1; i >= 0; i--) {
+                if (inNeighbors[i] == nullptr) {
+                    assert(inNeighborsTimes[i] == 0U);
+                    inNeighbors[i] = in;
+                    inNeighborsTimes[i] = 1U;
+                    inNeighborIndices[in->vertex] = i + 1U;
+                    inserted = true;
+                    PRINT_DEBUG("Inserted vertex at index " << i);
+                    break;
+                }
             }
+            if (!inserted) {
+                inNeighborIndices[in->vertex] = inNeighbors.size() + 1U;
+                inNeighbors.push_back(in);
+                inNeighborsTimes.push_back(1U);
+                PRINT_DEBUG("Added vertex at the end (real index " << (inNeighborIndices[in->vertex] - 1U) << ")");
+            }
+            return false;
+        } else {
+            inNeighborsTimes[index - 1U]++;
+            PRINT_DEBUG("Increased counter to " << inNeighborsTimes[index - 1U] );
+            return true;
         }
-        if (inNeighborsLost > 4 && inNeighborsLost > inNeighbors.size() * CLEANUP_AFTER) {
-            cleanupInNeighbors();
-        }
+    }
 
-        assert(found);
+    unsigned int reparent(VertexData *in) {
+        auto inLevel = in->level;
+        if (inLevel >= level) {
+            return 0U;
+        } else {
+            auto index = inNeighborIndices[in->vertex] - 1U;
+            if (inLevel + 1 < level) {
+                parentIndex = index;
+                auto diff = (level == UNREACHABLE ? graphSize : level) - (inLevel + 1U);
+                level = inLevel + 1U;
+                return diff;
+            } else if (index < parentIndex) {
+                parentIndex = index;
+            }
+            return 0U;
+        }
+    }
+
+    bool findAndRemoveInNeighbor(VertexData *in) {
+        auto index = inNeighborIndices[in->vertex] - 1U;
+        assert(inNeighborsTimes[index] > 0U);
+        inNeighborsTimes[index]--;
+        if (inNeighborsTimes[index] > 0U) {
+            return true;
+        }
+        inNeighbors[index] = nullptr;
+        inNeighborsTimes[index] = 0U;
+        inNeighborIndices.resetToDefault(in->vertex);
+        inNeighborsLost++;
+        return false;
     }
 
     bool isParent(VertexData *p) {
@@ -241,9 +261,10 @@ void ESTree::run()
         return;
     }
 
-    PRINT_DEBUG("Initializing ESTree...")
+   PRINT_DEBUG("Initializing ESTree...")
 
-    reachable.resetAll(diGraph->getSize());
+   VertexData::graphSize = diGraph->getSize();
+   reachable.resetAll(diGraph->getSize());
 
    BreadthFirstSearch<FastPropertyMap> bfs(false);
    root = source;
@@ -260,13 +281,13 @@ void ESTree::run()
    bfs.onTreeArcDiscover([&](Arc *a) {
         Vertex *t = a->getTail();
         Vertex *h = a->getHead();
+        PRINT_DEBUG( "(" << t << ", " << h << ")" << " is a tree arc.")
         if (data[h] == nullptr) {
             data[h] = new VertexData(h, data(t));
         } else {
             data[h]->reset(data(t));
         }
         reachable[h] = true;
-        PRINT_DEBUG( "(" << t << ", " << h << ")" << " is a tree arc.")
    });
    bfs.onNonTreeArcDiscover([&](Arc *a) {
         if (a->isLoop() || a->getHead() == source) {
@@ -276,8 +297,8 @@ void ESTree::run()
         Vertex *h = a->getHead();
         VertexData *td = data(t);
         VertexData *hd = data(h);
-        hd->inNeighbors.push_back(td);
         PRINT_DEBUG( "(" << td->vertex << ", " << hd->vertex << ")" << " is a non-tree arc.")
+        hd->addInNeighbor(td);
    });
    runAlgorithm(bfs, diGraph);
 
@@ -299,7 +320,8 @@ void ESTree::run()
            data[h] = hd;
        }
        if (!td->isReachable()) {
-            hd->inNeighbors.push_back(td);
+            PRINT_DEBUG( "(" << td->vertex << ", " << hd->vertex << ")" << " is an unvisited non-tree arc.")
+            hd->addInNeighbor(td);
        }
    });
 
@@ -310,7 +332,6 @@ void ESTree::run()
        }
    });
 
-   VertexData::graphSize = diGraph->getSize();
    initialized = true;
    PRINT_DEBUG("Initializing completed.")
 
@@ -385,6 +406,7 @@ void ESTree::onDiGraphSet()
     VertexData::cleanups = 0U;
     data.resetAll(diGraph->getSize());
     reachable.resetAll(diGraph->getSize());
+    VertexData::graphSize = diGraph->getSize();
 }
 
 void ESTree::onDiGraphUnset()
@@ -431,7 +453,10 @@ void ESTree::onArcAdd(Arc *a)
     assert(hd != nullptr);
 
     // store arc
-    hd->inNeighbors.push_back(td);
+    if (hd->addInNeighbor(td)) {
+        PRINT_DEBUG("Parallel arc is already there.")
+        return;
+    }
 
     if (!td->isReachable()) {
         PRINT_DEBUG("Tail is unreachable.")
@@ -439,26 +464,18 @@ void ESTree::onArcAdd(Arc *a)
         return;
     }
 
-    auto n = diGraph->getSize();
     //update...
-    if (hd->level <= td->level + 1) {
+    auto diff = hd->reparent(td);
+    if (diff == 0U) {
         // arc does not change anything
+        PRINT_DEBUG("Does not decrease level.")
         incNonTreeArc++;
         return;
     } else {
+        PRINT_DEBUG("Is a new tree arc, diff is " << diff);
         movesUp++;
-        if (!hd->isReachable()) {
-            levelDecrease += (n - (td->level + 1));
-        } else {
-            levelDecrease += (hd->level - (td->level + 1));
-        }
-        hd->level = td->level + 1;
         reachable[head] = true;
     }
-
-    std::vector<VertexData*> verticesToProcess;
-    verticesToProcess.push_back(hd);
-
 
     BreadthFirstSearch<FastPropertyMap> bfs(false);
     bfs.setStartVertex(head);
@@ -472,39 +489,18 @@ void ESTree::onArcAdd(Arc *a)
         VertexData *atd = data(at);
         VertexData *ahd = data(ah);
 
-        if (!ahd->isReachable() ||  atd->level + 1 < ahd->level) {
+        auto diff = ahd->reparent(atd);
+        if (diff > 0U) {
+            PRINT_DEBUG("Is a new tree arc.");
             movesUp++;
-            auto newLevel = atd->level + 1;
-            unsigned int dec;
-            if (!ahd->isReachable()) {
-                dec = n - newLevel;
-            } else {
-                dec = ahd->level - newLevel;
+            if (diff > maxLevelDecrease) {
+                maxLevelDecrease = diff;
             }
-            levelDecrease += dec;
-            if (dec > maxLevelDecrease) {
-                maxLevelDecrease = dec;
-            }
-            ahd->level = newLevel;
-            ahd->parentIndex = 0;
-            reachable[ah] = true;
-            verticesToProcess.push_back(ahd);
-            PRINT_DEBUG( "(" << at << ", " << ah << ")" << " is a new tree arc.");
-            return true;
-        } else if (atd->level + 1 == ahd->level && !ahd->isParent(atd)) {
-            ahd->parentIndex = 0;
-            verticesToProcess.push_back(ahd);
-            PRINT_DEBUG( "(" << at << ", " << ah << ")" << " may become a new tree arc.");
-        } else {
-            PRINT_DEBUG( "(" << at << ", " << ah << ")" << " is a non-tree arc.")
         }
-        return false;
+        return diff > 0U;
+
     });
     runAlgorithm(bfs, diGraph);
-
-    auto oldLevelInc = levelIncrease;
-    restoreTree(verticesToProcess);
-    assert(oldLevelInc == levelIncrease);
 
     IF_DEBUG(
     if (!checkTree()) {
@@ -569,7 +565,9 @@ void ESTree::onArcRemove(Arc *a)
 
     VertexData *td = data(tail);
     bool isParent = hd->isParent(td);
-    hd->findAndRemoveInNeighbor(td);
+    if (hd->findAndRemoveInNeighbor(td)) {
+        return;
+    }
 
     if (!hd->isReachable()) {
         PRINT_DEBUG("Head of arc is already unreachable. Nothing to do.")
@@ -722,7 +720,8 @@ void ESTree::cleanup()
     data.resetAll();
     reachable.resetAll();
 
-    initialized = false;
+    initialized = false ;
+
 }
 
 unsigned int process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queue,
@@ -782,9 +781,6 @@ unsigned int process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queu
 
         PRINT_DEBUG("Size of graph is " << n << ".");
 
-        //bool inNeighborFound = parent != nullptr;
-        //unsigned int minimumParentLevel = parent != nullptr ? parent->level : UINT_MAX;
-
         PRINT_DEBUG("Parent is " << parent);
 
         while (reachV && (parent == nullptr || vd->level <= parent->level) && !levelChanged) {
@@ -792,28 +788,7 @@ unsigned int process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queu
             PRINT_DEBUG("  Advancing parent index to " << vd->parentIndex << ".")
 
             if (vd->parentIndex >= vd->inNeighbors.size()) {
-                //if ((vd->level + 1 >= graph->getSize()) || (levelChanged && (!inNeighborFound || minimumParentLevel == UINT_MAX))) {
-                //    PRINT_DEBUG("    Vertex " << v << " is unreachable (source: " << (levelChanged ? (inNeighborFound ? "no" : "yes" ) : "?") << ").")
-                //    vd->setUnreachable();
-                //    reachable.resetToDefault(v);
-                //    reachV = false;
-                //    levelChanged = true;
-                //    levelDiff = n - oldVLevel;
-                //} else {
-                //    if (levelChanged) {
-                //        assert(oldVLevel < minimumParentLevel + 1);
-                //        levelDiff = minimumParentLevel + 1 - oldVLevel;
-                //        vd->level = minimumParentLevel + 1;
-                //    } else {
-                //        vd->level++;
-                //        levelDiff++;
-                //        levelChanged = true;
-                //    }
-                //    PRINT_DEBUG("  Maximum parent index exceeded, increasing level to " << vd->level << ".")
-                //    vd->parentIndex = 0;
-                //}
                 if (vd->level + 1 >= graph->getSize()) {
-                    //PRINT_DEBUG("    Vertex " << v << " is unreachable (source: " << (levelChanged ? (inNeighborFound ? "no" : "yes" ) : "?") << ").")
                     PRINT_DEBUG("    Vertex " << v << " is unreachable.")
                     vd->setUnreachable();
                     reachable.resetToDefault(v);
@@ -831,11 +806,6 @@ unsigned int process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queu
             }
             if (reachV && !levelChanged)  {
                 parent = vd->getParentData();
-                //inNeighborFound |= parent != nullptr;
-                //if (parent && parent->level < minimumParentLevel) {
-                //    minimumParentLevel = parent->level;
-                //    PRINT_DEBUG("  Minimum parent level is now " << minimumParentLevel << ".")
-                //}
                 PRINT_DEBUG("  Trying " << parent << " as parent.")
             }
         }
