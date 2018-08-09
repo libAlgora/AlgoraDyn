@@ -35,7 +35,7 @@ class ESTree : public DynamicSSReachAlgorithm
 {
 public:
     struct VertexData;
-    explicit ESTree(double cleanupAfter, unsigned int requeueLimit = UINT_MAX, double maxAffectedRatio = 1.0);
+    explicit ESTree(unsigned int requeueLimit = UINT_MAX, double maxAffectedRatio = 1.0);
     virtual ~ESTree();
     void setRequeueLimit(unsigned int limit) {
         requeueLimit = limit;
@@ -50,13 +50,13 @@ public:
     virtual std::string getName() const noexcept override {
       std::stringstream ss;
 			ss << "ES-Tree Single-Source Reachability Algorithm (";
-      ss << cleanupAfter << "/" << requeueLimit << "/" << maxAffectedRatio << ")";
+      ss << requeueLimit << "/" << maxAffectedRatio << ")";
       return ss.str();
 		}
     virtual std::string getShortName() const noexcept override {
       std::stringstream ss;
             ss << "EST-DSSR(";
-      ss << cleanupAfter << "/" << requeueLimit << "/" << maxAffectedRatio << ")";
+      ss << requeueLimit << "/" << maxAffectedRatio << ")";
       return ss.str();
 		}
     virtual std::string getProfilingInfo() const override;
@@ -89,7 +89,6 @@ private:
     bool initialized;
     unsigned int requeueLimit;
     double maxAffectedRatio;
-    double cleanupAfter;
 
     unsigned int movesDown;
     unsigned int movesUp;

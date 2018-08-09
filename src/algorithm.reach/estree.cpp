@@ -48,8 +48,6 @@ namespace Algora {
 struct ESTree::VertexData {
     static const unsigned int UNREACHABLE = UINT_MAX;
     static unsigned int graphSize;
-    static double CLEANUP_AFTER;
-    static unsigned int cleanups;
 
     Vertex *vertex;
     std::vector<VertexData*> inNeighbors;
@@ -192,8 +190,6 @@ struct ESTree::VertexData {
 };
 
 unsigned int ESTree::VertexData::graphSize = 0U;
-double ESTree::VertexData::CLEANUP_AFTER = 1.0;
-unsigned int ESTree::VertexData::cleanups = 0U;
 
 std::ostream& operator<<(std::ostream& os, const ESTree::VertexData *vd) {
     if (vd == nullptr) {
@@ -234,10 +230,10 @@ unsigned int process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queu
                      FastPropertyMap<bool> &inQueue,
                      FastPropertyMap<unsigned int> &timesInQueue, unsigned int requeueLimit, bool &limitReached, unsigned int &maxRequeued);
 
-ESTree::ESTree(double cleanupAfter, unsigned int requeueLimit, double maxAffectedRatio)
+ESTree::ESTree(unsigned int requeueLimit, double maxAffectedRatio)
     : DynamicSSReachAlgorithm(), root(nullptr),
       initialized(false), requeueLimit(requeueLimit),
-      maxAffectedRatio(maxAffectedRatio), cleanupAfter(cleanupAfter),
+      maxAffectedRatio(maxAffectedRatio),
       movesDown(0U), movesUp(0U),
       levelIncrease(0U), levelDecrease(0U),
       maxLevelIncrease(0U), maxLevelDecrease(0U),
@@ -247,7 +243,6 @@ ESTree::ESTree(double cleanupAfter, unsigned int requeueLimit, double maxAffecte
 {
     data.setDefaultValue(nullptr);
     reachable.setDefaultValue(false);
-    VertexData::CLEANUP_AFTER = cleanupAfter;
 }
 
 ESTree::~ESTree()
@@ -361,8 +356,6 @@ std::string ESTree::getProfilingInfo() const
     ss << "maximum #requeuings: " << maxReQueued << std::endl;
     ss << "maximum ratio of affected vertices: " << maxAffectedRatio << std::endl;
     ss << "#reruns: " << reruns << std::endl;
-    ss << "cleanup after: " << cleanupAfter << std::endl;
-    ss << "#cleanups: " << VertexData::cleanups << std::endl;
     return ss.str();
 }
 
@@ -383,8 +376,6 @@ DynamicSSReachAlgorithm::Profile ESTree::getProfile() const
     profile.push_back(std::make_pair(std::string("max_affected"), maxAffectedRatio));
     profile.push_back(std::make_pair(std::string("max_requeued"), maxReQueued));
     profile.push_back(std::make_pair(std::string("rerun"), reruns));
-    profile.push_back(std::make_pair(std::string("cleanup_after"), cleanupAfter));
-    profile.push_back(std::make_pair(std::string("cleanups"), VertexData::cleanups));
     return profile;
 }
 
@@ -403,7 +394,6 @@ void ESTree::onDiGraphSet()
     incNonTreeArc = 0U;
     reruns = 0U;
     maxReQueued = 0U;
-    VertexData::cleanups = 0U;
     data.resetAll(diGraph->getSize());
     reachable.resetAll(diGraph->getSize());
     VertexData::graphSize = diGraph->getSize();
