@@ -44,8 +44,8 @@ protected:
 
     // DynamicDiGraphAlgorithm interface
 protected:
-    virtual void onArcAdd(Arc *) override;
-    virtual void onArcRemove(Arc *) override;
+    virtual void onArcAdd(Arc *a) override;
+    virtual void onArcRemove(Arc *a) override;
 
     // DynamicSSReachAlgorithm interface
 public:

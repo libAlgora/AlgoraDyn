@@ -50,8 +50,8 @@ protected:
     virtual void onDiGraphUnset() override;
 
     // DynamicDiGraphAlgorithm interface
-    virtual void onArcAdd(Arc *) override;
-    virtual void onArcRemove(Arc *) override;
+    virtual void onArcAdd(Arc *a) override;
+    virtual void onArcRemove(Arc *a) override;
 
     // DynamicSSReachAlgorithm interface
 protected:
@@ -61,6 +61,8 @@ private:
     BreadthFirstSearch<FastPropertyMap> bfs;
     FastPropertyMap<int> levels;
     bool initialized;
+    bool arcAdded;
+    bool arcRemoved;
 };
 
 }

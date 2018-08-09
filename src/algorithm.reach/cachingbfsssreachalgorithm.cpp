@@ -26,7 +26,8 @@
 namespace Algora {
 
 CachingBFSSSReachAlgorithm::CachingBFSSSReachAlgorithm()
-    : DynamicSSReachAlgorithm(), initialized(false)
+    : DynamicSSReachAlgorithm(), initialized(false),
+      arcAdded(false), arcRemoved(false)
 {
     levels.setDefaultValue(-1);
     bfs.useModifiableProperty(&levels);
@@ -48,14 +49,18 @@ void CachingBFSSSReachAlgorithm::run()
     bfs.run();
     bfs.deliver();
     initialized = true;
+    arcAdded = false;
+    arcRemoved = false;
 }
 
 bool CachingBFSSSReachAlgorithm::query(const Vertex *t)
 {
-    if (t == source) {
+    if (t == source || (initialized && !arcRemoved && levels(t) != -1)) {
         return true;
+    } else if (initialized && !arcAdded && levels(t) == -1) {
+        return false;
     }
-    if (!initialized) {
+    if (!initialized || arcAdded || arcRemoved) {
         if (!prepare()) {
             throw DiGraphAlgorithmException(this, "Could not prepare myself.");
         }
@@ -69,28 +74,65 @@ void CachingBFSSSReachAlgorithm::onDiGraphSet()
     DynamicSSReachAlgorithm::onDiGraphSet();
     bfs.setGraph(diGraph);
     initialized = false;
+    arcAdded = false;
+    arcRemoved = false;
 }
 
 void CachingBFSSSReachAlgorithm::onDiGraphUnset()
 {
     bfs.unsetGraph();
     initialized = false;
+    arcAdded = false;
+    arcRemoved = false;
     DynamicSSReachAlgorithm::onDiGraphUnset();
 }
 
-void CachingBFSSSReachAlgorithm::onArcAdd(Arc *)
+void CachingBFSSSReachAlgorithm::onArcAdd(Arc *a)
 {
-    initialized = false;
+    if (!initialized || arcAdded || a->isLoop()) {
+        return;
+    }
+
+    auto head = a->getHead();
+
+    if (head == source ) {
+        return;
+    }
+
+    auto tail = a->getTail();
+
+    if (levels(head) != -1 || levels(tail) == -1) {
+        return;
+    }
+
+    arcAdded = true;
 }
 
-void CachingBFSSSReachAlgorithm::onArcRemove(Arc *)
+void CachingBFSSSReachAlgorithm::onArcRemove(Arc *a)
 {
-    initialized = false;
+    if (!initialized || arcRemoved || a->isLoop()) {
+        return;
+    }
+
+    auto head = a->getHead();
+
+    if (head == source) {
+        return;
+    }
+
+    if (levels(head) == -1) {
+        return;
+    }
+
+    arcRemoved = true;
 }
 
 void CachingBFSSSReachAlgorithm::onSourceSet()
 {
+    DynamicSSReachAlgorithm::onSourceSet();
     initialized = false;
+    arcAdded = false;
+    arcRemoved = false;
 }
 
 } // end namespace

@@ -76,8 +76,8 @@ struct SimpleIncSSReachAlgorithm::Reachability {
     unsigned long numReReachFromSource;
 
     Reachability(bool r, bool sf, double maxUS)
-        : diGraph(nullptr), source(nullptr), reverse(r), searchForward(sf), maxUnknownStateRatio(maxUS), maxUSSqrt(false), maxUSLog(false),
-          relateToReachable(false), numReachable(0U),
+        : diGraph(nullptr), source(nullptr), reverse(r), searchForward(sf), maxUnknownStateRatio(maxUS),
+          maxUSSqrt(false), maxUSLog(false), relateToReachable(false), numReachable(0U),
           numUnreached(0UL), numRereached(0UL), numUnknown(0UL), numReached(0UL), numTracebacks(0UL),
           maxUnreached(0UL), maxRereached(0UL), maxUnknown(0UL), maxReached(0UL), maxTracebacks(0UL),
           numReReachFromSource(0U) {
@@ -206,7 +206,7 @@ struct SimpleIncSSReachAlgorithm::Reachability {
             numReReachFromSource++;
             reachFrom(source, true);
             for (auto v : changedStateVertices) {
-                if (reachability[v] != State::REACHABLE) {
+                if (reachability(v) != State::REACHABLE) {
                     PRINT_DEBUG("Setting remaining vertex " << v << " with unknown state unreachable.");
                     reachability[v] = State::UNREACHABLE;
                 }
@@ -294,12 +294,35 @@ struct SimpleIncSSReachAlgorithm::Reachability {
             return '?';
         }
     }
+
+    bool verifyReachability() const {
+        FastPropertyMap<bool> lr(false);
+        BreadthFirstSearch<FastPropertyMap> bfs(false);
+        bfs.setStartVertex(source);
+        bfs.onVertexDiscover([&](const Vertex *v) {
+            lr[v] = true;
+            return true;
+        });
+        runAlgorithm(bfs, diGraph);
+        bool ok = true;
+        diGraph->mapVerticesUntil([&](Vertex *v) {
+            if((reachability(v) == State::UNKNOWN)
+                    || (reachability(v) == State::REACHABLE && !lr(v))
+                    || (reachability(v) == State::UNREACHABLE && lr(v))) {
+                ok = false;
+                PRINT_DEBUG("State mismatch for vertex " << v << ": " << printState(reachability(v)) << " but is "
+                            << (lr(v) ? "reachable" : "unreachable"));
+            }
+        }, [&](const Vertex *) { return !ok; });
+        return ok;
+    }
 };
 
 
 SimpleIncSSReachAlgorithm::SimpleIncSSReachAlgorithm(bool reverse, bool searchForward, double maxUS)
     : DynamicSSReachAlgorithm(), data(new Reachability(reverse, searchForward, maxUS)), initialized(false),
-      reverse(reverse), searchForward(searchForward), maxUnknownStateRatio(maxUS)
+      reverse(reverse), searchForward(searchForward), maxUnknownStateRatio(maxUS),
+      maxUSSqrt(false), maxUSLog(false), relateToReachable(false)
 
 { }
 
@@ -401,33 +424,59 @@ void SimpleIncSSReachAlgorithm::onVertexRemove(Vertex *v)
 
 void SimpleIncSSReachAlgorithm::onArcAdd(Arc *a)
 {
-    Vertex *tail = a->getTail();
-    Vertex *head = a->getHead();
-    PRINT_DEBUG( "A new arc was added: (" << tail << ", " << head << ")")
     if (!initialized) {
-        //run();
         return;
     }
-    if (data->reachable(tail)) {
-        data->reachFrom(head, diGraph);
+
+    PRINT_DEBUG( "A new arc was added: (" << a->getTail() << ", " << a->getHead() << ")");
+
+    if (a->isLoop()) {
+        PRINT_DEBUG("Arc is a loop.");
+        return;
     }
+    Vertex *tail = a->getTail();
+    Vertex *head = a->getHead();
+
+    if (head == source) {
+        PRINT_DEBUG("Head is source.");
+        return;
+    }
+
+    if (data->reachable(head) || !data->reachable(tail)) {
+        return;
+    }
+
+    data->reachFrom(head, diGraph);
+    assert(data->verifyReachability());
 }
 
 void SimpleIncSSReachAlgorithm::onArcRemove(Arc *a)
 {
-    PRINT_DEBUG( "(" << a->getTail() << ", " << a->getHead() << ") is about to be removed" )
     if (!initialized) {
-        PRINT_DEBUG("Uninitialized. Stop.")
         return;
     }
 
-    if (!data->reachable(a->getTail())) {
-        // tail is unreachable, nothing to update
+    PRINT_DEBUG( "(" << a->getTail() << ", " << a->getHead() << ") is about to be removed" );
+
+    if (a->isLoop()) {
+        PRINT_DEBUG("Arc is a loop.");
+        return;
+    }
+    Vertex *head = a->getHead();
+
+    if (head == source) {
+        PRINT_DEBUG("Head is source.");
+        return;
+    }
+
+    if (!data->reachable(head)) {
+        // head is already unreachable, nothing to update
         PRINT_DEBUG("Tail is unreachable. Stop.")
         return;
     }
 
-    data->unReachFrom(a->getHead());
+    data->unReachFrom(head);
+    assert(data->verifyReachability());
 }
 
 bool SimpleIncSSReachAlgorithm::query(const Vertex *t)

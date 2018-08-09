@@ -287,15 +287,16 @@ void SimpleESTree::onArcAdd(Arc *a)
     if (!initialized) {
         return;
     }
-    PRINT_DEBUG("An arc has been added: (" << a->getTail() << ", " << a->getHead() << ")")
 
-    Vertex *tail = a->getTail();
-    Vertex *head = a->getHead();
+    PRINT_DEBUG("An arc has been added: (" << a->getTail() << ", " << a->getHead() << ")")
 
     if (a->isLoop()) {
         PRINT_DEBUG("Arc is a loop.")
         return;
     }
+
+    Vertex *tail = a->getTail();
+    Vertex *head = a->getHead();
 
     if (head == source) {
         PRINT_DEBUG("Head is source.")
@@ -404,6 +405,8 @@ void SimpleESTree::onArcRemove(Arc *a)
         return;
     }
 
+    PRINT_DEBUG("An arc is about to be removed: (" << a->getTail() << ", " << a->getHead() << ")");
+
     if (a->isLoop()) {
         PRINT_DEBUG("Arc is a loop.")
         return;
@@ -417,7 +420,6 @@ void SimpleESTree::onArcRemove(Arc *a)
         return;
     }
 
-    PRINT_DEBUG("An arc is about to be removed: (" << tail << ", " << head << ")");
 
     PRINT_DEBUG("Stored data of tail: " << data(tail));
     PRINT_DEBUG("Stored data of head: " << data(head));

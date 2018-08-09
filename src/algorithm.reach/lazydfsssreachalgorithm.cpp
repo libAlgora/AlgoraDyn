@@ -114,16 +114,47 @@ void LazyDFSSSReachAlgorithm::onDiGraphSet()
     DynamicSSReachAlgorithm::onDiGraphSet();
     grin->initialized = false;
     grin->arcAdded = false;
+    grin->arcRemoved = false;
     grin->graph = diGraph;
 }
 
-void LazyDFSSSReachAlgorithm::onArcAdd(Arc *)
+void LazyDFSSSReachAlgorithm::onArcAdd(Arc *a)
 {
+    if (a->isLoop()) {
+        return;
+    }
+
+    auto head = a->getHead();
+
+    if (head == source || grin->arcAdded || !grin->initialized) {
+        return;
+    }
+
+    auto tail = a->getTail();
+
+    if (grin->discovered(head) || (grin->exhausted && !grin->discovered(tail))) {
+        return;
+    }
+
     grin->arcAdded = true;
 }
 
-void LazyDFSSSReachAlgorithm::onArcRemove(Arc *)
+void LazyDFSSSReachAlgorithm::onArcRemove(Arc *a)
 {
+    if (a->isLoop()) {
+        return;
+    }
+
+    auto head = a->getHead();
+
+    if (head == source || grin->arcRemoved || !grin->initialized) {
+        return;
+    }
+
+    if (grin->exhausted && !grin->discovered(head)) {
+        return;
+    }
+
     grin->arcRemoved = true;
 }
 
