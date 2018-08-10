@@ -51,9 +51,6 @@ struct ESTree::VertexData {
     static unsigned int graphSize;
 
     Vertex *vertex;
-    std::vector<VertexData*> parents;
-    std::vector<unsigned int> parentTimes;
-
     std::vector<VertexData*> inNeighbors;
     std::vector<unsigned int> inNeighborsTimes;
     unsigned int parentIndex;
@@ -68,8 +65,8 @@ struct ESTree::VertexData {
         inNeighborIndices.resetAll(graphSize);
         if (p != nullptr) {
             inNeighborIndices[p->vertex] = 1U;
-            parents.push_back(p);
-            parentTimes.push_back(1U);
+            inNeighbors.push_back(p);
+            inNeighborsTimes.push_back(1U);
             level = p->level + 1;
         }
     }
@@ -80,22 +77,15 @@ struct ESTree::VertexData {
                 inNeighborIndices.resetToDefault(in->vertex);
             }
         }
-        for (auto in : parents) {
-            if (in != nullptr) {
-                inNeighborIndices.resetToDefault(in->vertex);
-            }
-        }
         inNeighbors.clear();
-        parents.clear();
         inNeighborsTimes.clear();
-        parentTimes.clear();
         inNeighborsLost = 0U;
         parentIndex = 0U;
         level = l;
         if (p != nullptr) {
             inNeighborIndices[p->vertex] = 1U;
-            parents.push_back(p);
-            parentTimes.push_back(1U);
+            inNeighbors.push_back(p);
+            inNeighborsTimes.push_back(1U);
             level = p->level + 1;
         }
     }
@@ -113,41 +103,26 @@ struct ESTree::VertexData {
         return isReachable() ? level : graphSize + 1U;
     }
 
-    void pullUp(VertexData *p, unsigned int index) {
-        PRINT_DEBUG("Pulling vertex up to new parent.");
-        for (unsigned int i = 0; i < parents.size(); i++) {
-            inNeighbors.push_back(parents[i]);
-            inNeighborsTimes.push_back(parentTimes[i]);
-            inNeighborIndices[parents[i]->vertex] = inNeighbors.size();
-        }
-        parents.clear();
-        parentTimes.clear();
-        parents.push_back(p);
-        level = p->level + 1U;
-        inNeighborIndices[p->vertex] = 1U;
-        if (index == 0U) {
-            parentTimes.push_back(1U);
-        } else {
-            parentTimes.push_back(inNeighborsTimes[index - 1U]);
-            inNeighbors[index - 1U] = inNeighbors.back();
-            inNeighborsTimes[index - 1U] = inNeighborsTimes.back();
-            inNeighbors.pop_back();
-            inNeighborsTimes.pop_back();
-        }
-    }
-
     bool addInNeighbor(VertexData *in) {
         auto index = inNeighborIndices[in->vertex];
         PRINT_DEBUG("Index of " << in->vertex << " is " << index);
         if (index == 0U) {
-            if (in->level + 1 == level) {
-                inNeighborIndices[in->vertex] = parents.size() + 1U;
-                parents.push_back(in);
-                parentTimes.push_back(1U);
-            } else if (in->level + 1 < level) {
-                pullUp(in, index);
-                PRINT_DEBUG("Vertex improves level.");
-            } else {
+            // try to find an empty place
+            bool inserted = false;
+            for (int i = inNeighbors.size() - 1; i >= 0; i--) {
+                if (inNeighbors[i] == nullptr) {
+                    assert(inNeighborsTimes[i] == 0U);
+                    inNeighbors[i] = in;
+                    inNeighborsTimes[i] = 1U;
+                    inNeighborIndices[in->vertex] = i + 1U;
+                    inserted = true;
+                    PRINT_DEBUG("Inserted vertex at index " << i);
+                    assert(inNeighborsLost > 0U);
+                    inNeighborsLost--;
+                    break;
+                }
+            }
+            if (!inserted) {
                 inNeighborIndices[in->vertex] = inNeighbors.size() + 1U;
                 inNeighbors.push_back(in);
                 inNeighborsTimes.push_back(1U);
@@ -155,13 +130,8 @@ struct ESTree::VertexData {
             }
             return false;
         } else {
-            if (in->level + 1 == level) {
-                parentTimes[index - 1U]++;
-                PRINT_DEBUG("Increased counter in parents to " << parentTimes[index - 1U] );
-            } else {
-                inNeighborsTimes[index - 1U]++;
-                PRINT_DEBUG("Increased counter in in-neighbors to " << inNeighborsTimes[index - 1U] );
-            }
+            inNeighborsTimes[index - 1U]++;
+            PRINT_DEBUG("Increased counter to " << inNeighborsTimes[index - 1U] );
             return true;
         }
     }
@@ -171,24 +141,14 @@ struct ESTree::VertexData {
         if (inLevel >= level) {
             return 0U;
         } else {
-            auto index = inNeighborIndices[in->vertex];
+            auto index = inNeighborIndices[in->vertex] - 1U;
             if (inLevel + 1 < level) {
-                PRINT_DEBUG("Got a better parent.");
-                auto oldLevel = level == UNREACHABLE ? graphSize : level;
-                pullUp(in, index);
-                return oldLevel - level;
-            } else {
-                PRINT_DEBUG("Got one more parent.");
-                auto oldIndex = inNeighborIndices[in->vertex];
-                parents.push_back(in);
-                parentTimes.push_back(inNeighborsTimes[oldIndex - 1U]);
-                inNeighborIndices[in->vertex] = parents.size();
-
-                inNeighbors[oldIndex - 1U] = inNeighbors.back();
-                inNeighborsTimes[oldIndex - 1U] = inNeighborsTimes.back();
-                inNeighborIndices[inNeighbors.back()->vertex] = oldIndex;
-                inNeighbors.pop_back();
-                inNeighborsTimes.pop_back();
+                parentIndex = index;
+                auto diff = (level == UNREACHABLE ? graphSize : level) - (inLevel + 1U);
+                level = inLevel + 1U;
+                return diff;
+            } else if (index < parentIndex) {
+                parentIndex = index;
             }
             return 0U;
         }
@@ -197,39 +157,18 @@ struct ESTree::VertexData {
     bool findAndRemoveInNeighbor(VertexData *in) {
         auto index = inNeighborIndices[in->vertex] - 1U;
         assert(inNeighborsTimes[index] > 0U);
-        if (in->level + 1 == in->level) {
-            parentTimes[index]--;
-            if (parentTimes[index] > 0U) {
-                return true;
-            }
-            parents[index] = parents.back();
-            parentTimes[index] = parentTimes.back();
-            inNeighborIndices[parents.back()->vertex] = index + 1U;
-            parents.pop_back();
-            parentTimes.pop_back();
-            inNeighborIndices.resetToDefault(in->vertex);
-            return false;
-        } else {
-            inNeighborsTimes[index]--;
-            if (inNeighborsTimes[index] > 0U) {
-                return true;
-            }
-            inNeighbors[index] = inNeighbors.back();
-            inNeighborsTimes[index] = inNeighborsTimes.back();
-            inNeighborIndices[inNeighbors.back()->vertex] = index + 1U;
-            inNeighbors.pop_back();
-            inNeighborsTimes.pop_back();
-            inNeighborIndices.resetToDefault(in->vertex);
-            return false;
+        inNeighborsTimes[index]--;
+        if (inNeighborsTimes[index] > 0U) {
+            return true;
         }
+        inNeighbors[index] = nullptr;
+        inNeighborsTimes[index] = 0U;
+        inNeighborIndices.resetToDefault(in->vertex);
+        inNeighborsLost++;
+        return false;
     }
 
-    // TODO
     bool isParent(VertexData *p) {
-        if (parents.empty()) {
-            return false;
-
-        }
         if (parentIndex >= inNeighbors.size() || !isReachable()) {
             return false;
         }
