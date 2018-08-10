@@ -211,6 +211,7 @@ struct SimpleIncSSReachAlgorithm::Reachability {
                     reachability[v] = State::UNREACHABLE;
                 }
             }
+            changedStateVertices.clear();
             return;
         }
 
@@ -244,6 +245,7 @@ struct SimpleIncSSReachAlgorithm::Reachability {
                         reachability[v] = State::UNREACHABLE;
                     }
                     assert(reachability[u] == State::UNREACHABLE);
+                    backwardsReached.clear();
                 }
             }
             if (reachability(u) == State::REACHABLE) {
@@ -269,6 +271,7 @@ struct SimpleIncSSReachAlgorithm::Reachability {
         if (maxTracebacks < tracebacks) {
             maxTracebacks = tracebacks;
         }
+        changedStateVertices.clear();
     }
 
     bool reachable(const Vertex *v) const {
