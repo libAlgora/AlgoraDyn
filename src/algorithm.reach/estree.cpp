@@ -72,11 +72,15 @@ struct ESTree::VertexData {
     }
 
     void reset(VertexData *p = nullptr, unsigned int l = UINT_MAX) {
+        for (auto in : inNeighbors) {
+            if (in != nullptr) {
+                inNeighborIndices.resetToDefault(in->vertex);
+            }
+        }
         inNeighbors.clear();
         inNeighborsTimes.clear();
         inNeighborsLost = 0U;
         parentIndex = 0U;
-        inNeighborIndices.resetAll(graphSize);
         level = l;
         if (p != nullptr) {
             inNeighborIndices[p->vertex] = 1U;
