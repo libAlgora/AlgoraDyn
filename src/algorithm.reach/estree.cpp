@@ -674,21 +674,15 @@ void ESTree::rerun()
     run();
 }
 
-//void ESTree::restoreTree(const std::vector<ESTree::VertexData *> vds)
 void ESTree::restoreTree(ESTree::VertexData *vd)
 {
     PriorityQueue queue;
     queue.set_capacity(diGraph->getSize());
     FastPropertyMap<bool> inQueue(false, "", diGraph->getSize());
     FastPropertyMap<unsigned int> timesInQueue(0U, "", diGraph->getSize());
-    //for (auto vd : vds) {
-    //    if (!inQueue[vd->vertex]) {
-            //queue.push(vd);
-            queue.push_back(vd);
-            inQueue[vd->vertex] = true;
-            timesInQueue[vd->vertex]++;
-    //    }
-    //}
+    queue.push_back(vd);
+    inQueue[vd->vertex] = true;
+    timesInQueue[vd->vertex]++;
     PRINT_DEBUG("Initialized queue with " << vds.size() << " vertices.");
     bool limitReached = false;
     auto affected = 0U;
@@ -696,9 +690,7 @@ void ESTree::restoreTree(ESTree::VertexData *vd)
 
     while (!queue.empty()) {
         IF_DEBUG(printQueue(queue))
-        //auto vd = queue.bot();
         auto vd = queue.front();
-        //queue.popBot();
         queue.pop_front();
         inQueue[vd->vertex] = false;
         unsigned int levels = process(diGraph, vd, queue, data, reachable, inQueue, timesInQueue, requeueLimit,
