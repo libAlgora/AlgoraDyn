@@ -126,7 +126,6 @@ struct RemoveArcOperation : public Operation {
 };
 
 struct DynamicDiGraph::CheshireCat {
-    bool doubleArcIsRemoval;
     IncidenceListGraph dynGraph;
     IncidenceListGraph constructionGraph;
 
@@ -142,7 +141,9 @@ struct DynamicDiGraph::CheshireCat {
     std::vector<AddVertexOperation*> vertices;
     std::unordered_map<Arc*,AddArcOperation*> constructionArcMap;
 
-    CheshireCat() : timeIndex(0U), opIndex(0U) { clear(); }
+    bool doubleArcIsRemoval;
+
+    CheshireCat() : timeIndex(0U), opIndex(0U), doubleArcIsRemoval(false) { clear(); }
     ~CheshireCat() {
         clear();
     }
