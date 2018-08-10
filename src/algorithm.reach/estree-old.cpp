@@ -576,7 +576,7 @@ void OldESTree::onArcRemove(Arc *a)
         PRINT_DEBUG("Arc is not a tree arc. Nothing to do.");
         decNonTreeArc++;
     } else {
-        restoreTree({ hd });
+        restoreTree(hd);
     }
 
     IF_DEBUG(
@@ -672,22 +672,18 @@ void OldESTree::rerun()
     run();
 }
 
-void OldESTree::restoreTree(const std::vector<OldESTree::VertexData *> vds)
+void OldESTree::restoreTree(OldESTree::VertexData *vd)
 {
     PriorityQueue queue;
     FastPropertyMap<bool> inQueue(false, "", diGraph->getSize());
     FastPropertyMap<unsigned int> timesInQueue(0U, "", diGraph->getSize());
-    for (auto vd : vds) {
-        if (!inQueue[vd->vertex]) {
-            queue.push(vd);
-            inQueue[vd->vertex] = true;
-            timesInQueue[vd->vertex]++;
-        }
-    }
+    queue.push(vd);
+    inQueue[vd->vertex] = true;
+    timesInQueue[vd->vertex]++;
     PRINT_DEBUG("Initialized queue with " << vds.size() << " vertices.");
     bool limitReached = false;
-		auto affected = 0U;
-		auto maxAffected = maxAffectedRatio * VertexData::graphSize;
+    auto affected = 0U;
+    auto maxAffected = maxAffectedRatio * VertexData::graphSize;
 
     while (!queue.empty()) {
         IF_DEBUG(printQueue(queue))
@@ -700,7 +696,7 @@ void OldESTree::restoreTree(const std::vector<OldESTree::VertexData *> vds)
             rerun();
             break;
         } else if (levels > 0U) {
-						affected++;
+            affected++;
             movesDown++;
             levelIncrease += levels;
             PRINT_DEBUG("total level increase " << levelIncrease);

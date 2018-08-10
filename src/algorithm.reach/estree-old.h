@@ -103,7 +103,7 @@ private:
     unsigned int reruns;
     unsigned int maxReQueued;
 
-    void restoreTree(const std::vector<VertexData *> vds);
+    void restoreTree(VertexData *vd);
     void cleanup();
     void dumpTree(std::ostream &os);
     bool checkTree();

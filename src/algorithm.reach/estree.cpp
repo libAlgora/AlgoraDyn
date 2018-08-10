@@ -887,7 +887,9 @@ unsigned int process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queu
               PRINT_DEBUG("    NOT adding " << hd << " to queue: not a child of " << vd)
             }
         }, [&limitReached](const Arc *) { return limitReached; });
-        enqueue(vd);
+        if (reachV || !limitReached) {
+            enqueue(vd);
+        }
     }
 
     PRINT_DEBUG("Returning level diff " << levelDiff  << " for " << vd << ".");
