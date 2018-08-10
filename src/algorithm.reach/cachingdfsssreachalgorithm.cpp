@@ -40,7 +40,7 @@ CachingDFSSSReachAlgorithm::~CachingDFSSSReachAlgorithm()
 
 void CachingDFSSSReachAlgorithm::run()
 {
-    dfsResults.resetAll();
+    dfsResults.resetAll(diGraph->getSize());
     dfs.setStartVertex(source);
     if (!dfs.prepare()) {
        throw DiGraphAlgorithmException(this, "Could not prepare DFS algorithm.");
@@ -72,6 +72,7 @@ void CachingDFSSSReachAlgorithm::onDiGraphSet()
 {
     DynamicSSReachAlgorithm::onDiGraphSet();
     dfs.setGraph(diGraph);
+    dfsResults.resetAll(diGraph->getSize());
     initialized = false;
     arcAdded = false;
     arcRemoved = false;
