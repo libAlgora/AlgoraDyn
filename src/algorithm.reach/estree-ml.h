@@ -20,8 +20,8 @@
  *   http://algora.xaikal.org
  */
 
-#ifndef ESTREE_H
-#define ESTREE_H
+#ifndef ESTREEML_H
+#define ESTREEML_H
 
 #include "dynamicssreachalgorithm.h"
 #include "property/propertymap.h"
@@ -31,12 +31,12 @@
 
 namespace Algora {
 
-class ESTree : public DynamicSSReachAlgorithm
+class ESTreeML : public DynamicSSReachAlgorithm
 {
 public:
     struct VertexData;
-    explicit ESTree(unsigned int requeueLimit = UINT_MAX, double maxAffectedRatio = 1.0);
-    virtual ~ESTree();
+    explicit ESTreeML(unsigned int requeueLimit = UINT_MAX, double maxAffectedRatio = 1.0);
+    virtual ~ESTreeML();
     void setRequeueLimit(unsigned int limit) {
         requeueLimit = limit;
     }
@@ -49,13 +49,13 @@ public:
     virtual void run() override;
     virtual std::string getName() const noexcept override {
       std::stringstream ss;
-			ss << "ES-Tree Single-Source Reachability Algorithm (";
+            ss << "Multilevel ES-Tree Single-Source Reachability Algorithm (";
       ss << requeueLimit << "/" << maxAffectedRatio << ")";
       return ss.str();
 		}
     virtual std::string getShortName() const noexcept override {
       std::stringstream ss;
-            ss << "EST-DSSR(";
+            ss << "ML-EST-DSSR(";
       ss << requeueLimit << "/" << maxAffectedRatio << ")";
       return ss.str();
 		}
@@ -103,7 +103,7 @@ private:
     unsigned int reruns;
     unsigned int maxReQueued;
 
-    void restoreTree(const std::vector<VertexData *> vds);
+    void restoreTree(VertexData *vd);
     void cleanup();
     void dumpTree(std::ostream &os);
     bool checkTree();
@@ -112,4 +112,4 @@ private:
 
 }
 
-#endif // ESTREE_H
+#endif // ESTREEML_H
