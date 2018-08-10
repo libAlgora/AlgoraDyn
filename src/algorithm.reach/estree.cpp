@@ -112,6 +112,8 @@ struct ESTree::VertexData {
                     inNeighborIndices[in->vertex] = i + 1U;
                     inserted = true;
                     PRINT_DEBUG("Inserted vertex at index " << i);
+                    assert(inNeighborsLost > 0U);
+                    inNeighborsLost--;
                     break;
                 }
             }
@@ -483,6 +485,7 @@ void ESTree::onArcAdd(Arc *a)
         if (diff > 0U) {
             PRINT_DEBUG("Is a new tree arc.");
             movesUp++;
+            reachable[ah] = true;
             if (diff > maxLevelDecrease) {
                 maxLevelDecrease = diff;
             }
@@ -597,6 +600,7 @@ bool ESTree::query(const Vertex *t)
     if (!initialized) {
         run();
     }
+    assert(checkTree());
     return reachable(t);
 }
 
@@ -643,6 +647,11 @@ bool ESTree::checkTree()
        }
        if (!data[v]->checkIntegrity()) {
            std::cerr << "Integrity check failed for vertex " << data[v] << std::endl;
+           ok = false;
+       }
+       if (reachable(v) != data[v]->isReachable()) {
+           std::cerr << "Reachability flag diverges from state according to BFS tree: " <<
+                     reachable(v) << " vs " << data[v] << std::endl;
            ok = false;
        }
    });
