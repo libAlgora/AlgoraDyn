@@ -244,7 +244,8 @@ ESTreeML::ESTreeML(unsigned int requeueLimit, double maxAffectedRatio)
       maxLevelIncrease(0U), maxLevelDecrease(0U),
       decUnreachableHead(0U), decNonTreeArc(0U),
       incUnreachableTail(0U), incNonTreeArc(0U),
-      reruns(0U), maxReQueued(0U)
+      reruns(0U), maxReQueued(0U),
+      maxAffected(0U), totalAffected(0U)
 {
     data.setDefaultValue(nullptr);
     reachable.setDefaultValue(false);
@@ -360,6 +361,8 @@ std::string ESTreeML::getProfilingInfo() const
     ss << "requeue limit: " << requeueLimit << std::endl;
     ss << "maximum #requeuings: " << maxReQueued << std::endl;
     ss << "maximum ratio of affected vertices: " << maxAffectedRatio << std::endl;
+    ss << "total affected vertices: " << totalAffected << std::endl;
+    ss << "maximum number of affected vertices: " << maxAffected << std::endl;
     ss << "#reruns: " << reruns << std::endl;
     return ss.str();
 }
@@ -380,6 +383,8 @@ DynamicSSReachAlgorithm::Profile ESTreeML::getProfile() const
     profile.push_back(std::make_pair(std::string("requeue_limit"), requeueLimit));
     profile.push_back(std::make_pair(std::string("max_affected"), maxAffectedRatio));
     profile.push_back(std::make_pair(std::string("max_requeued"), maxReQueued));
+    profile.push_back(std::make_pair(std::string("total_affected"), totalAffected));
+    profile.push_back(std::make_pair(std::string("max_affected"), maxAffected));
     profile.push_back(std::make_pair(std::string("rerun"), reruns));
     return profile;
 }
@@ -399,6 +404,8 @@ void ESTreeML::onDiGraphSet()
     incNonTreeArc = 0U;
     reruns = 0U;
     maxReQueued = 0U;
+    maxAffected = 0U;
+    totalAffected = 0U;
     data.resetAll(diGraph->getSize());
     reachable.resetAll(diGraph->getSize());
     VertexData::graphSize = diGraph->getSize();
@@ -682,7 +689,7 @@ void ESTreeML::restoreTree(ESTreeML::VertexData *vd)
     PRINT_DEBUG("Initialized queue with " << vds.size() << " vertices.");
     bool limitReached = false;
     auto affected = 0U;
-    auto maxAffected = maxAffectedRatio * VertexData::graphSize;
+    auto affectedLimit = maxAffectedRatio * VertexData::graphSize;
 
     while (!queue.empty()) {
         IF_DEBUG(printQueue(queue))
@@ -691,11 +698,11 @@ void ESTreeML::restoreTree(ESTreeML::VertexData *vd)
         inQueue[vd->vertex] = false;
         unsigned int levels = process(diGraph, vd, queue, data, reachable, inQueue, timesInQueue, requeueLimit,
                                       limitReached, maxReQueued);
-        if (limitReached || affected > maxAffected) {
+        if (limitReached || affected > affectedLimit) {
             rerun();
             break;
         } else if (levels > 0U) {
-						affected++;
+            affected++;
             movesDown++;
             levelIncrease += levels;
             PRINT_DEBUG("total level increase " << levelIncrease);
@@ -704,6 +711,10 @@ void ESTreeML::restoreTree(ESTreeML::VertexData *vd)
                 PRINT_DEBUG("new max level increase " << maxLevelIncrease);
             }
         }
+    }
+    totalAffected += affected;
+    if (affected > maxAffected) {
+        maxAffected = affected;
     }
 }
 
