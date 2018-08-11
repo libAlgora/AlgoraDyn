@@ -191,7 +191,7 @@ struct SimpleIncSSReachAlgorithm::Reachability {
         }
 
         changedStateVertices.clear();
-        propagate(from, State::UNKNOWN, true);
+        propagate(from, State::UNKNOWN, true, false);
 
         auto unknown = changedStateVertices.size();
         numReachable -= unknown;
@@ -230,7 +230,7 @@ struct SimpleIncSSReachAlgorithm::Reachability {
                 if (checkReachability(u, backwardsReached)) {
                     PRINT_DEBUG( u << " is reachable.");
                     if (searchForward) {
-                        reachFrom(u, diGraph);
+                        reachFrom(u);
                     } else {
                         //assert(reachability[u] == State::REACHABLE);
                         reachability[u] = State::REACHABLE;
@@ -359,7 +359,7 @@ void SimpleIncSSReachAlgorithm::run()
     }
 
     data->reset(source);
-    data->reachFrom(source, diGraph);
+    data->reachFrom(source);
     initialized = true;
 }
 
@@ -449,7 +449,7 @@ void SimpleIncSSReachAlgorithm::onArcAdd(Arc *a)
         return;
     }
 
-    data->reachFrom(head, diGraph);
+    data->reachFrom(head);
     assert(data->verifyReachability());
 }
 
