@@ -702,11 +702,11 @@ void ESTree::restoreTree(ESTree::VertexData *vd)
         inQueue[vd->vertex] = false;
         unsigned int levels = process(diGraph, vd, queue, data, reachable, inQueue, timesInQueue, requeueLimit,
                                       limitReached, maxReQueued);
-        if (limitReached || affected > affectedLimit) {
+        affected++;
+        if (limitReached || (affected > affectedLimit && !queue.empty())) {
             rerun();
             break;
         } else if (levels > 0U) {
-						affected++;
             movesDown++;
             levelIncrease += levels;
             PRINT_DEBUG("total level increase " << levelIncrease);

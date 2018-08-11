@@ -559,11 +559,11 @@ void SimpleESTree::restoreTree(SimpleESTree::VertexData *rd)
         inQueue.resetToDefault(vd->vertex);
         unsigned int levels = process(diGraph, vd, queue, data, reachable, inQueue, timesInQueue, requeueLimit,
                                       limitReached, maxReQueued);
-        if (limitReached || affected > affectedLimit) {
+        affected++;
+        if (limitReached || (affected > affectedLimit && !queue.empty())) {
             rerun();
             break;
         } else if (levels > 0U) {
-						affected++;
             movesDown++;
             levelIncrease += levels;
             if (levels > maxLevelIncrease) {
