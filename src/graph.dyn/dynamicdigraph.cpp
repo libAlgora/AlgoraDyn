@@ -462,6 +462,13 @@ struct DynamicDiGraph::CheshireCat {
         }
         return vertices.at(vertexId)->vertex;
     }
+
+    unsigned int getSizeOfLastDelta() {
+        if (timeIndex + 1U == offset.size()) {
+            return operations.size() - offset[timeIndex];
+        }
+        return offset[timeIndex + 1U] - offset[timeIndex];
+    }
 };
 
 DynamicDiGraph::DynamicDiGraph()
@@ -593,6 +600,11 @@ Vertex *DynamicDiGraph::getCurrentVertexForId(unsigned int vertexId) const
 unsigned int DynamicDiGraph::idOfIthVertex(unsigned int i) const
 {
     return stoul(grin->dynGraph.vertexAt(i)->getName());
+}
+
+unsigned int DynamicDiGraph::getSizeOfLastDelta() const
+{
+    return grin->getSizeOfLastDelta();
 }
 
 unsigned int DynamicDiGraph::countVertexAdditions(unsigned int timeFrom, unsigned int timeUntil) const
