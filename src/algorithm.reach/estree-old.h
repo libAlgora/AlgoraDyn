@@ -102,6 +102,8 @@ private:
     unsigned int incNonTreeArc;
     unsigned int reruns;
     unsigned int maxReQueued;
+    unsigned int maxAffected;
+    unsigned int totalAffected;
 
     void restoreTree(VertexData *vd);
     void cleanup();
