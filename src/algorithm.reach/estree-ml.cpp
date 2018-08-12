@@ -556,8 +556,10 @@ void ESTreeML::onArcRemove(Arc *a)
     PRINT_DEBUG("Stored data of tail: " << data(tail));
     PRINT_DEBUG("Stored data of head: " << data(head));
 
+		IF_DEBUG(
     std::stringstream ss;
     dumpTree(ss);
+		);
 
     VertexData *hd = data(head);
     if (hd == nullptr) {
