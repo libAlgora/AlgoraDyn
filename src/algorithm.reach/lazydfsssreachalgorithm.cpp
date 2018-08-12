@@ -120,7 +120,7 @@ void LazyDFSSSReachAlgorithm::onDiGraphSet()
 
 void LazyDFSSSReachAlgorithm::onVertexAdd(Vertex *v)
 {
-    grin->discovered(v) = false;
+    grin->discovered[v] = false;
     grin->exhausted = false;
 }
 
