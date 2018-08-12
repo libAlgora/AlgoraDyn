@@ -109,6 +109,17 @@ void LazyBFSSSReachAlgorithm::onDiGraphSet()
     grin->graph = diGraph;
 }
 
+void LazyBFSSSReachAlgorithm::onVertexAdd(Vertex *v)
+{
+    grin->discovered[v] = false;
+    grin->exhausted = false;
+}
+
+void LazyBFSSSReachAlgorithm::onVertexRemove(Vertex *v)
+{
+    grin->discovered.resetToDefault(v);
+}
+
 void LazyBFSSSReachAlgorithm::onArcAdd(Arc *a)
 {
     if (a->isLoop()) {

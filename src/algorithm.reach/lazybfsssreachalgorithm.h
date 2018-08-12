@@ -44,6 +44,8 @@ protected:
 
     // DynamicDiGraphAlgorithm interface
 protected:
+    virtual void onVertexAdd(Vertex *v) override;
+    virtual void onVertexRemove(Vertex *v) override;
     virtual void onArcAdd(Arc *a) override;
     virtual void onArcRemove(Arc *a) override;
 

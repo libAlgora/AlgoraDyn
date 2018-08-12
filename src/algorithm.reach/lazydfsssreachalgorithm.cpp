@@ -118,6 +118,17 @@ void LazyDFSSSReachAlgorithm::onDiGraphSet()
     grin->graph = diGraph;
 }
 
+void LazyDFSSSReachAlgorithm::onVertexAdd(Vertex *v)
+{
+    grin->discovered(v) = false;
+    grin->exhausted = false;
+}
+
+void LazyDFSSSReachAlgorithm::onVertexRemove(Vertex *v)
+{
+    grin->discovered.resetToDefault(v);
+}
+
 void LazyDFSSSReachAlgorithm::onArcAdd(Arc *a)
 {
     if (a->isLoop()) {

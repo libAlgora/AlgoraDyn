@@ -87,6 +87,15 @@ void CachingDFSSSReachAlgorithm::onDiGraphUnset()
     DynamicSSReachAlgorithm::onDiGraphUnset();
 }
 
+void CachingDFSSSReachAlgorithm::onVertexAdd(Vertex *v)
+{
+}
+
+void CachingDFSSSReachAlgorithm::onVertexRemove(Vertex *)
+{
+
+}
+
 void CachingDFSSSReachAlgorithm::onArcAdd(Arc *a)
 {
     if (!initialized || arcAdded || a->isLoop()) {

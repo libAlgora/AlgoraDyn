@@ -50,6 +50,8 @@ protected:
     virtual void onDiGraphUnset() override;
 
     // DynamicDiGraphAlgorithm interface
+    virtual void onVertexAdd(Vertex *v) override;
+    virtual void onVertexRemove(Vertex *v) override;
     virtual void onArcAdd(Arc *a) override;
     virtual void onArcRemove(Arc *a) override;
 

@@ -87,6 +87,16 @@ void CachingBFSSSReachAlgorithm::onDiGraphUnset()
     DynamicSSReachAlgorithm::onDiGraphUnset();
 }
 
+void CachingBFSSSReachAlgorithm::onVertexAdd(Vertex *v)
+{
+    levels[v] = -1;
+}
+
+void CachingBFSSSReachAlgorithm::onVertexRemove(Vertex *v)
+{
+    levels.resetToDefault(v);
+}
+
 void CachingBFSSSReachAlgorithm::onArcAdd(Arc *a)
 {
     if (!initialized || arcAdded || a->isLoop()) {
