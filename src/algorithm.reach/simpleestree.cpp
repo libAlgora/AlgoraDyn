@@ -157,6 +157,28 @@ SimpleESTree::~SimpleESTree()
     cleanup();
 }
 
+unsigned int SimpleESTree::getDepthOfBFSTree() const
+{
+    auto maxLevel = 0U;
+    diGraph->mapVertices([&](Vertex *v) {
+        if (reachable(v) && data[v]->level > maxLevel) {
+            maxLevel = data[v]->level;
+        }
+    });
+    return maxLevel + 1U;
+}
+
+unsigned int SimpleESTree::getNumReachable() const
+{
+    auto numR = 0U;
+    diGraph->mapVertices([&](Vertex *v) {
+        if (reachable(v)) {
+            numR++;
+        }
+    });
+    return numR;
+}
+
 void SimpleESTree::run()
 {
     if (initialized) {

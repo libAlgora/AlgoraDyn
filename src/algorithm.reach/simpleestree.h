@@ -43,6 +43,8 @@ public:
     void setMaxAffectedRatio(double ratio) {
         maxAffectedRatio = ratio;
     }
+    unsigned int getDepthOfBFSTree() const;
+    unsigned int getNumReachable() const;
 
     // DiGraphAlgorithm interface
 public:
