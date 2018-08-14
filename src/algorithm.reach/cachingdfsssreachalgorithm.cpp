@@ -87,7 +87,7 @@ void CachingDFSSSReachAlgorithm::onDiGraphUnset()
     DynamicSSReachAlgorithm::onDiGraphUnset();
 }
 
-void CachingDFSSSReachAlgorithm::onVertexAdd(Vertex *v)
+void CachingDFSSSReachAlgorithm::onVertexAdd(Vertex *)
 {
 }
 
