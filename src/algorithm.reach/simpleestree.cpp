@@ -161,8 +161,8 @@ unsigned int SimpleESTree::getDepthOfBFSTree() const
 {
     auto maxLevel = 0U;
     diGraph->mapVertices([&](Vertex *v) {
-        if (reachable(v) && data[v]->level > maxLevel) {
-            maxLevel = data[v]->level;
+        if (reachable(v) && data(v)->level > maxLevel) {
+            maxLevel = data(v)->level;
         }
     });
     return maxLevel + 1U;
