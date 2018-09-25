@@ -33,7 +33,7 @@ namespace Algora {
 class SimpleIncSSReachAlgorithm : public DynamicSSReachAlgorithm
 {
 public:
-    explicit SimpleIncSSReachAlgorithm(bool reverse = false, bool searchForward = false, double maxUS = 1.0);
+    explicit SimpleIncSSReachAlgorithm(bool reverse = false, bool searchForward = false, double maxUS = 1.0, bool radicalReset = false);
     virtual ~SimpleIncSSReachAlgorithm();
     void setMaxUnknownStateSqrt();
     void setMaxUnknownStateLog();
@@ -55,7 +55,8 @@ public:
         } else {
             ss << maxUnknownStateRatio;
         }
-        ss << " w.r.t. " << (relateToReachable ? "#reachable" : "#vertices") << ")";
+        ss << " * " << (relateToReachable ? "#R" : "#V") << "/";
+        ss  << (radicalReset? "radical reset" : "soft reset") << ")\n";
         return ss.str();
     }
     virtual std::string getShortName() const noexcept override {
@@ -70,7 +71,8 @@ public:
         } else {
             ss << maxUnknownStateRatio;
         }
-        ss << "~" << (relateToReachable ? "R" : "G") << ")";
+        ss << "~" << (relateToReachable ? "R" : "G") << ",";
+        ss << (radicalReset ? "C" : "NC") << ")\n";
         return ss.str();
     }
     virtual std::string getProfilingInfo() const override;
@@ -107,6 +109,7 @@ private:
     bool maxUSSqrt;
     bool maxUSLog;
     bool relateToReachable;
+    bool radicalReset;
 };
 
 }

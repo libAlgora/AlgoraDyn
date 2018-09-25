@@ -38,7 +38,7 @@
 
 #ifdef DEBUG_SISSREACH
 #include <iostream>
-#define PRINT_DEBUG(msg) std::cout << msg << std::endl;
+#define PRINT_DEBUG(msg) std::cout << msg << std::endl
 #define IF_DEBUG(cmd) cmd;
 #else
 #define PRINT_DEBUG(msg)
@@ -50,7 +50,10 @@ namespace Algora {
 
 struct SimpleIncSSReachAlgorithm::Reachability {
     enum struct State : std::int8_t { REACHABLE, UNREACHABLE, UNKNOWN };
+
+    SimpleIncSSReachAlgorithm *parent;
     FastPropertyMap<State> reachability;
+    FastPropertyMap<Vertex*> pred;
     DiGraph *diGraph;
     Vertex *source;
     std::vector<const Vertex*> changedStateVertices;
@@ -61,6 +64,7 @@ struct SimpleIncSSReachAlgorithm::Reachability {
     bool maxUSSqrt;
     bool maxUSLog;
     bool relateToReachable;
+    bool radicalReset;
 
     unsigned int numReachable;
     unsigned long numUnreached;
@@ -75,22 +79,26 @@ struct SimpleIncSSReachAlgorithm::Reachability {
     unsigned long maxTracebacks;
     unsigned long numReReachFromSource;
 
-    Reachability(bool r, bool sf, double maxUS)
-        : diGraph(nullptr), source(nullptr), reverse(r), searchForward(sf), maxUnknownStateRatio(maxUS),
+    Reachability(SimpleIncSSReachAlgorithm *p, bool r, bool sf, double maxUS)
+        : parent(p), diGraph(nullptr), source(nullptr), reverse(r), searchForward(sf), maxUnknownStateRatio(maxUS),
           maxUSSqrt(false), maxUSLog(false), relateToReachable(false), numReachable(0U),
           numUnreached(0UL), numRereached(0UL), numUnknown(0UL), numReached(0UL), numTracebacks(0UL),
           maxUnreached(0UL), maxRereached(0UL), maxUnknown(0UL), maxReached(0UL), maxTracebacks(0UL),
           numReReachFromSource(0U) {
         reachability.setDefaultValue(State::UNREACHABLE);
+        pred.setDefaultValue(nullptr);
+        radicalReset = parent->radicalReset;
     }
 
     void reset(Vertex *src = nullptr) {
         source = src;
         reachability.resetAll();
+        pred.resetAll();
         //if (source != nullptr) {
         //    reachability[source] = State::REACHABLE;
         //}
         numReachable = 0UL;
+#ifdef COLLECT_PR_DATA
         numUnreached = 0UL;
         numRereached = 0UL;
         numUnknown = 0UL;
@@ -102,19 +110,65 @@ struct SimpleIncSSReachAlgorithm::Reachability {
         maxReached = 0UL;
         maxTracebacks = 0UL;
         numReReachFromSource = 0UL;
+#endif
     }
 
-    unsigned int propagate(const Vertex *from, State s, bool collectVertices, bool force = false) {
+    unsigned int propagate(const Vertex *from, State s, bool collectVertices, bool setPred,
+                           bool force) {
         PRINT_DEBUG("Propagating " << printState(s) << " from " << from << ".");
         BreadthFirstSearch<FastPropertyMap> bfs(false);
         bfs.setGraph(diGraph);
         bfs.setStartVertex(from);
-        bfs.onVertexDiscover([&](const Vertex *v) {
-            PRINT_DEBUG("Reaching " << v << " with state " << printState(reachability(v)) );
+        if (!setPred) {
+            pred.resetToDefault(from);
+        }
+        if (reachability(from) != s) {
+            reachability[from] = s;
+            if (s == State::REACHABLE) {
+                numReachable++;
+            }
+            if (collectVertices) {
+                changedStateVertices.push_back(from);
+            }
+        }
+
+        bfs.onArcDiscover([&](const Arc *a) {
+            PRINT_DEBUG("Discovering arc (" << a->getTail() << ", " << a->getHead() << ")" );
+#ifdef COLLECT_PR_DATA
+            parent->prArcConsidered();
+#endif
+            auto p = a->getTail();
+            auto v = a->getHead();
+
+            PRINT_DEBUG("Reaching " << v << " via " << p << " with state " << printState(reachability(v))
+                        << " and pred " << pred(v));
+
+            if (pred(v) != nullptr && pred(v) != p) {
+                PRINT_DEBUG(v << " already has another predecessor.");
+                return false;
+            }
+
             if ((!force && reachability(v) == s) || (v == source && source != from)) {
                 PRINT_DEBUG(v << " already had this state and update was not forced, no update of successors.");
                 return false;
             }
+
+            if (!force && reachability(v) == State::UNREACHABLE && s == State::UNKNOWN) {
+                PRINT_DEBUG(v << " is already known to be unreachable.");
+                return false;
+            }
+
+            if (setPred && pred(v) == nullptr) {
+                pred[v] = p;
+                PRINT_DEBUG("Set predecessor.");
+            } else if (!setPred && pred(v) == p) {
+                pred.resetToDefault(v);
+                PRINT_DEBUG("Deleted predecessor.");
+            } else {
+                PRINT_DEBUG("Warning: Predecessor not updated.");
+                assert(false);
+            }
+
             if (reachability[v] != s) {
                 reachability[v] = s;
                 if (s == State::REACHABLE) {
@@ -130,6 +184,13 @@ struct SimpleIncSSReachAlgorithm::Reachability {
             }
             return true;
         });
+
+#ifdef COLLECT_PR_DATA
+        bfs.onVertexDiscover([&](const Vertex *) {
+            parent->prVertexConsidered();
+            return true;
+        });
+#endif
         if (!bfs.prepare()) {
             throw DiGraphAlgorithmException(nullptr, "Could not prepare BFS algorithm.");
         }
@@ -137,43 +198,88 @@ struct SimpleIncSSReachAlgorithm::Reachability {
         return bfs.deliver();
     }
 
-    bool checkReachability(const Vertex *u, std::vector<const Vertex*> &visitedUnknown) const {
+    bool checkReachability(const Vertex *u, std::vector<const Vertex*> &visitedUnknown) {
         assert (u != source);
         PRINT_DEBUG("Trying to find reachable predecessor of " << u << ".");
-        bool reach = false;
         BreadthFirstSearch<FastPropertyMap> bfs(false);
         bfs.setGraph(diGraph);
         bfs.reverseArcDirection(true);
         bfs.setStartVertex(u);
-        bfs.onVertexDiscover([&](const Vertex *v) {
-            PRINT_DEBUG("Exploring " << v->getName() << " with state " << printState(reachability(v)) );
+
+        assert(reachability(u) == State::UNKNOWN);
+        visitedUnknown.push_back(u);
+
+#ifdef COLLECT_PR_DATA
+        bfs.onArcDiscover([&](const Arc *) {
+            parent->prArcConsidered();
+            return true;
+        });
+#endif
+
+        FastPropertyMap<Vertex*> succ;
+        Vertex *reachableAncestor = nullptr;
+        bfs.onTreeArcDiscover([&](const Arc* a) {
+
+            auto v = a->getTail();
+            auto head = a->getHead();
+
+#ifdef COLLECT_PR_DATA
+            parent->prVertexConsidered();
+#endif
+
+            PRINT_DEBUG("Exploring " << v->getName() << " with state " << printState(reachability(v))
+                        << " via " << head);
             switch (reachability(v)) {
             case State::REACHABLE:
-                reach = true;
+                reachableAncestor = v;
+                succ[v] = head;
                 return false;
             case State::UNKNOWN:
                 visitedUnknown.push_back(v);
+                succ[v] = head;
+                return true;
             case State::UNREACHABLE:
-                ;
+                return false;
             }
             return true;
         });
-        bfs.setArcStopCondition([&](const Arc*) { return reach; });
-        bfs.setVertexStopCondition([&](const Vertex*) { return reach; });
+        bfs.setArcStopCondition([&](const Arc*) { return reachableAncestor != nullptr; });
+        bfs.setVertexStopCondition([&](const Vertex*) { return reachableAncestor != nullptr; });
         if (!bfs.prepare()) {
             throw DiGraphAlgorithmException(nullptr, "Could not prepare BFS algorithm.");
         }
         bfs.run();
         bfs.deliver();
-        return reach;
+
+        if (reachableAncestor != nullptr) {
+            auto *t = reachableAncestor;
+            auto *h = succ[reachableAncestor];
+            while (t != u) {
+#ifdef COLLECT_PR_DATA
+            parent->prVertexConsidered();
+#endif
+                pred[h] = t;
+                reachability[h] = State::REACHABLE;
+                numReachable++;
+                PRINT_DEBUG(t << " gets parent of " << h << ", " << h << " is now reachable.");
+                t = h;
+                h = succ[h];
+            }
+            return true;
+        }
+        return false;
     }
 
     void reachFrom(const Vertex *from, bool force = false) {
-        auto reached = propagate(from, State::REACHABLE, false, force);
+#ifdef COLLECT_PR_DATA
+        auto reached = propagate(from, State::REACHABLE, false, true, force);
         if (reached > maxReached) {
             maxReached = reached;
         }
         numReached += reached;
+#else
+        propagate(from, State::REACHABLE, false, true, force);
+#endif
     }
 
     void unReachFrom(const Vertex *from) {
@@ -184,18 +290,24 @@ struct SimpleIncSSReachAlgorithm::Reachability {
         if (!maxUSSqrt && !maxUSLog && maxUnknownStateRatio == 0.0) {
             PRINT_DEBUG("Maximum allowed unknown state ratio is 0, recomputing immediately.");
             reachability.resetAll();
+            pred.resetAll();
             numReachable = 0U;
+#ifdef COLLECT_PR_DATA
             numReReachFromSource++;
+            parent->prReset();
+#endif
             reachFrom(source, false);
             return;
         }
 
         changedStateVertices.clear();
-        propagate(from, State::UNKNOWN, true, false);
+        propagate(from, State::UNKNOWN, true, false, false);
 
         auto unknown = changedStateVertices.size();
+#ifdef COLLECT_PR_DATA
         numReachable -= unknown;
         PRINT_DEBUG( unknown << " vertices have unknown state.");
+#endif
 
         auto relateTo = relateToReachable ? numReachable : diGraph->getSize();
         auto compareTo = maxUSSqrt ? floor(sqrt(relateTo))
@@ -204,26 +316,41 @@ struct SimpleIncSSReachAlgorithm::Reachability {
         if (unknown > compareTo) {
             PRINT_DEBUG("Maximum allowed unknown state ratio exceeded, " << unknown << " > " << compareTo << ", recomputing.");
             numReReachFromSource++;
-            reachFrom(source, true);
-            for (auto v : changedStateVertices) {
-                if (reachability(v) != State::REACHABLE) {
-                    PRINT_DEBUG("Setting remaining vertex " << v << " with unknown state unreachable.");
-                    reachability[v] = State::UNREACHABLE;
+#ifdef COLLECT_PR_DATA
+            parent->prReset();
+#endif
+
+            if (radicalReset) {
+                reachability.resetAll();
+                pred.resetAll();
+                numReachable = 0U;
+                reachFrom(source, false);
+            } else {
+                reachFrom(source, true);
+                for (auto v : changedStateVertices) {
+#ifdef COLLECT_PR_DATA
+                    parent->prVertexConsidered();
+#endif
+                    if (reachability(v) != State::REACHABLE) {
+                        PRINT_DEBUG("Setting remaining vertex " << v << " with unknown state unreachable.");
+                        reachability[v] = State::UNREACHABLE;
+                    }
                 }
             }
             changedStateVertices.clear();
             return;
         }
 
-        if (reverse) {
-            std::reverse(changedStateVertices.begin(), changedStateVertices.end());
-        }
+#ifdef COLLECT_PR_DATA
         auto rereached = 0UL;
         auto tracebacks = 0UL;
+#endif
         std::vector<const Vertex*> backwardsReached;
-        while (!changedStateVertices.empty()) {
-            const Vertex *u = changedStateVertices.back();
-            changedStateVertices.pop_back();
+
+        auto processUnknowns = [&](const Vertex *u) {
+#ifdef COLLECT_PR_DATA
+             parent->prVertexConsidered();
+#endif
             if (reachability(u) == State::UNKNOWN) {
                 tracebacks++;
                 backwardsReached.clear();
@@ -231,10 +358,6 @@ struct SimpleIncSSReachAlgorithm::Reachability {
                     PRINT_DEBUG( u << " is reachable.");
                     if (searchForward) {
                         reachFrom(u);
-                    } else {
-                        //assert(reachability[u] == State::REACHABLE);
-                        reachability[u] = State::REACHABLE;
-                        numReachable++;
                     }
                     assert(reachability[u] == State::REACHABLE);
                 } else {
@@ -248,11 +371,22 @@ struct SimpleIncSSReachAlgorithm::Reachability {
                     backwardsReached.clear();
                 }
             }
+#ifdef COLLECT_PR_DATA
             if (reachability(u) == State::REACHABLE) {
                 rereached++;
             }
-        }
+#endif
+        };
 
+        if (reverse) {
+            std::for_each(changedStateVertices.crbegin(), changedStateVertices.crend(), processUnknowns);
+        } else {
+            std::for_each(changedStateVertices.cbegin(), changedStateVertices.cend(), processUnknowns);
+        }
+        changedStateVertices.clear();
+
+
+#ifdef COLLECT_PR_DATA
         assert(unknown >= rereached);
         auto unreached = unknown - rereached;
         numUnreached += unreached;
@@ -271,7 +405,7 @@ struct SimpleIncSSReachAlgorithm::Reachability {
         if (maxTracebacks < tracebacks) {
             maxTracebacks = tracebacks;
         }
-        changedStateVertices.clear();
+#endif
     }
 
     bool reachable(const Vertex *v) const {
@@ -308,24 +442,40 @@ struct SimpleIncSSReachAlgorithm::Reachability {
         });
         runAlgorithm(bfs, diGraph);
         bool ok = true;
+        auto countReachable = 0U;
         diGraph->mapVerticesUntil([&](Vertex *v) {
+            if (reachability(v) == State::REACHABLE) {
+                countReachable++;
+            }
+
             if((reachability(v) == State::UNKNOWN)
                     || (reachability(v) == State::REACHABLE && !lr(v))
                     || (reachability(v) == State::UNREACHABLE && lr(v))) {
                 ok = false;
                 PRINT_DEBUG("State mismatch for vertex " << v << ": " << printState(reachability(v)) << " but is "
                             << (lr(v) ? "reachable" : "unreachable"));
+            } else if (reachability(v) == State::REACHABLE && pred(v) == nullptr && v != source) {
+                ok = false;
+                PRINT_DEBUG(v << " is reachable but has no predecessor.");
+            } else if (reachability(v) != State::REACHABLE && pred(v) != nullptr) {
+                ok = false;
+                PRINT_DEBUG(v << " is not reachable but has predecessor.");
             }
         }, [&](const Vertex *) { return !ok; });
+
+        if (ok && countReachable != numReachable) {
+            ok = false;
+            PRINT_DEBUG("Wrong #reachable: stored " << numReachable << ", real " << countReachable );
+        }
         return ok;
     }
 };
 
 
-SimpleIncSSReachAlgorithm::SimpleIncSSReachAlgorithm(bool reverse, bool searchForward, double maxUS)
-    : DynamicSSReachAlgorithm(), data(new Reachability(reverse, searchForward, maxUS)), initialized(false),
+SimpleIncSSReachAlgorithm::SimpleIncSSReachAlgorithm(bool reverse, bool searchForward, double maxUS, bool radicalReset)
+    : DynamicSSReachAlgorithm(), data(new Reachability(this, reverse, searchForward, maxUS)), initialized(false),
       reverse(reverse), searchForward(searchForward), maxUnknownStateRatio(maxUS),
-      maxUSSqrt(false), maxUSLog(false), relateToReachable(false)
+      maxUSSqrt(false), maxUSLog(false), relateToReachable(false), radicalReset(radicalReset)
 
 { }
 
@@ -366,6 +516,7 @@ void SimpleIncSSReachAlgorithm::run()
 std::string SimpleIncSSReachAlgorithm::getProfilingInfo() const
 {
     std::stringstream ss;
+    ss << DynamicSSReachAlgorithm::getProfilingInfo();
     ss << "total reached vertices: " << data->numReached << std::endl;
     ss << "total unknown state vertices: " << data->numUnknown << std::endl;
     ss << "total unreached vertices: " << data->numUnreached << std::endl;
@@ -383,7 +534,7 @@ std::string SimpleIncSSReachAlgorithm::getProfilingInfo() const
 
 DynamicSSReachAlgorithm::Profile SimpleIncSSReachAlgorithm::getProfile() const
 {
-    Profile profile;
+    auto profile = DynamicSSReachAlgorithm::getProfile();
     profile.push_back(std::make_pair(std::string("total_reached"), data->numReached));
     profile.push_back(std::make_pair(std::string("total_unknown"), data->numUnknown));
     profile.push_back(std::make_pair(std::string("total_unreached"), data->numUnreached));
@@ -394,7 +545,7 @@ DynamicSSReachAlgorithm::Profile SimpleIncSSReachAlgorithm::getProfile() const
     profile.push_back(std::make_pair(std::string("max_unreached"), data->maxUnreached));
     profile.push_back(std::make_pair(std::string("max_rereached"), data->maxRereached));
     profile.push_back(std::make_pair(std::string("max_tracebacks"), data->maxTracebacks));
-    profile.push_back(std::make_pair(std::string("unknown_limit"), data->maxUnknownStateRatio));
+    profile.push_back(std::make_pair(std::string("unknown_limit_percent"), data->maxUnknownStateRatio * 100));
     profile.push_back(std::make_pair(std::string("rereach_from_source"), data->numReReachFromSource));
 
     return profile;
@@ -431,7 +582,7 @@ void SimpleIncSSReachAlgorithm::onArcAdd(Arc *a)
         return;
     }
 
-    PRINT_DEBUG( "A new arc was added: (" << a->getTail() << ", " << a->getHead() << ")");
+    PRINT_DEBUG( "\nA new arc was added: (" << a->getTail() << ", " << a->getHead() << ")");
 
     if (a->isLoop()) {
         PRINT_DEBUG("Arc is a loop.");
@@ -449,6 +600,7 @@ void SimpleIncSSReachAlgorithm::onArcAdd(Arc *a)
         return;
     }
 
+    data->pred[head] = tail;
     data->reachFrom(head);
     assert(data->verifyReachability());
 }
@@ -459,7 +611,7 @@ void SimpleIncSSReachAlgorithm::onArcRemove(Arc *a)
         return;
     }
 
-    PRINT_DEBUG( "(" << a->getTail() << ", " << a->getHead() << ") is about to be removed" );
+    PRINT_DEBUG( "\n(" << a->getTail() << ", " << a->getHead() << ") is about to be removed" );
 
     if (a->isLoop()) {
         PRINT_DEBUG("Arc is a loop.");
@@ -474,7 +626,12 @@ void SimpleIncSSReachAlgorithm::onArcRemove(Arc *a)
 
     if (!data->reachable(head)) {
         // head is already unreachable, nothing to update
-        PRINT_DEBUG("Tail is unreachable. Stop.")
+        PRINT_DEBUG("Head is unreachable. Stop.");
+        return;
+    }
+
+    if (data->pred(head) != a->getTail()) {
+        PRINT_DEBUG("Not a tree arc.");
         return;
     }
 
