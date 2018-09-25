@@ -51,6 +51,12 @@ void CachingBFSSSReachAlgorithm::run()
     initialized = true;
     arcAdded = false;
     arcRemoved = false;
+
+#ifdef COLLECT_PR_DATA
+    prReset();
+    prVerticesConsidered(diGraph->getSize());
+    prArcsConsidered(diGraph->getNumArcs());
+#endif
 }
 
 bool CachingBFSSSReachAlgorithm::query(const Vertex *t)

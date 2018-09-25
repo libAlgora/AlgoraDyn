@@ -26,13 +26,15 @@
 #include "algorithm/dynamicdigraphalgorithm.h"
 #include "graph/digraph.h"
 #include <ostream>
+#include <sstream>
 
 namespace Algora {
 
 class DynamicSSReachAlgorithm : public DynamicDiGraphAlgorithm
 {
 public:
-    typedef std::vector<std::pair<std::string, unsigned long long int>> Profile;
+    typedef unsigned long long int pr_val;
+    typedef std::vector<std::pair<std::string, pr_val>> Profile;
 
     explicit DynamicSSReachAlgorithm() : DynamicDiGraphAlgorithm(), source(nullptr) { }
     virtual ~DynamicSSReachAlgorithm() { }
@@ -41,16 +43,42 @@ public:
     virtual bool query(const Vertex *t) = 0;
 
     virtual void dumpData(std::ostream&) { }
-    virtual Profile getProfile() const { return Profile(); }
+    virtual Profile getProfile() const {
+        return Profile {
+            std::pair(std::string("vertices_considered"), pr_consideredVertices),
+            std::pair(std::string("arcs_considered"), pr_consideredArcs),
+            std::pair(std::string("num_resets"), pr_numResets)
+                    };
+    }
 
     // DiGraphAlgorithm interface
 public:
     virtual bool prepare() override { return source != nullptr && DynamicDiGraphAlgorithm::prepare() && diGraph->containsVertex(source); }
+    virtual std::string getProfilingInfo() const override {
+        std::stringstream ss;
+        for (const auto &[key, value] : getProfile()) {
+            ss << key << ": " << value << '\n';
+        }
+        return ss.str();
+    }
 
 protected:
     virtual void onSourceSet() { }
+    virtual void onDiGraphSet() override { DynamicDiGraphAlgorithm::onDiGraphSet(); resetProfileData(); }
+
+    void prVertexConsidered() { pr_consideredVertices++; }
+    void prVerticesConsidered(const pr_val &n) { pr_consideredVertices += n; }
+    void prArcConsidered() { pr_consideredArcs++; }
+    void prArcsConsidered(const pr_val &m) { pr_consideredArcs += m; }
+    void prReset() { pr_numResets++; }
+    void resetProfileData() { pr_consideredVertices = 0UL; pr_consideredArcs = 0UL; pr_numResets = 0UL; }
 
     Vertex *source;
+
+    pr_val pr_consideredVertices;
+    pr_val pr_consideredArcs;
+    pr_val pr_numResets;
+
 };
 
 }

@@ -29,6 +29,7 @@
 namespace Algora {
 
 struct LazyBFSSSReachAlgorithm::CheshireCat {
+    LazyBFSSSReachAlgorithm *parent;
     bool initialized;
     bool arcAdded;
     bool arcRemoved;
@@ -38,8 +39,10 @@ struct LazyBFSSSReachAlgorithm::CheshireCat {
     boost::circular_buffer<Vertex*> queue;
     FastPropertyMap<bool> discovered;
 
-    CheshireCat()
-        : initialized(false), arcAdded(false), arcRemoved(false), exhausted(false) { discovered.setDefaultValue(false); }
+    CheshireCat(LazyBFSSSReachAlgorithm *p)
+        : parent(p), initialized(false), arcAdded(false), arcRemoved(false), exhausted(false) {
+        discovered.setDefaultValue(false);
+    }
 
     void searchOn(const Vertex *t) {
         if (!initialized) {
@@ -48,12 +51,21 @@ struct LazyBFSSSReachAlgorithm::CheshireCat {
             queue.push_back(source);
             discovered.resetAll();
             discovered[source] = true;
+#ifdef COLLECT_PR_DATA
+            parent->prReset();
+#endif
         }
         bool stop = false;
         while (!stop && !queue.empty()) {
             const Vertex *v = queue.front();
+#ifdef COLLECT_PR_DATA
+                parent->prVertexConsidered();
+#endif
             queue.pop_front();
             graph->mapOutgoingArcs(v, [&](Arc *a) {
+#ifdef COLLECT_PR_DATA
+                parent->prArcConsidered();
+#endif
                 Vertex *head = a->getHead();
                 if (!discovered(head)) {
                     queue.push_back(head);
@@ -85,7 +97,7 @@ struct LazyBFSSSReachAlgorithm::CheshireCat {
 };
 
 LazyBFSSSReachAlgorithm::LazyBFSSSReachAlgorithm()
-    : grin(new CheshireCat)
+    : grin(new CheshireCat(this))
 {
 
 }

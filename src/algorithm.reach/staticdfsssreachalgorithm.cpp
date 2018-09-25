@@ -51,6 +51,16 @@ bool StaticDFSSSReachAlgorithm::query(const Vertex *t)
     DepthFirstSearch<FastPropertyMap> dfs(false);
     dfs.setStartVertex(source);
     bool reachable = false;
+#ifdef COLLECT_PR_DATA
+    dfs.onArcDiscover([&](const Arc *) {
+        prArcConsidered();
+        return true;
+    });
+    dfs.onVertexDiscover([&](const Vertex *) {
+        prVertexConsidered();
+        return true;
+    });
+#endif
     dfs.setArcStopCondition([&](const Arc *a) {
         if (a->getHead() == t) {
             reachable = true;

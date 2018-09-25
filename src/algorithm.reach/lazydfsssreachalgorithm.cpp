@@ -29,6 +29,7 @@
 namespace Algora {
 
 struct LazyDFSSSReachAlgorithm::CheshireCat {
+    LazyDFSSSReachAlgorithm *parent;
     bool initialized;
     bool arcAdded;
     bool arcRemoved;
@@ -38,8 +39,8 @@ struct LazyDFSSSReachAlgorithm::CheshireCat {
     std::vector<Arc*> stack;
     FastPropertyMap<bool> discovered;
 
-    CheshireCat()
-        : initialized(false), arcAdded(false), arcRemoved(false), exhausted(false) { discovered.setDefaultValue(false); }
+    CheshireCat(LazyDFSSSReachAlgorithm *p)
+        : parent(p), initialized(false), arcAdded(false), arcRemoved(false), exhausted(false) { discovered.setDefaultValue(false); }
 
     bool searchOn(const Vertex *t) {
         if (!initialized) {
@@ -49,6 +50,9 @@ struct LazyDFSSSReachAlgorithm::CheshireCat {
             });
             discovered.resetAll();
             discovered[source] = true;
+#ifdef COLLECT_PR_DATA
+            parent->prReset();
+#endif
         }
         bool stop = false;
         while (!stop && !stack.empty()) {
@@ -58,12 +62,18 @@ struct LazyDFSSSReachAlgorithm::CheshireCat {
             if (discovered(v)) {
                 continue;
             }
+#ifdef COLLECT_PR_DATA
+            parent->prVertexConsidered();
+#endif
             discovered[v] = true;
             if (v == t) {
                 stop = true;
             }
 
             graph->mapOutgoingArcs(v, [&](Arc *a) {
+#ifdef COLLECT_PR_DATA
+                parent->prArcConsidered();
+#endif
                 Vertex *head = a->getHead();
                 if (!discovered(head)) {
                     stack.push_back(a);
@@ -94,7 +104,7 @@ struct LazyDFSSSReachAlgorithm::CheshireCat {
 };
 
 LazyDFSSSReachAlgorithm::LazyDFSSSReachAlgorithm()
-    : grin(new CheshireCat)
+    : grin(new CheshireCat(this))
 {
 
 }

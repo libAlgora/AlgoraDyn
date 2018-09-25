@@ -51,6 +51,16 @@ bool StaticBFSSSReachAlgorithm::query(const Vertex *t)
     BreadthFirstSearch<FastPropertyMap> bfs(false);
     bfs.setStartVertex(source);
     bool reachable = false;
+#ifdef COLLECT_PR_DATA
+    bfs.onArcDiscover([&](const Arc *) {
+        prArcConsidered();
+        return true;
+    });
+    bfs.onVertexDiscover([&](const Vertex *) {
+        prVertexConsidered();
+        return true;
+    });
+#endif
     bfs.setArcStopCondition([&](const Arc *a) {
         if (a->getHead() == t) {
             reachable = true;

@@ -50,6 +50,12 @@ void CachingDFSSSReachAlgorithm::run()
     initialized = true;
     arcAdded = false;
     arcRemoved = false;
+
+#ifdef COLLECT_PR_DATA
+    prReset();
+    prVerticesConsidered(diGraph->getSize());
+    prArcsConsidered(diGraph->getNumArcs());
+#endif
 }
 
 bool CachingDFSSSReachAlgorithm::query(const Vertex *t)
