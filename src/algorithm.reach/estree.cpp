@@ -50,6 +50,7 @@ struct ESTree::VertexData {
     static const unsigned int UNREACHABLE = UINT_MAX;
     static unsigned int graphSize;
 
+    ESTree *est;
     Vertex *vertex;
     std::vector<VertexData*> inNeighbors;
     std::vector<unsigned int> inNeighborsTimes;
@@ -59,8 +60,8 @@ struct ESTree::VertexData {
     // offset 1
     FastPropertyMap<unsigned int> inNeighborIndices;
 
-    VertexData(Vertex *v, VertexData *p = nullptr, unsigned int l = UINT_MAX)
-        : vertex(v), parentIndex(0), level(l), inNeighborsLost(0U) {
+    VertexData(ESTree *est, Vertex *v, VertexData *p = nullptr, unsigned int l = UINT_MAX)
+        : est(est), vertex(v), parentIndex(0), level(l), inNeighborsLost(0U) {
         inNeighborIndices.setDefaultValue(0U);
         inNeighborIndices.resetAll(graphSize);
         if (p != nullptr) {
@@ -76,6 +77,9 @@ struct ESTree::VertexData {
             if (in != nullptr) {
                 inNeighborIndices.resetToDefault(in->vertex);
             }
+#ifdef COLLECT_PR_DATA
+            est->prVertexConsidered();
+#endif
         }
         inNeighbors.clear();
         inNeighborsTimes.clear();
@@ -110,6 +114,9 @@ struct ESTree::VertexData {
             // try to find an empty place
             bool inserted = false;
             for (int i = inNeighbors.size() - 1; i >= 0; i--) {
+#ifdef COLLECT_PR_DATA
+            est->prVertexConsidered();
+#endif
                 if (inNeighbors[i] == nullptr) {
                     assert(inNeighborsTimes[i] == 0U);
                     inNeighbors[i] = in;
@@ -236,7 +243,9 @@ unsigned int process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queu
                      const FastPropertyMap<ESTree::VertexData*> &data,
                      FastPropertyMap<bool> &reachable,
                      FastPropertyMap<bool> &inQueue,
-                     FastPropertyMap<unsigned int> &timesInQueue, unsigned int requeueLimit, bool &limitReached, unsigned int &maxRequeued);
+                     FastPropertyMap<unsigned int> &timesInQueue, unsigned int requeueLimit,
+										 bool &limitReached, unsigned int &maxRequeued,
+										 unsigned int &verticesConsidered, unsigned int &arcsConsidered);
 
 ESTree::ESTree(unsigned int requeueLimit, double maxAffectedRatio)
     : DynamicSSReachAlgorithm(), root(nullptr),
@@ -277,17 +286,21 @@ void ESTree::run()
    }
    bfs.setStartVertex(root);
    if (data[root] == nullptr) {
-      data[root] = new VertexData(root, nullptr, 0);
+      data[root] = new VertexData(this, root, nullptr, 0);
    } else {
        data[root]->reset(nullptr, 0);
    }
    reachable[root] = true;
    bfs.onTreeArcDiscover([&](Arc *a) {
+#ifdef COLLECT_PR_DATA
+        prVertexConsidered();
+        prArcConsidered();
+#endif
         Vertex *t = a->getTail();
         Vertex *h = a->getHead();
         PRINT_DEBUG( "(" << t << ", " << h << ")" << " is a tree arc.")
         if (data[h] == nullptr) {
-            data[h] = new VertexData(h, data(t));
+            data[h] = new VertexData(this, h, data(t));
         } else {
             data[h]->reset(data(t));
         }
@@ -297,6 +310,9 @@ void ESTree::run()
         if (a->isLoop() || a->getHead() == source) {
             return;
         }
+#ifdef COLLECT_PR_DATA
+        prArcConsidered();
+#endif
         Vertex *t = a->getTail();
         Vertex *h = a->getHead();
         VertexData *td = data(t);
@@ -307,6 +323,9 @@ void ESTree::run()
    runAlgorithm(bfs, diGraph);
 
    diGraph->mapArcs([&](Arc *a) {
+#ifdef COLLECT_PR_DATA
+        prArcConsidered();
+#endif
        if (a->isLoop() || a->getHead() == source) {
            return;
        }
@@ -316,11 +335,11 @@ void ESTree::run()
        VertexData *hd = data(h);
 
        if (td == nullptr) {
-           td = new VertexData(t);
+           td = new VertexData(this, t);
            data[t] = td;
        }
        if (hd == nullptr) {
-           hd = new VertexData(h);
+           hd = new VertexData(this, h);
            data[h] = hd;
        }
        if (!td->isReachable()) {
@@ -331,7 +350,7 @@ void ESTree::run()
 
    diGraph->mapVertices([&](Vertex *v) {
        if (data(v) == nullptr) {
-           data[v] = new VertexData(v);
+           data[v] = new VertexData(this, v);
            PRINT_DEBUG( v << " is unreachable.")
        }
    });
@@ -351,6 +370,7 @@ void ESTree::run()
 std::string ESTree::getProfilingInfo() const
 {
     std::stringstream ss;
+    ss << DynamicSSReachAlgorithm::getProfilingInfo();
     ss << "#moves down (level increase): " << movesDown << std::endl;
     ss << "#moves up (level decrease): " << movesUp << std::endl;
     ss << "total level increase: " << levelIncrease << std::endl;
@@ -372,7 +392,7 @@ std::string ESTree::getProfilingInfo() const
 
 DynamicSSReachAlgorithm::Profile ESTree::getProfile() const
 {
-    Profile profile;
+    auto profile = DynamicSSReachAlgorithm::getProfile();
     profile.push_back(std::make_pair(std::string("vertices_moved_down"), movesDown));
     profile.push_back(std::make_pair(std::string("vertices_moved_up"), movesUp));
     profile.push_back(std::make_pair(std::string("total_level_increase"), levelIncrease));
@@ -422,7 +442,7 @@ void ESTree::onDiGraphUnset()
 
 void ESTree::onVertexAdd(Vertex *v)
 {
-    data[v] = new VertexData(v);
+    data[v] = new VertexData(this, v);
     VertexData::graphSize++;
 }
 
@@ -486,6 +506,9 @@ void ESTree::onArcAdd(Arc *a)
     bfs.setStartVertex(head);
     bfs.onArcDiscover([&](const Arc *a) {
         PRINT_DEBUG( "Discovering arc (" << a->getTail() << ", " << a->getHead() << ")...");
+#ifdef COLLECT_PR_DATA
+        prArcConsidered();
+#endif
         if (a->isLoop()) {
             return false;
         }
@@ -495,6 +518,9 @@ void ESTree::onArcAdd(Arc *a)
         VertexData *ahd = data(ah);
 
         auto diff = ahd->reparent(atd);
+#ifdef COLLECT_PR_DATA
+        prVertexConsidered();
+#endif
         if (diff > 0U) {
             PRINT_DEBUG("Is a new tree arc.");
             movesUp++;
@@ -696,15 +722,26 @@ void ESTree::restoreTree(ESTree::VertexData *vd)
     bool limitReached = false;
     auto affected = 0U;
     auto affectedLimit = maxAffectedRatio * VertexData::graphSize;
+    auto verticesConsidered = 0U;
+    auto arcsConsidered = 0U;
 
     while (!queue.empty()) {
         IF_DEBUG(printQueue(queue))
         auto vd = queue.front();
         queue.pop_front();
         inQueue[vd->vertex] = false;
+#ifdef COLLECT_PR_DATA
+        prVertexConsidered();
+#endif
         unsigned int levels = process(diGraph, vd, queue, data, reachable, inQueue, timesInQueue, requeueLimit,
-                                      limitReached, maxReQueued);
+                                      limitReached, maxReQueued, verticesConsidered, arcsConsidered);
         affected++;
+#ifdef COLLECT_PR_DATA
+        prVerticesConsidered(verticesConsidered);
+        prArcsConsidered(arcsConsidered);
+        verticesConsidered = 0U;
+        arcsConsidered = 0U;
+#endif
         if (limitReached || (affected > affectedLimit && !queue.empty())) {
             rerun();
             break;
@@ -743,7 +780,11 @@ unsigned int process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queu
                      const FastPropertyMap<ESTree::VertexData *> &data,
                      FastPropertyMap<bool> &reachable,
                      FastPropertyMap<bool> &inQueue,
-                     FastPropertyMap<unsigned int> &timesInQueue, unsigned int requeueLimit, bool &limitReached, unsigned int &maxRequeued) {
+                     FastPropertyMap<unsigned int> &timesInQueue,
+										 unsigned int requeueLimit, bool &limitReached,
+										 unsigned int &maxRequeued,
+                     unsigned int &verticesConsidered,
+                     unsigned int &arcsConsidered) {
 
     if (vd->level == 0UL) {
         PRINT_DEBUG("No need to process source vertex " << vd << ".");
@@ -800,6 +841,9 @@ unsigned int process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queu
         PRINT_DEBUG("Parent is " << parent);
 
         while (reachV && (parent == nullptr || vd->level <= parent->level) && !levelChanged) {
+#ifdef COLLECT_PR_DATA
+            verticesConsidered++;
+#endif
             vd->parentIndex++;
             PRINT_DEBUG("  Advancing parent index to " << vd->parentIndex << ".")
 
@@ -827,11 +871,17 @@ unsigned int process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queu
     }
     if (levelChanged) {
         graph->mapOutgoingArcsUntil(vd->vertex, [&](Arc *a) {
+#ifdef COLLECT_PR_DATA
+            arcsConsidered++;
+#endif
             if (a->isLoop()) {
               PRINT_DEBUG("    Ignoring loop.");
               return;
             }
             Vertex *head = a->getHead();
+#ifdef COLLECT_PR_DATA
+            verticesConsidered++;
+#endif
             auto *hd = data(head);
             if (hd->isParent(vd) && !inQueue[head]) {
                 enqueue(hd);

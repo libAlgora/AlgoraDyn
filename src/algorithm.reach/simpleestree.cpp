@@ -135,7 +135,9 @@ unsigned int process(DiGraph *graph, SimpleESTree::VertexData *vd, PriorityQueue
                      const FastPropertyMap<SimpleESTree::VertexData*> &data,
                      FastPropertyMap<bool> &reachable,
                      FastPropertyMap<bool> &inQueue,
-                     FastPropertyMap<unsigned int> &timesInQueue, unsigned int limit, bool &limitReached, unsigned int &maxRequeued);
+                     FastPropertyMap<unsigned int> &timesInQueue, unsigned int limit,
+										 bool &limitReached, unsigned int &maxRequeued,
+										 unsigned int &verticesConsidered, unsigned int &arcsConsidered);
 
 SimpleESTree::SimpleESTree(unsigned int requeueLimit, double maxAffectedRatio)
     : DynamicSSReachAlgorithm(), root(nullptr),
@@ -202,6 +204,10 @@ void SimpleESTree::run()
    }
    reachable[root] = true;
    bfs.onTreeArcDiscover([&](Arc *a) {
+#ifdef COLLECT_PR_DATA
+        prVertexConsidered();
+        prArcConsidered();
+#endif
         Vertex *t = a->getTail();
         Vertex *h = a->getHead();
         if (data[h] == nullptr) {
@@ -211,10 +217,16 @@ void SimpleESTree::run()
         }
         reachable[h] = true;
         PRINT_DEBUG( "(" << t << ", " << h << ")" << " is a tree arc.")
+#ifdef COLLECT_PR_DATA
+        prArcConsidered();
+#endif
    });
    runAlgorithm(bfs, diGraph);
 
    diGraph->mapVertices([&](Vertex *v) {
+#ifdef COLLECT_PR_DATA
+        prVertexConsidered();
+#endif
        if (data(v) == nullptr) {
            data[v] = new VertexData(v);
            PRINT_DEBUG( v << " is a unreachable.")
@@ -237,6 +249,7 @@ void SimpleESTree::run()
 std::string SimpleESTree::getProfilingInfo() const
 {
     std::stringstream ss;
+    ss << DynamicSSReachAlgorithm::getProfilingInfo();
     ss << "#moves down (level increase): " << movesDown << std::endl;
     ss << "#moves up (level decrease): " << movesUp << std::endl;
     ss << "total level increase: " << levelIncrease << std::endl;
@@ -258,7 +271,7 @@ std::string SimpleESTree::getProfilingInfo() const
 
 DynamicSSReachAlgorithm::Profile SimpleESTree::getProfile() const
 {
-    Profile profile;
+    auto profile = DynamicSSReachAlgorithm::getProfile();
     profile.push_back(std::make_pair(std::string("vertices_moved_down"), movesDown));
     profile.push_back(std::make_pair(std::string("vertices_moved_up"), movesUp));
     profile.push_back(std::make_pair(std::string("total_level_increase"), levelIncrease));
@@ -370,6 +383,9 @@ void SimpleESTree::onArcAdd(Arc *a)
     bfs.setStartVertex(head);
     bfs.onArcDiscover([&](const Arc *a) {
         PRINT_DEBUG( "Discovering arc (" << a->getTail() << ", " << a->getHead() << ")...");
+#ifdef COLLECT_PR_DATA
+        prArcConsidered();
+#endif
         if (a->isLoop()) {
             PRINT_DEBUG( "Loop ignored.");
             return false;
@@ -379,6 +395,9 @@ void SimpleESTree::onArcAdd(Arc *a)
         VertexData *atd = data(at);
         VertexData *ahd = data(ah);
 
+#ifdef COLLECT_PR_DATA
+        prVertexConsidered();
+#endif
         if (!ahd->isReachable() ||  atd->level + 1 < ahd->level) {
             movesUp++;
             auto newLevel = atd->level + 1;
@@ -573,15 +592,27 @@ void SimpleESTree::restoreTree(SimpleESTree::VertexData *rd)
     bool limitReached = false;
     auto affected = 0U;
     auto affectedLimit = maxAffectedRatio * VertexData::graphSize;
+    auto verticesConsidered = 0U;
+    auto arcsConsidered = 0U;
 
     while (!queue.empty()) {
         IF_DEBUG(printQueue(queue))
         auto vd = queue.bot();
         queue.popBot();
         inQueue.resetToDefault(vd->vertex);
+#ifdef COLLECT_PR_DATA
+        prVertexConsidered();
+#endif
         unsigned int levels = process(diGraph, vd, queue, data, reachable, inQueue, timesInQueue, requeueLimit,
-                                      limitReached, maxReQueued);
+                                      limitReached, maxReQueued, verticesConsidered, arcsConsidered);
         affected++;
+
+#ifdef COLLECT_PR_DATA
+        prVerticesConsidered(verticesConsidered);
+        prArcsConsidered(arcsConsidered);
+        verticesConsidered = 0U;
+        arcsConsidered = 0U;
+#endif
         if (limitReached || (affected > affectedLimit && !queue.empty())) {
             rerun();
             break;
@@ -617,7 +648,11 @@ unsigned int process(DiGraph *graph, SimpleESTree::VertexData *vd, PriorityQueue
                      const FastPropertyMap<SimpleESTree::VertexData *> &data,
                      FastPropertyMap<bool> &reachable,
                      FastPropertyMap<bool> &inQueue,
-                     FastPropertyMap<unsigned int> &timesInQueue, unsigned int limit, bool &limitReached, unsigned int &maxRequeued) {
+                     FastPropertyMap<unsigned int> &timesInQueue,
+                     unsigned int limit, bool &limitReached,
+                     unsigned int &maxRequeued,
+                     unsigned int &verticesConsidered,
+                     unsigned int &arcsConsidered) {
 
     if (vd->level == 0UL) {
         PRINT_DEBUG("No need to process source vertex " << vd << ".");
@@ -644,11 +679,17 @@ unsigned int process(DiGraph *graph, SimpleESTree::VertexData *vd, PriorityQueue
     PRINT_DEBUG("Min parent level is " << minParentLevel << ".");
 
     graph->mapIncomingArcsUntil(v, [&](Arc *a) {
+#ifdef COLLECT_PR_DATA
+            arcsConsidered++;
+#endif
         if (a->isLoop()) {
             PRINT_DEBUG( "Loop ignored.");
             return;
         }
         auto pd = data(a->getTail());
+#ifdef COLLECT_PR_DATA
+            verticesConsidered++;
+#endif
         auto pLevel = pd->level;
         if (pLevel < minParentLevel) {
             minParentLevel = pLevel;
@@ -680,11 +721,17 @@ unsigned int process(DiGraph *graph, SimpleESTree::VertexData *vd, PriorityQueue
     if (levelDiff > 0U) {
         PRINT_DEBUG("Updating children...");
         graph->mapOutgoingArcsUntil(vd->vertex, [&](Arc *a) {
+#ifdef COLLECT_PR_DATA
+            arcsConsidered++;
+#endif
             if (a->isLoop()) {
                 return;
             }
             Vertex *head = a->getHead();
             auto *hd = data(head);
+#ifdef COLLECT_PR_DATA
+            verticesConsidered++;
+#endif
             if (hd->isParent(vd) && !inQueue[head]) {
                 if (timesInQueue[head] < limit) {
                     PRINT_DEBUG("    Adding child " << hd << " to queue...");
