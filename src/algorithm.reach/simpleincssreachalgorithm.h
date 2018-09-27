@@ -71,7 +71,7 @@ public:
         } else {
             ss << maxUnknownStateRatio;
         }
-        ss << "~" << (relateToReachable ? "R" : "G") << ",";
+        ss << "~" << (relateToReachable ? "R" : "G") << "/";
         ss << (radicalReset ? "C" : "NC") << ")\n";
         return ss.str();
     }
