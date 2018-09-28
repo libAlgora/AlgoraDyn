@@ -55,8 +55,8 @@ public:
         } else {
             ss << maxUnknownStateRatio;
         }
-        ss << " * " << (relateToReachable ? "#R" : "#V") << "/";
-        ss  << (radicalReset? "radical reset" : "soft reset") << ")\n";
+        ss << "*" << (relateToReachable ? "#R" : "#V") << "/";
+        ss  << (radicalReset? "radical reset" : "soft reset") << ")";
         return ss.str();
     }
     virtual std::string getShortName() const noexcept override {
@@ -72,7 +72,7 @@ public:
             ss << maxUnknownStateRatio;
         }
         ss << "~" << (relateToReachable ? "R" : "G") << "/";
-        ss << (radicalReset ? "C" : "NC") << ")\n";
+        ss << (radicalReset ? "C" : "NC") << ")";
         return ss.str();
     }
     virtual std::string getProfilingInfo() const override;
