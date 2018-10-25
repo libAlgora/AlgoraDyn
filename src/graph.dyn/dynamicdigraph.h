@@ -23,6 +23,8 @@
 #ifndef DYNAMICDIGRAPH_H
 #define DYNAMICDIGRAPH_H
 
+//#include <vector>
+
 namespace Algora {
 
 class DiGraph;
@@ -45,6 +47,7 @@ public:
     void addVertex(unsigned int vertexId, unsigned int timestamp);
     void removeVertex(unsigned int vertexId, unsigned int timestamp);
     void addArc(unsigned int tailId, unsigned int headId, unsigned int timestamp, bool antedateVertexAdditions = false);
+//    void addArcs(const std::vector<unsigned int> &tailIds, unsigned int headId, unsigned int timestamp, bool antedateVertexAdditions = false);
     void removeArc(unsigned int tailId, unsigned int headId, unsigned int timestamp, bool removeIsolatedEnds = false);
     bool hasArc(unsigned int tailId, unsigned int headId);
     void clear();

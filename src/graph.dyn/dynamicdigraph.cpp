@@ -53,6 +53,8 @@ struct Operation {
 
 struct OperationSet : public Operation {
     std::vector<Operation*> operations;
+    Type type = MULTIPLE;
+
     virtual ~OperationSet() {
         for (auto op : operations) {
             delete op;
@@ -64,7 +66,7 @@ struct OperationSet : public Operation {
             op->apply(graph);
         }
     }
-    virtual Type getType() const override { return MULTIPLE; }
+    virtual Type getType() const override { return type; }
     virtual void reset() override {
         for (auto op : operations) {
             op->reset();
