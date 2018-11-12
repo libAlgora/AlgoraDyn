@@ -73,7 +73,7 @@ public:
     void secondArcIsRemoval(bool sir);
 
 private:
-    class CheshireCat;
+    struct CheshireCat;
     CheshireCat *grin;
 };
 

@@ -61,7 +61,7 @@ struct OperationSet : public Operation {
         }
     }
 
-    virtual void apply(IncidenceListGraph *graph) {
+    virtual void apply(IncidenceListGraph *graph) override {
         for (auto op : operations) {
             op->apply(graph);
         }
@@ -81,7 +81,7 @@ struct AddVertexOperation : public Operation {
 
     AddVertexOperation(Vertex *cv, unsigned int vId) : vertex(nullptr), constructionVertex(cv), vertexId(vId) { }
 
-    virtual void apply(IncidenceListGraph *graph) {
+    virtual void apply(IncidenceListGraph *graph) override {
         vertex = graph->addVertex();
         vertex->setName(std::to_string(vertexId));
     }
@@ -94,7 +94,7 @@ struct RemoveVertexOperation : public Operation {
 
     RemoveVertexOperation(AddVertexOperation *avo) : addOp(avo) {}
 
-    virtual void apply(IncidenceListGraph *graph) {
+    virtual void apply(IncidenceListGraph *graph) override {
         graph->removeVertex(addOp->vertex);
     }
     virtual Type getType() const override { return VERTEX_REMOVAL; }
@@ -109,7 +109,7 @@ struct AddArcOperation : public Operation {
     AddArcOperation(AddVertexOperation *t, AddVertexOperation *h, Arc *ca)
         : tail(t), head(h), arc(nullptr), constructionArc(ca) { }
 
-    virtual void apply(IncidenceListGraph *graph) {
+    virtual void apply(IncidenceListGraph *graph) override {
         arc = graph->addArc(tail->vertex, head->vertex);
     }
     virtual Type getType() const override { return ARC_ADDITION; }
@@ -121,7 +121,7 @@ struct RemoveArcOperation : public Operation {
 
     RemoveArcOperation(AddArcOperation *aao) : addOp(aao) { }
 
-    virtual void apply(IncidenceListGraph *graph) {
+    virtual void apply(IncidenceListGraph *graph) override {
         graph->removeArc(addOp->arc);
     }
     virtual Type getType() const override { return ARC_REMOVAL; }
