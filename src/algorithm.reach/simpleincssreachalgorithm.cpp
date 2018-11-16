@@ -158,7 +158,7 @@ struct SimpleIncSSReachAlgorithm::Reachability {
                 return false;
             }
 
-            if (setPred && pred(v) == nullptr) {
+            if (setPred && (pred(v) == nullptr || force)) {
                 pred[v] = p;
                 PRINT_DEBUG("Set predecessor.");
             } else if (!setPred && pred(v) == p) {
@@ -473,9 +473,10 @@ struct SimpleIncSSReachAlgorithm::Reachability {
 
 
 SimpleIncSSReachAlgorithm::SimpleIncSSReachAlgorithm(bool reverse, bool searchForward, double maxUS, bool radicalReset)
-    : DynamicSSReachAlgorithm(), data(new Reachability(this, reverse, searchForward, maxUS)), initialized(false),
+    : DynamicSSReachAlgorithm(), initialized(false),
       reverse(reverse), searchForward(searchForward), maxUnknownStateRatio(maxUS),
-      maxUSSqrt(false), maxUSLog(false), relateToReachable(false), radicalReset(radicalReset)
+      maxUSSqrt(false), maxUSLog(false), relateToReachable(false), radicalReset(radicalReset),
+      data(new Reachability(this, reverse, searchForward, maxUS))
 
 { }
 

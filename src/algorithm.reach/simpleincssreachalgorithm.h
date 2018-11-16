@@ -99,8 +99,6 @@ protected:
     virtual void onSourceSet() override;
 
 private:
-    struct Reachability;
-    Reachability *data;
     bool initialized;
 
     bool reverse;
@@ -110,6 +108,9 @@ private:
     bool maxUSLog;
     bool relateToReachable;
     bool radicalReset;
+
+    struct Reachability;
+    Reachability *data;
 };
 
 }
