@@ -283,7 +283,7 @@ struct DynamicDiGraph::CheshireCat {
             os->operations.push_back(aao);
             operations.push_back(os);
         } else {
-          operations.push_back(aao);
+            operations.push_back(aao);
         }
         constructionArcMap[ca] = aao;
     }
@@ -350,6 +350,28 @@ struct DynamicDiGraph::CheshireCat {
         } else {
             operations.push_back(rao);
         }
+    }
+
+    void compact(unsigned int num) {
+        std::vector<Operation*> ops;
+        for (auto i = 0U; i < num; i++) {
+            auto *last = operations.back();
+            operations.pop_back();
+            auto nestedOs = dynamic_cast<OperationSet*>(last);
+            if (nestedOs) {
+                while (!nestedOs->operations.empty()) {
+                    ops.push_back(nestedOs->operations.back());
+                    nestedOs->operations.pop_back();
+                }
+                delete nestedOs;
+            } else {
+                ops.push_back(last);
+            }
+        }
+        std::reverse(std::begin(ops), std::end(ops));
+        auto *os = new OperationSet;
+        os->operations = std::move(ops);
+        operations.push_back(os);
     }
 
     bool advance(bool sameTime = false) {
@@ -552,6 +574,16 @@ bool DynamicDiGraph::hasArc(unsigned int tailId, unsigned int headId)
 void DynamicDiGraph::clear()
 {
     grin->clear();
+}
+
+void DynamicDiGraph::compact(unsigned int num)
+{
+    if (num < 1U) {
+        throw std::invalid_argument("Can only compact positive number of operations.");
+    } else if (num > grin->operations.size() - grin->opIndex) {
+        throw std::invalid_argument("Cannot compact already executed operations.");
+    }
+    grin->compact(num);
 }
 
 void DynamicDiGraph::resetToBigBang()

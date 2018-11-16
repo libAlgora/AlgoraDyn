@@ -47,10 +47,10 @@ public:
     void addVertex(unsigned int vertexId, unsigned int timestamp);
     void removeVertex(unsigned int vertexId, unsigned int timestamp);
     void addArc(unsigned int tailId, unsigned int headId, unsigned int timestamp, bool antedateVertexAdditions = false);
-//    void addArcs(const std::vector<unsigned int> &tailIds, unsigned int headId, unsigned int timestamp, bool antedateVertexAdditions = false);
     void removeArc(unsigned int tailId, unsigned int headId, unsigned int timestamp, bool removeIsolatedEnds = false);
     bool hasArc(unsigned int tailId, unsigned int headId);
     void clear();
+    void compact(unsigned int num);
 
     void resetToBigBang();
     bool applyNextOperation(bool sameTimestamp = false);
