@@ -62,16 +62,16 @@ public:
     virtual std::string getProfilingInfo() const override;
     virtual Profile getProfile() const override;
 
-protected:
-    virtual void onDiGraphSet() override;
-    virtual void onDiGraphUnset() override;
-
     // DynamicDiGraphAlgorithm interface
-protected:
+public:
     virtual void onVertexAdd(Vertex *v) override;
     virtual void onArcAdd(Arc *a) override;
     virtual void onVertexRemove(Vertex *v) override;
     virtual void onArcRemove(Arc *a) override;
+
+protected:
+    virtual void onDiGraphSet() override;
+    virtual void onDiGraphUnset() override;
 
     // DynamicSSReachAlgorithm interface
 protected:

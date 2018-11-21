@@ -352,7 +352,9 @@ struct SimpleIncSSReachAlgorithm::Reachability {
              parent->prVertexConsidered();
 #endif
             if (reachability(u) == State::UNKNOWN) {
+#ifdef COLLECT_PR_DATA
                 tracebacks++;
+#endif
                 backwardsReached.clear();
                 if (checkReachability(u, backwardsReached)) {
                     PRINT_DEBUG( u << " is reachable.");

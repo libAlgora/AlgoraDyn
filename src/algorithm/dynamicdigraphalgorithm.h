@@ -34,17 +34,29 @@ class DynamicDiGraphAlgorithm
         : public DiGraphAlgorithm
 {
 public:
-    explicit DynamicDiGraphAlgorithm() : DiGraphAlgorithm() {}
+    explicit DynamicDiGraphAlgorithm() : DiGraphAlgorithm(), autoUpdate(true), registered(false) {}
     virtual ~DynamicDiGraphAlgorithm() { }
 
-protected:
+    void setAutoUpdate(bool au) {
+        this->autoUpdate = au;
+    }
+
+    bool doesAutoUpdate() const {
+        return this->autoUpdate;
+    }
+
     virtual void onVertexAdd(Vertex *) { }
     virtual void onVertexRemove(Vertex *) { }
     virtual void onArcAdd(Arc *) { }
     virtual void onArcRemove(Arc *) { }
 
+protected:
     virtual void onDiGraphSet() override;
     virtual void onDiGraphUnset() override;
+
+private:
+    bool autoUpdate;
+    bool registered;
 };
 
 }

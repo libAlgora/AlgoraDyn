@@ -39,15 +39,15 @@ public:
     virtual std::string getName() const noexcept override { return "Lazy BFS Single-Source Reachability Algorithm"; }
     virtual std::string getShortName() const noexcept override { return "Lazy-BFS-SSReach"; }
 
-protected:
-    virtual void onDiGraphSet() override;
-
     // DynamicDiGraphAlgorithm interface
-protected:
+public:
     virtual void onVertexAdd(Vertex *v) override;
     virtual void onVertexRemove(Vertex *v) override;
     virtual void onArcAdd(Arc *a) override;
     virtual void onArcRemove(Arc *a) override;
+
+protected:
+    virtual void onDiGraphSet() override;
 
     // DynamicSSReachAlgorithm interface
 public:

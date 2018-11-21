@@ -785,6 +785,10 @@ unsigned int process(DiGraph *graph, ESTree::VertexData *vd, PriorityQueue &queu
 										 unsigned int &maxRequeued,
                      unsigned int &verticesConsidered,
                      unsigned int &arcsConsidered) {
+#ifndef COLLECT_PR_DATA
+    (void)verticesConsidered;
+    (void)arcsConsidered;
+#endif
 
     if (vd->level == 0UL) {
         PRINT_DEBUG("No need to process source vertex " << vd << ".");
