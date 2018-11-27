@@ -29,7 +29,6 @@
 #include "graph/vertex.h"
 #include "algorithm.basic.traversal/breadthfirstsearch.h"
 #include "algorithm/digraphalgorithmexception.h"
-#include "datastructure/bucketqueue.h"
 
 //#define DEBUG_ESTREEML
 
@@ -44,187 +43,6 @@
 
 namespace Algora {
 
-struct ESTreeML::VertexData {
-    static const unsigned int UNREACHABLE = UINT_MAX;
-    static unsigned int graphSize;
-
-    ESTreeML *est;
-    Vertex *vertex;
-    std::vector<VertexData*> inNeighbors;
-    std::vector<unsigned int> inNeighborsTimes;
-    unsigned int parentIndex;
-    unsigned int level;
-    unsigned int inNeighborsLost = 0U;
-    // offset 1
-    FastPropertyMap<unsigned int> inNeighborIndices;
-
-    VertexData(ESTreeML *est, Vertex *v, VertexData *p = nullptr, unsigned int l = UINT_MAX)
-        : est(est), vertex(v), parentIndex(0), level(l), inNeighborsLost(0U) {
-        inNeighborIndices.setDefaultValue(0U);
-        inNeighborIndices.resetAll(graphSize);
-        if (p != nullptr) {
-            inNeighborIndices[p->vertex] = 1U;
-            inNeighbors.push_back(p);
-            inNeighborsTimes.push_back(1U);
-            level = p->level + 1;
-        }
-    }
-
-    void reset(VertexData *p = nullptr, unsigned int l = UINT_MAX) {
-        for (auto in : inNeighbors) {
-            if (in != nullptr) {
-                inNeighborIndices.resetToDefault(in->vertex);
-            }
-#ifdef COLLECT_PR_DATA
-            est->prVertexConsidered();
-#endif
-        }
-        inNeighbors.clear();
-        inNeighborsTimes.clear();
-        inNeighborsLost = 0U;
-        parentIndex = 0U;
-        level = l;
-        if (p != nullptr) {
-            inNeighborIndices[p->vertex] = 1U;
-            inNeighbors.push_back(p);
-            inNeighborsTimes.push_back(1U);
-            level = p->level + 1;
-        }
-    }
-
-    void setUnreachable() {
-        parentIndex = 0;
-        level = UNREACHABLE;
-    }
-
-    bool isReachable() const {
-        return level != UNREACHABLE;
-    }
-
-    unsigned int priority() const {
-        return isReachable() ? level : graphSize + 1U;
-    }
-
-    bool addInNeighbor(VertexData *in) {
-        auto index = inNeighborIndices[in->vertex];
-        PRINT_DEBUG("Index of " << in->vertex << " is " << index);
-        if (index == 0U) {
-            // try to find an empty place
-            bool inserted = false;
-            for (int i = inNeighbors.size() - 1; i >= 0; i--) {
-#ifdef COLLECT_PR_DATA
-            est->prVertexConsidered();
-#endif
-                if (inNeighbors[i] == nullptr) {
-                    assert(inNeighborsTimes[i] == 0U);
-                    inNeighbors[i] = in;
-                    inNeighborsTimes[i] = 1U;
-                    inNeighborIndices[in->vertex] = i + 1U;
-                    inserted = true;
-                    PRINT_DEBUG("Inserted vertex at index " << i);
-                    assert(inNeighborsLost > 0U);
-                    inNeighborsLost--;
-                    break;
-                }
-            }
-            if (!inserted) {
-                inNeighborIndices[in->vertex] = inNeighbors.size() + 1U;
-                inNeighbors.push_back(in);
-                inNeighborsTimes.push_back(1U);
-                PRINT_DEBUG("Added vertex at the end (real index " << (inNeighborIndices[in->vertex] - 1U) << ")");
-            }
-            return false;
-        } else {
-            inNeighborsTimes[index - 1U]++;
-            PRINT_DEBUG("Increased counter to " << inNeighborsTimes[index - 1U] );
-            return true;
-        }
-    }
-
-    unsigned int reparent(VertexData *in) {
-        auto inLevel = in->level;
-        if (inLevel >= level) {
-            return 0U;
-        } else {
-            auto index = inNeighborIndices[in->vertex] - 1U;
-            if (inLevel + 1 < level) {
-                parentIndex = index;
-                auto diff = (level == UNREACHABLE ? graphSize : level) - (inLevel + 1U);
-                level = inLevel + 1U;
-                return diff;
-            } else if (index < parentIndex) {
-                parentIndex = index;
-            }
-            return 0U;
-        }
-    }
-
-    bool findAndRemoveInNeighbor(VertexData *in) {
-        auto index = inNeighborIndices[in->vertex] - 1U;
-        assert(inNeighborsTimes[index] > 0U);
-        inNeighborsTimes[index]--;
-        if (inNeighborsTimes[index] > 0U) {
-            return true;
-        }
-        inNeighbors[index] = nullptr;
-        inNeighborsTimes[index] = 0U;
-        inNeighborIndices.resetToDefault(in->vertex);
-        inNeighborsLost++;
-        return false;
-    }
-
-    bool isParent(VertexData *p) {
-        if (parentIndex >= inNeighbors.size() || !isReachable()) {
-            return false;
-        }
-        return inNeighbors[parentIndex] == p;
-    }
-
-    VertexData *getParentData() const {
-        if (parentIndex >= inNeighbors.size() || !isReachable()) {
-            return nullptr;
-        }
-        return inNeighbors[parentIndex];
-    }
-
-    Vertex *getParent() const {
-        auto p = getParentData();
-        if (p == nullptr) {
-            return nullptr;
-        }
-        return p->vertex;
-    }
-
-    bool checkIntegrity() const {
-        return (isReachable() && (level == 0 || getParentData()->level + 1 == level))
-                || (!isReachable() && getParentData() == nullptr);
-    }
-};
-
-unsigned int ESTreeML::VertexData::graphSize = 0U;
-
-std::ostream& operator<<(std::ostream& os, const ESTreeML::VertexData *vd) {
-    if (vd == nullptr) {
-        os << " null ";
-        return os;
-    }
-
-    os << vd->vertex << ": ";
-    os << "N-: [ ";
-    for (auto nd : vd->inNeighbors) {
-        if (nd == nullptr) {
-            os << "null ";
-        } else {
-            os << nd->vertex << " ";
-        }
-    }
-    os << "] ; parent: " << vd->parentIndex << " ; level: " << vd->level;
-    return os;
-}
-
-struct ESNode_Priority { int operator()(const ESTreeML::VertexData *vd) { return vd->priority(); }};
-typedef BucketQueue<ESTreeML::VertexData*, ESNode_Priority> PriorityQueue;
-
 #ifdef DEBUG_ESTREEML
 void printQueue(PriorityQueue q) {
     std::cerr << "PriorityQueue: ";
@@ -235,14 +53,6 @@ void printQueue(PriorityQueue q) {
     std::cerr << std::endl;
 }
 #endif
-
-unsigned int process(DiGraph *graph, ESTreeML::VertexData *vd, PriorityQueue &queue,
-                     const FastPropertyMap<ESTreeML::VertexData*> &data,
-                     FastPropertyMap<bool> &reachable,
-                     FastPropertyMap<bool> &inQueue,
-                     FastPropertyMap<unsigned int> &timesInQueue, unsigned int requeueLimit,
-										 bool &limitReached, unsigned int &maxRequeued,
-										 unsigned int &verticesConsidered, unsigned int &arcsConsidered);
 
 ESTreeML::ESTreeML(unsigned int requeueLimit, double maxAffectedRatio)
     : DynamicSSReachAlgorithm(), root(nullptr),
@@ -257,6 +67,7 @@ ESTreeML::ESTreeML(unsigned int requeueLimit, double maxAffectedRatio)
       maxAffected(0U), totalAffected(0U)
 {
     data.setDefaultValue(nullptr);
+    inNeighborIndices.setDefaultValue(0U);
     reachable.setDefaultValue(false);
 }
 
@@ -273,7 +84,6 @@ void ESTreeML::run()
 
    PRINT_DEBUG("Initializing ESTreeML...")
 
-   VertexData::graphSize = diGraph->getSize();
    reachable.resetAll(diGraph->getSize());
 
    BreadthFirstSearch<FastPropertyMap> bfs(false);
@@ -283,9 +93,9 @@ void ESTreeML::run()
    }
    bfs.setStartVertex(root);
    if (data[root] == nullptr) {
-      data[root] = new VertexData(this, root, nullptr, 0);
+      data[root] = new ESVertexData(&inNeighborIndices, root, nullptr, nullptr, 0U);
    } else {
-       data[root]->reset(nullptr, 0);
+       data[root]->reset(nullptr, nullptr, 0U);
    }
    reachable[root] = true;
    bfs.onTreeArcDiscover([&](Arc *a) {
@@ -297,9 +107,9 @@ void ESTreeML::run()
         Vertex *h = a->getHead();
         PRINT_DEBUG( "(" << t << ", " << h << ")" << " is a tree arc.")
         if (data[h] == nullptr) {
-            data[h] = new VertexData(this, h, data(t));
+            data[h] = new ESVertexData(&inNeighborIndices, h, data(t), a, 0U);
         } else {
-            data[h]->reset(data(t));
+            data[h]->reset(data(t), a);
         }
         reachable[h] = true;
    });
@@ -312,10 +122,10 @@ void ESTreeML::run()
 #endif
         Vertex *t = a->getTail();
         Vertex *h = a->getHead();
-        VertexData *td = data(t);
-        VertexData *hd = data(h);
+        ESVertexData *td = data(t);
+        ESVertexData *hd = data(h);
         PRINT_DEBUG( "(" << td->vertex << ", " << hd->vertex << ")" << " is a non-tree arc.")
-        hd->addInNeighbor(td);
+        hd->addInNeighbor(td, a);
    });
    runAlgorithm(bfs, diGraph);
 
@@ -328,20 +138,20 @@ void ESTreeML::run()
        }
        Vertex *t = a->getTail();
        Vertex *h = a->getHead();
-       VertexData *td = data(t);
-       VertexData *hd = data(h);
+       ESVertexData *td = data(t);
+       ESVertexData *hd = data(h);
 
        if (td == nullptr) {
-           td = new VertexData(this, t);
+           td = new ESVertexData(&inNeighborIndices, t);
            data[t] = td;
        }
        if (hd == nullptr) {
-           hd = new VertexData(this, h);
+           hd = new ESVertexData(&inNeighborIndices, h);
            data[h] = hd;
        }
        if (!td->isReachable()) {
             PRINT_DEBUG( "(" << td->vertex << ", " << hd->vertex << ")" << " is an unvisited non-tree arc.")
-            hd->addInNeighbor(td);
+            hd->addInNeighbor(td, a);
        }
    });
 
@@ -350,7 +160,7 @@ void ESTreeML::run()
         prVertexConsidered();
 #endif
        if (data(v) == nullptr) {
-           data[v] = new VertexData(this, v);
+           data[v] = new ESVertexData(&inNeighborIndices, v);
            PRINT_DEBUG( v << " is unreachable.")
        }
    });
@@ -431,7 +241,6 @@ void ESTreeML::onDiGraphSet()
     totalAffected = 0U;
     data.resetAll(diGraph->getSize());
     reachable.resetAll(diGraph->getSize());
-    VertexData::graphSize = diGraph->getSize();
 }
 
 void ESTreeML::onDiGraphUnset()
@@ -442,8 +251,7 @@ void ESTreeML::onDiGraphUnset()
 
 void ESTreeML::onVertexAdd(Vertex *v)
 {
-    data[v] = new VertexData(this, v);
-    VertexData::graphSize++;
+    data[v] = new ESVertexData(&inNeighborIndices, v);
 }
 
 void ESTreeML::onArcAdd(Arc *a)
@@ -457,8 +265,8 @@ void ESTreeML::onArcAdd(Arc *a)
     Vertex *head = a->getHead();
 
     IF_DEBUG(
-    std::stringstream ss;
-    dumpTree(ss);
+        std::stringstream ss;
+        dumpTree(ss);
     )
 
     if (a->isLoop()) {
@@ -471,17 +279,14 @@ void ESTreeML::onArcAdd(Arc *a)
         return;
     }
 
-    VertexData *td = data(tail);
-    VertexData *hd = data(head);
+    ESVertexData *td = data(tail);
+    ESVertexData *hd = data(head);
 
     assert(td != nullptr);
     assert(hd != nullptr);
 
     // store arc
-    if (hd->addInNeighbor(td)) {
-        PRINT_DEBUG("Parallel arc is already there.")
-        return;
-    }
+    hd->addInNeighbor(td, a);
 
     if (!td->isReachable()) {
         PRINT_DEBUG("Tail is unreachable.")
@@ -490,7 +295,7 @@ void ESTreeML::onArcAdd(Arc *a)
     }
 
     //update...
-    auto diff = hd->reparent(td);
+    auto diff = hd->reparent(td, a);
     if (diff == 0U) {
         // arc does not change anything
         PRINT_DEBUG("Does not decrease level.")
@@ -514,10 +319,10 @@ void ESTreeML::onArcAdd(Arc *a)
         }
         Vertex *at = a->getTail();
         Vertex *ah = a->getHead();
-        VertexData *atd = data(at);
-        VertexData *ahd = data(ah);
+        ESVertexData *atd = data(at);
+        ESVertexData *ahd = data(ah);
 
-        auto diff = ahd->reparent(atd);
+        auto diff = ahd->reparent(atd, a);
 #ifdef COLLECT_PR_DATA
         prVertexConsidered();
 #endif
@@ -526,6 +331,9 @@ void ESTreeML::onArcAdd(Arc *a)
             movesUp++;
             reachable[ah] = true;
             if (diff > maxLevelDecrease) {
+                if (diff - diGraph->getSize() > 0) {
+                    diff -= (ESVertexData::UNREACHABLE - diGraph->getSize());
+                }
                 maxLevelDecrease = diff;
             }
         }
@@ -547,13 +355,11 @@ void ESTreeML::onArcAdd(Arc *a)
 
 void ESTreeML::onVertexRemove(Vertex *v)
 {
-    VertexData::graphSize--;
-
     if (!initialized) {
         return;
     }
 
-     VertexData *vd = data(v);
+     ESVertexData *vd = data(v);
      if (vd != nullptr) {
          delete vd;
          data.resetToDefault(v);
@@ -585,23 +391,21 @@ void ESTreeML::onArcRemove(Arc *a)
     PRINT_DEBUG("Stored data of tail: " << data(tail));
     PRINT_DEBUG("Stored data of head: " << data(head));
 
-		IF_DEBUG(
-    std::stringstream ss;
-    dumpTree(ss);
-		);
+    IF_DEBUG(
+        std::stringstream ss;
+        dumpTree(ss);
+    );
 
-    VertexData *hd = data(head);
+    ESVertexData *hd = data(head);
     if (hd == nullptr) {
         PRINT_DEBUG("Head of arc is unreachable (and never was). Nothing to do.")
         throw std::logic_error("Should not happen");
         return;
     }
 
-    VertexData *td = data(tail);
+    ESVertexData *td = data(tail);
     bool isParent = hd->isParent(td);
-    if (hd->findAndRemoveInNeighbor(td)) {
-        return;
-    }
+    hd->findAndRemoveInNeighbor(td, a);
 
     if (!hd->isReachable()) {
         PRINT_DEBUG("Head of arc is already unreachable. Nothing to do.")
@@ -663,7 +467,7 @@ void ESTreeML::dumpTree(std::ostream &os)
     }  else {
         diGraph->mapVertices([&](Vertex *v) {
           auto vd = data[v];
-          os << v << ": L " << vd->level << ", P " << vd->getParent() << '\n';
+          os << v << ": L " << vd->getLevel() << ", P " << vd->getParent() << '\n';
         });
     }
 }
@@ -680,8 +484,8 @@ bool ESTreeML::checkTree()
 
    bool ok = true;
    diGraph->mapVertices([&](Vertex *v) {
-       auto bfsLevel = levels[v] < 0 ? ESTreeML::VertexData::UNREACHABLE : levels[v];
-       if (data[v]->level != bfsLevel) {
+       auto bfsLevel = levels[v] < 0 ? ESVertexData::UNREACHABLE : levels[v];
+       if (data[v]->getLevel() != bfsLevel) {
            std::cerr << "Level mismatch for vertex " << data[v]
                         << ": expected level " << bfsLevel << std::endl;
            ok = false;
@@ -709,88 +513,9 @@ void ESTreeML::rerun()
     run();
 }
 
-void ESTreeML::restoreTree(ESTreeML::VertexData *vd)
+unsigned int ESTreeML::process(ESVertexData *vd, ESTreeML::PriorityQueue &queue, FastPropertyMap<bool> &inQueue, FastPropertyMap<unsigned int> &timesInQueue, bool &limitReached)
 {
-    PriorityQueue queue;
-    FastPropertyMap<bool> inQueue(false, "", diGraph->getSize());
-    FastPropertyMap<unsigned int> timesInQueue(0U, "", diGraph->getSize());
-    queue.push(vd);
-    inQueue[vd->vertex] = true;
-    timesInQueue[vd->vertex]++;
-    PRINT_DEBUG("Initialized queue with " << vds.size() << " vertices.");
-    bool limitReached = false;
-    auto affected = 0U;
-    auto affectedLimit = maxAffectedRatio * VertexData::graphSize;
-    auto verticesConsidered = 0U;
-    auto arcsConsidered = 0U;
-
-    while (!queue.empty()) {
-        IF_DEBUG(printQueue(queue))
-        auto vd = queue.bot();
-        queue.popBot();
-        inQueue[vd->vertex] = false;
-#ifdef COLLECT_PR_DATA
-        prVertexConsidered();
-#endif
-        unsigned int levels = process(diGraph, vd, queue, data, reachable, inQueue, timesInQueue, requeueLimit,
-                                      limitReached, maxReQueued, verticesConsidered, arcsConsidered);
-        affected++;
-
-#ifdef COLLECT_PR_DATA
-        prVerticesConsidered(verticesConsidered);
-        prArcsConsidered(arcsConsidered);
-        verticesConsidered = 0U;
-        arcsConsidered = 0U;
-#endif
-        if (limitReached || (affected > affectedLimit && !queue.empty())) {
-            rerun();
-            break;
-        } else if (levels > 0U) {
-            movesDown++;
-            levelIncrease += levels;
-            PRINT_DEBUG("total level increase " << levelIncrease);
-            if (levels > maxLevelIncrease) {
-                maxLevelIncrease = levels;
-                PRINT_DEBUG("new max level increase " << maxLevelIncrease);
-            }
-        }
-    }
-    totalAffected += affected;
-    if (affected > maxAffected) {
-        maxAffected = affected;
-    }
-}
-
-void ESTreeML::cleanup()
-{
-    for (auto i = data.cbegin(); i != data.cend(); i++) {
-        if ((*i)) {
-            delete (*i);
-        }
-    }
-
-    data.resetAll();
-    reachable.resetAll();
-
-    initialized = false ;
-
-}
-
-unsigned int process(DiGraph *graph, ESTreeML::VertexData *vd, PriorityQueue &queue,
-                     const FastPropertyMap<ESTreeML::VertexData *> &data,
-                     FastPropertyMap<bool> &reachable,
-                     FastPropertyMap<bool> &inQueue,
-                     FastPropertyMap<unsigned int> &timesInQueue,
-                     unsigned int requeueLimit, bool &limitReached,
-                     unsigned int &maxRequeued,
-                     unsigned int &verticesConsidered,
-                     unsigned int &arcsConsidered) {
-#ifndef COLLECT_PR_DATA
-    (void)verticesConsidered;
-    (void)arcsConsidered;
-#endif
-
-    if (vd->level == 0UL) {
+    if (vd->getLevel() == 0UL) {
         PRINT_DEBUG("No need to process source vertex " << vd << ".");
         return 0U;
     }
@@ -802,23 +527,27 @@ unsigned int process(DiGraph *graph, ESTreeML::VertexData *vd, PriorityQueue &qu
         return 0U;
     }
 
-    Vertex *v = vd->vertex;
+#ifdef COLLECT_PR_DATA
+    auto verticesConsidered = 0U;
+    auto arcsConsidered = 0U;
+#endif
+
+    Vertex *v = vd->getVertex();
     bool reachV = true;
     bool levelChanged = false;
-    auto n = graph->getSize();
-    unsigned int oldVLevel = vd->level;
+    auto n = diGraph->getSize();
+    unsigned int oldVLevel = vd->getLevel();
     unsigned int levelDiff = 0U;
 
-    auto enqueue = [&](ESTreeML::VertexData *vd) {
-        auto vertex = vd->vertex;
+    auto enqueue = [&](ESVertexData *vd) {
+        auto vertex = vd->getVertex();
         if (timesInQueue[vertex] < requeueLimit) {
             PRINT_DEBUG("    Adding " << vd << " to queue...");
             timesInQueue[vertex]++;
-            if (timesInQueue[vertex] > maxRequeued) {
-                maxRequeued = timesInQueue[vertex];
+            if (timesInQueue[vertex] > maxReQueued) {
+                maxReQueued = timesInQueue[vertex];
             }
             queue.push(vd);
-            //queue.push_back(vd);
             inQueue[vertex] = true;
         } else {
             timesInQueue[vertex]++;
@@ -848,7 +577,6 @@ unsigned int process(DiGraph *graph, ESTreeML::VertexData *vd, PriorityQueue &qu
         minParentIndex = oldIndex;
 
         PRINT_DEBUG("Size of graph is " << n << ".");
-
         PRINT_DEBUG("Parent is " << parent);
 
         while (reachV && (parent == nullptr || vd->level <= parent->level)
@@ -860,7 +588,7 @@ unsigned int process(DiGraph *graph, ESTreeML::VertexData *vd, PriorityQueue &qu
             PRINT_DEBUG("  Advancing parent index to " << vd->parentIndex << ".")
 
             if (vd->parentIndex >= vd->inNeighbors.size()) {
-                if (vd->level + 1 >= graph->getSize()) {
+                if (vd->level + 1 >= diGraph->getSize()) {
                     PRINT_DEBUG("    Vertex " << v << " is unreachable.")
                     vd->setUnreachable();
                     reachable.resetToDefault(v);
@@ -888,7 +616,7 @@ unsigned int process(DiGraph *graph, ESTreeML::VertexData *vd, PriorityQueue &qu
         }
     }
     if (levelChanged) {
-        graph->mapOutgoingArcsUntil(vd->vertex, [&](Arc *a) {
+        diGraph->mapOutgoingArcsUntil(vd->getVertex(), [&](Arc *a) {
 #ifdef COLLECT_PR_DATA
             arcsConsidered++;
 #endif
@@ -924,8 +652,71 @@ unsigned int process(DiGraph *graph, ESTreeML::VertexData *vd, PriorityQueue &qu
     PRINT_DEBUG("Returning level diff " << levelDiff  << " for " << vd << ".");
 
     assert(vd->checkIntegrity());
+#ifdef COLLECT_PR_DATA
+        prVerticesConsidered(verticesConsidered);
+        prArcsConsidered(arcsConsidered);
+#endif
 
     return levelDiff;
+
+}
+
+void ESTreeML::restoreTree(ESVertexData *vd)
+{
+    PriorityQueue queue;
+    queue.setLimit(diGraph->getSize());
+    FastPropertyMap<bool> inQueue(false, "", diGraph->getSize());
+    FastPropertyMap<unsigned int> timesInQueue(0U, "", diGraph->getSize());
+    queue.push(vd);
+    inQueue[vd->getVertex()] = true;
+    timesInQueue[vd->getVertex()]++;
+    PRINT_DEBUG("Initialized queue with " << vds.size() << " vertices.");
+    bool limitReached = false;
+    auto affected = 0U;
+    auto affectedLimit = maxAffectedRatio * diGraph->getSize();
+
+    while (!queue.empty()) {
+        IF_DEBUG(printQueue(queue))
+        auto vd = queue.bot();
+        queue.popBot();
+        inQueue[vd->getVertex()] = false;
+#ifdef COLLECT_PR_DATA
+        prVertexConsidered();
+#endif
+        unsigned int levels = process(vd, queue, inQueue, timesInQueue, limitReached);
+        affected++;
+
+        if (limitReached || (affected > affectedLimit && !queue.empty())) {
+            rerun();
+            break;
+        } else if (levels > 0U) {
+            movesDown++;
+            levelIncrease += levels;
+            PRINT_DEBUG("total level increase " << levelIncrease);
+            if (levels > maxLevelIncrease) {
+                maxLevelIncrease = levels;
+                PRINT_DEBUG("new max level increase " << maxLevelIncrease);
+            }
+        }
+    }
+    totalAffected += affected;
+    if (affected > maxAffected) {
+        maxAffected = affected;
+    }
+}
+
+void ESTreeML::cleanup()
+{
+    for (auto i = data.cbegin(); i != data.cend(); i++) {
+        if ((*i)) {
+            delete (*i);
+        }
+    }
+
+    data.resetAll();
+    reachable.resetAll();
+
+    initialized = false ;
 }
 
 }

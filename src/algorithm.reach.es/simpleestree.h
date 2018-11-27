@@ -23,7 +23,7 @@
 #ifndef SIMPLEESTREE_H
 #define SIMPLEESTREE_H
 
-#include "dynamicssreachalgorithm.h"
+#include "algorithm.reach/dynamicssreachalgorithm.h"
 #include "property/propertymap.h"
 #include "property/fastpropertymap.h"
 #include <climits>

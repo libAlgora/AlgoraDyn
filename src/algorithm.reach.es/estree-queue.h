@@ -20,23 +20,24 @@
  *   http://algora.xaikal.org
  */
 
-#ifndef ESTREE_H
-#define ESTREE_H
+#ifndef ESTREE_QUEUE_H
+#define ESTREE_QUEUE_H
 
-#include "dynamicssreachalgorithm.h"
+#include "algorithm.reach/dynamicssreachalgorithm.h"
+#include "esvertexdata.h"
 #include "property/propertymap.h"
 #include "property/fastpropertymap.h"
 #include <climits>
 #include <sstream>
+#include <boost/circular_buffer.hpp>
 
 namespace Algora {
 
-class ESTree : public DynamicSSReachAlgorithm
+class ESTreeQ : public DynamicSSReachAlgorithm
 {
 public:
-    struct VertexData;
-    explicit ESTree(unsigned int requeueLimit = UINT_MAX, double maxAffectedRatio = 1.0);
-    virtual ~ESTree();
+    explicit ESTreeQ(unsigned int requeueLimit = UINT_MAX, double maxAffectedRatio = 1.0);
+    virtual ~ESTreeQ();
     void setRequeueLimit(unsigned int limit) {
         requeueLimit = limit;
     }
@@ -49,13 +50,13 @@ public:
     virtual void run() override;
     virtual std::string getName() const noexcept override {
       std::stringstream ss;
-			ss << "ES-Tree Single-Source Reachability Algorithm (";
+            ss << "Queue ES-Tree Single-Source Reachability Algorithm (";
       ss << requeueLimit << "/" << maxAffectedRatio << ")";
       return ss.str();
 		}
     virtual std::string getShortName() const noexcept override {
       std::stringstream ss;
-            ss << "EST-DSSR(";
+            ss << "Q-EST-DSSR(";
       ss << requeueLimit << "/" << maxAffectedRatio << ")";
       return ss.str();
 		}
@@ -83,7 +84,8 @@ public:
     virtual void dumpData(std::ostream &os) override;
 
 private:
-    FastPropertyMap<VertexData*> data;
+    FastPropertyMap<ESVertexData*> data;
+    FastPropertyMap<unsigned int> inNeighborIndices;
     FastPropertyMap<bool> reachable;
     Vertex *root;
     bool initialized;
@@ -105,13 +107,18 @@ private:
     unsigned int maxAffected;
     unsigned int totalAffected;
 
-    void restoreTree(VertexData *vd);
+    void restoreTree(ESVertexData *vd);
     void cleanup();
     void dumpTree(std::ostream &os);
     bool checkTree();
     void rerun();
+    typedef boost::circular_buffer<ESVertexData*> PriorityQueue;
+    unsigned int process(ESVertexData *vd, PriorityQueue &queue,
+                     FastPropertyMap<bool> &inQueue,
+                     FastPropertyMap<unsigned int> &timesInQueue,
+                     bool &limitReached);
 };
 
 }
 
-#endif // ESTREE_H
+#endif // ESTREE_QUEUE_H

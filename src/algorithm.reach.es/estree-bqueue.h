@@ -20,10 +20,12 @@
  *   http://algora.xaikal.org
  */
 
-#ifndef ESTREEML_H
-#define ESTREEML_H
+#ifndef ESTREE_BQUEUE_H
+#define ESTREE_BQUEUE_H
 
-#include "dynamicssreachalgorithm.h"
+#include "algorithm.reach/dynamicssreachalgorithm.h"
+#include "esvertexdata.h"
+#include "datastructure/bucketqueue.h"
 #include "property/propertymap.h"
 #include "property/fastpropertymap.h"
 #include <climits>
@@ -31,12 +33,11 @@
 
 namespace Algora {
 
-class ESTreeML : public DynamicSSReachAlgorithm
+class OldESTree : public DynamicSSReachAlgorithm
 {
 public:
-    struct VertexData;
-    explicit ESTreeML(unsigned int requeueLimit = UINT_MAX, double maxAffectedRatio = 1.0);
-    virtual ~ESTreeML();
+    explicit OldESTree(unsigned int requeueLimit = UINT_MAX, double maxAffectedRatio = 1.0);
+    virtual ~OldESTree();
     void setRequeueLimit(unsigned int limit) {
         requeueLimit = limit;
     }
@@ -48,17 +49,17 @@ public:
 public:
     virtual void run() override;
     virtual std::string getName() const noexcept override {
-      std::stringstream ss;
-            ss << "Multilevel ES-Tree Single-Source Reachability Algorithm (";
-      ss << requeueLimit << "/" << maxAffectedRatio << ")";
-      return ss.str();
-		}
+        std::stringstream ss;
+        ss << "BucketQueue ES-Tree Single-Source Reachability Algorithm (";
+        ss << requeueLimit << "/" << maxAffectedRatio << ")";
+        return ss.str();
+    }
     virtual std::string getShortName() const noexcept override {
-      std::stringstream ss;
-            ss << "ML-EST-DSSR(";
-      ss << requeueLimit << "/" << maxAffectedRatio << ")";
-      return ss.str();
-		}
+        std::stringstream ss;
+        ss << "BQ-EST-DSSR(";
+        ss << requeueLimit << "/" << maxAffectedRatio << ")";
+        return ss.str();
+    }
     virtual std::string getProfilingInfo() const override;
     virtual Profile getProfile() const override;
 
@@ -83,7 +84,8 @@ public:
     virtual void dumpData(std::ostream &os) override;
 
 private:
-    FastPropertyMap<VertexData*> data;
+    FastPropertyMap<ESVertexData*> data;
+    FastPropertyMap<unsigned int> inNeighborIndices;
     FastPropertyMap<bool> reachable;
     Vertex *root;
     bool initialized;
@@ -105,13 +107,18 @@ private:
     unsigned int maxAffected;
     unsigned int totalAffected;
 
-    void restoreTree(VertexData *vd);
+    void restoreTree(ESVertexData *vd);
     void cleanup();
     void dumpTree(std::ostream &os);
     bool checkTree();
     void rerun();
+    typedef BucketQueue<ESVertexData*, ES_Priority> PriorityQueue;
+    unsigned int process(ESVertexData *vd, PriorityQueue &queue,
+                     FastPropertyMap<bool> &inQueue,
+                     FastPropertyMap<unsigned int> &timesInQueue,
+                     bool &limitReached);
 };
 
 }
 
-#endif // ESTREEML_H
+#endif // ESTREE_BQUEUE_H

@@ -36,7 +36,7 @@ QMAKE_EXTRA_TARGETS += adinfotarget
 QMAKE_CXXFLAGS_DEBUG += -std=c++17 -O0 -DCOLLECT_PR_DATA
 
 QMAKE_CXXFLAGS_RELEASE -= -O3 -O2 -O1
-QMAKE_CXXFLAGS_RELEASE += -std=c++17 -O3 -DNDEBUG -DCOLLECT_PR_DATA
+QMAKE_CXXFLAGS_RELEASE += -std=c++17 -O3 -DNDEBUG #-DCOLLECT_PR_DATA
 
 zmiy {
   QMAKE_CXXFLAGS_RELEASE += -march=haswell -mmmx -msse -msse2 -msse3 -mssse3 \
@@ -77,4 +77,5 @@ SOURCES += \
 include(graph.dyn/graph.dyn.pri)
 include(algorithm/algorithm.pri)
 include(algorithm.reach/algorithm.reach.pri)
+include(algorithm.reach.es/algorithm.reach.es.pri)
 include(io/io.pri)
