@@ -652,6 +652,28 @@ bool SimpleIncSSReachAlgorithm::query(const Vertex *t)
         run();
     }
     return data->reachable(t);
+
+//    BreadthFirstSearch<FastPropertyMap> bfs(false);
+//    bfs.setStartVertex(source);
+//    bool reachable = false;
+//#ifdef COLLECT_PR_DATA
+//    bfs.onArcDiscover([&](const Arc *) {
+//        prArcConsidered();
+//        return true;
+//    });
+//    bfs.onVertexDiscover([&](const Vertex *) {
+//        prVertexConsidered();
+//        return true;
+//    });
+//#endif
+//    bfs.setArcStopCondition([&](const Arc *a) {
+//        if (a->getHead() == t) {
+//            reachable = true;
+//        }
+//        return reachable;
+//    });
+//    runAlgorithm(bfs, diGraph);
+//    return reachable;
 }
 
 void SimpleIncSSReachAlgorithm::dumpData(std::ostream &os)
