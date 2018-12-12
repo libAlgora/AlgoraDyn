@@ -36,7 +36,7 @@ QMAKE_EXTRA_TARGETS += adinfotarget
 QMAKE_CXXFLAGS_DEBUG += -std=c++17 -O0 -DCOLLECT_PR_DATA
 
 QMAKE_CXXFLAGS_RELEASE -= -O3 -O2 -O1
-QMAKE_CXXFLAGS_RELEASE += -std=c++17 -O3 -DNDEBUG -fno-omit-frame-pointer #-DCOLLECT_PR_DATA
+QMAKE_CXXFLAGS_RELEASE += -std=c++17 -O3 -DNDEBUG -fno-omit-frame-pointer -g #-DCOLLECT_PR_DATA
 
 zmiy {
   QMAKE_CXXFLAGS_RELEASE += -march=haswell -mmmx -msse -msse2 -msse3 -mssse3 \
