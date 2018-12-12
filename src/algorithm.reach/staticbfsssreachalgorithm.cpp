@@ -48,7 +48,7 @@ bool StaticBFSSSReachAlgorithm::query(const Vertex *t)
     if (t == source) {
         return true;
     }
-    BreadthFirstSearch<FastPropertyMap> bfs(false);
+    static BreadthFirstSearch<FastPropertyMap> bfs(false);
     bfs.setStartVertex(source);
     bool reachable = false;
 #ifdef COLLECT_PR_DATA
