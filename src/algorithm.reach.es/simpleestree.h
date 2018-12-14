@@ -26,6 +26,8 @@
 #include "algorithm.reach/dynamicssreachalgorithm.h"
 #include "property/propertymap.h"
 #include "property/fastpropertymap.h"
+#include "datastructure/bucketqueue.h"
+#include "sesvertexdata.h"
 #include <climits>
 #include <sstream>
 
@@ -34,17 +36,16 @@ namespace Algora {
 class SimpleESTree : public DynamicSSReachAlgorithm
 {
 public:
-    struct VertexData;
-    explicit SimpleESTree(unsigned int requeueLimit = UINT_MAX, double maxAffectedRatio = 1.0);
+    explicit SimpleESTree(unsigned long long requeueLimit = ULLONG_MAX, double maxAffectedRatio = 1.0);
     virtual ~SimpleESTree();
-    void setRequeueLimit(unsigned int limit) {
+    void setRequeueLimit(unsigned long long limit) {
         requeueLimit = limit;
     }
     void setMaxAffectedRatio(double ratio) {
         maxAffectedRatio = ratio;
     }
-    unsigned int getDepthOfBFSTree() const;
-    unsigned int getNumReachable() const;
+    unsigned long long getDepthOfBFSTree() const;
+    unsigned long long getNumReachable() const;
 
     // DiGraphAlgorithm interface
 public:
@@ -85,33 +86,38 @@ public:
     virtual void dumpData(std::ostream &os) override;
 
 private:
-    FastPropertyMap<VertexData*> data;
+    FastPropertyMap<SESVertexData*> data;
     FastPropertyMap<bool> reachable;
     Vertex *root;
     bool initialized;
-    unsigned int requeueLimit;
+    unsigned long long requeueLimit;
     double maxAffectedRatio;
 
-    unsigned int movesDown;
-    unsigned int movesUp;
-    unsigned long long int levelIncrease;
-    unsigned long long int levelDecrease;
-    unsigned int maxLevelIncrease;
-    unsigned int maxLevelDecrease;
-    unsigned int decUnreachableHead;
-    unsigned int decNonTreeArc;
-    unsigned int incUnreachableTail;
-    unsigned int incNonTreeArc;
-    unsigned int reruns;
-    unsigned int maxReQueued;
-    unsigned int maxAffected;
-    unsigned int totalAffected;
+    unsigned long long movesDown;
+    unsigned long long movesUp;
+    unsigned long long levelIncrease;
+    unsigned long long levelDecrease;
+    unsigned long long maxLevelIncrease;
+    unsigned long long maxLevelDecrease;
+    unsigned long long decUnreachableHead;
+    unsigned long long decNonTreeArc;
+    unsigned long long incUnreachableTail;
+    unsigned long long incNonTreeArc;
+    unsigned long long reruns;
+    unsigned long long maxReQueued;
+    unsigned long long maxAffected;
+    unsigned long long totalAffected;
 
-    void restoreTree(VertexData *rd);
+    void restoreTree(SESVertexData *rd);
     void cleanup();
     void dumpTree(std::ostream &os);
     bool checkTree();
     void rerun();
+    typedef BucketQueue<SESVertexData*, SES_Priority> PriorityQueue;
+    unsigned long long process(SESVertexData *vd, PriorityQueue &queue,
+                     FastPropertyMap<bool> &inQueue,
+                     FastPropertyMap<unsigned long long> &timesInQueue,
+                     bool &limitReached);
 };
 
 }

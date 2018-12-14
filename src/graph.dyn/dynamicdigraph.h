@@ -37,20 +37,20 @@ public:
     ~DynamicDiGraph();
 
     DiGraph *getDiGraph() const;
-    unsigned int getCurrentTime() const;
-    unsigned int getMaxTime() const;
-    unsigned int getNumberOfDeltas() const;
-    unsigned int getCurrentGraphSize() const;
-    unsigned int getCurrentArcSize() const;
+    unsigned long long getCurrentTime() const;
+    unsigned long long getMaxTime() const;
+    unsigned long long getNumberOfDeltas() const;
+    unsigned long long getCurrentGraphSize() const;
+    unsigned long long getCurrentArcSize() const;
 
-    unsigned int addVertex(unsigned int timestamp);
-    void addVertex(unsigned int vertexId, unsigned int timestamp);
-    void removeVertex(unsigned int vertexId, unsigned int timestamp);
-    void addArc(unsigned int tailId, unsigned int headId, unsigned int timestamp, bool antedateVertexAdditions = false);
-    void removeArc(unsigned int tailId, unsigned int headId, unsigned int timestamp, bool removeIsolatedEnds = false);
-    bool hasArc(unsigned int tailId, unsigned int headId);
+    unsigned long long addVertex(unsigned long long timestamp);
+    void addVertex(unsigned long long vertexId, unsigned long long timestamp);
+    void removeVertex(unsigned long long vertexId, unsigned long long timestamp);
+    void addArc(unsigned long long tailId, unsigned long long headId, unsigned long long timestamp, bool antedateVertexAdditions = false);
+    void removeArc(unsigned long long tailId, unsigned long long headId, unsigned long long timestamp, bool removeIsolatedEnds = false);
+    bool hasArc(unsigned long long tailId, unsigned long long headId);
     void clear();
-    void compact(unsigned int num);
+    void compact(unsigned long long num);
 
     void resetToBigBang();
     bool applyNextOperation(bool sameTimestamp = false);
@@ -60,16 +60,16 @@ public:
     bool lastOpWasArcAddition() const;
     bool lastOpWasArcRemoval() const;
     bool lastOpWasMultiple() const;
-    Vertex *getCurrentVertexForId(unsigned int vertexId) const;
-    unsigned int idOfIthVertex(unsigned int i) const;
-    unsigned int getSizeOfLastDelta() const;
+    Vertex *getCurrentVertexForId(unsigned long long vertexId) const;
+    unsigned long long idOfIthVertex(unsigned long long i) const;
+    unsigned long long getSizeOfLastDelta() const;
 
-    unsigned int countVertexAdditions(unsigned int timeFrom, unsigned int timeUntil) const;
-    unsigned int countVertexRemovals(unsigned int timeFrom, unsigned int timeUntil) const;
-    unsigned int countArcAdditions(unsigned int timeFrom, unsigned int timeUntil) const;
-    unsigned int countArcRemovals(unsigned int timeFrom, unsigned int timeUntil) const;
+    unsigned long long countVertexAdditions(unsigned long long timeFrom, unsigned long long timeUntil) const;
+    unsigned long long countVertexRemovals(unsigned long long timeFrom, unsigned long long timeUntil) const;
+    unsigned long long countArcAdditions(unsigned long long timeFrom, unsigned long long timeUntil) const;
+    unsigned long long countArcRemovals(unsigned long long timeFrom, unsigned long long timeUntil) const;
 
-    void squashTimes(unsigned int timeFrom, unsigned int timeUntil);
+    void squashTimes(unsigned long long timeFrom, unsigned long long timeUntil);
     void secondArcIsRemoval(bool sir);
 
 private:

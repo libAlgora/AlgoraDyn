@@ -61,7 +61,7 @@ protected:
 
 private:
     BreadthFirstSearch<FastPropertyMap> bfs;
-    FastPropertyMap<int> levels;
+    FastPropertyMap<unsigned long long> levels;
     bool initialized;
     bool arcAdded;
     bool arcRemoved;

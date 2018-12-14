@@ -54,7 +54,7 @@ void printQueue(PriorityQueue q) {
 }
 #endif
 
-ESTreeML::ESTreeML(unsigned int requeueLimit, double maxAffectedRatio)
+ESTreeML::ESTreeML(unsigned long long requeueLimit, double maxAffectedRatio)
     : DynamicSSReachAlgorithm(), root(nullptr),
       initialized(false), requeueLimit(requeueLimit),
       maxAffectedRatio(maxAffectedRatio),
@@ -477,14 +477,14 @@ bool ESTreeML::checkTree()
    BreadthFirstSearch<FastPropertyMap> bfs;
    bfs.setStartVertex(source);
    bfs.levelAsValues(true);
-   FastPropertyMap<int> levels(-1);
+   FastPropertyMap<unsigned long long> levels(bfs.INFINITY);
    levels.resetAll(diGraph->getSize());
    bfs.useModifiableProperty(&levels);
    runAlgorithm(bfs, diGraph);
 
    bool ok = true;
    diGraph->mapVertices([&](Vertex *v) {
-       auto bfsLevel = levels[v] < 0 ? ESVertexData::UNREACHABLE : levels[v];
+       auto bfsLevel = levels[v] == bfs.INFINITY ? ESVertexData::UNREACHABLE : levels[v];
        if (data[v]->getLevel() != bfsLevel) {
            std::cerr << "Level mismatch for vertex " << data[v]
                         << ": expected level " << bfsLevel << std::endl;
@@ -513,7 +513,7 @@ void ESTreeML::rerun()
     run();
 }
 
-unsigned int ESTreeML::process(ESVertexData *vd, ESTreeML::PriorityQueue &queue, FastPropertyMap<bool> &inQueue, FastPropertyMap<unsigned int> &timesInQueue, bool &limitReached)
+unsigned long long ESTreeML::process(ESVertexData *vd, ESTreeML::PriorityQueue &queue, FastPropertyMap<bool> &inQueue, FastPropertyMap<unsigned long long> &timesInQueue, bool &limitReached)
 {
     if (vd->getLevel() == 0UL) {
         PRINT_DEBUG("No need to process source vertex " << vd << ".");
@@ -536,8 +536,8 @@ unsigned int ESTreeML::process(ESVertexData *vd, ESTreeML::PriorityQueue &queue,
     bool reachV = true;
     bool levelChanged = false;
     auto n = diGraph->getSize();
-    unsigned int oldVLevel = vd->getLevel();
-    unsigned int levelDiff = 0U;
+    auto oldVLevel = vd->getLevel();
+    auto levelDiff = 0ULL;
 
     auto enqueue = [&](ESVertexData *vd) {
         auto vertex = vd->getVertex();
@@ -666,7 +666,7 @@ void ESTreeML::restoreTree(ESVertexData *vd)
     PriorityQueue queue;
     queue.setLimit(diGraph->getSize());
     FastPropertyMap<bool> inQueue(false, "", diGraph->getSize());
-    FastPropertyMap<unsigned int> timesInQueue(0U, "", diGraph->getSize());
+    FastPropertyMap<unsigned long long> timesInQueue(0U, "", diGraph->getSize());
     queue.push(vd);
     inQueue[vd->getVertex()] = true;
     timesInQueue[vd->getVertex()]++;
@@ -683,7 +683,7 @@ void ESTreeML::restoreTree(ESVertexData *vd)
 #ifdef COLLECT_PR_DATA
         prVertexConsidered();
 #endif
-        unsigned int levels = process(vd, queue, inQueue, timesInQueue, limitReached);
+        auto levels = process(vd, queue, inQueue, timesInQueue, limitReached);
         affected++;
 
         if (limitReached || (affected > affectedLimit && !queue.empty())) {

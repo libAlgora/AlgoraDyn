@@ -36,9 +36,9 @@ namespace Algora {
 class OldESTree : public DynamicSSReachAlgorithm
 {
 public:
-    explicit OldESTree(unsigned int requeueLimit = UINT_MAX, double maxAffectedRatio = 1.0);
+    explicit OldESTree(unsigned long long requeueLimit = UINT_MAX, double maxAffectedRatio = 1.0);
     virtual ~OldESTree();
-    void setRequeueLimit(unsigned int limit) {
+    void setRequeueLimit(unsigned long long limit) {
         requeueLimit = limit;
     }
     void setMaxAffectedRatio(double ratio) {
@@ -85,27 +85,27 @@ public:
 
 private:
     FastPropertyMap<ESVertexData*> data;
-    FastPropertyMap<unsigned int> inNeighborIndices;
+    FastPropertyMap<unsigned long long> inNeighborIndices;
     FastPropertyMap<bool> reachable;
     Vertex *root;
     bool initialized;
-    unsigned int requeueLimit;
+    unsigned long long requeueLimit;
     double maxAffectedRatio;
 
-    unsigned int movesDown;
-    unsigned int movesUp;
-    unsigned long long int levelIncrease;
-    unsigned long long int levelDecrease;
-    unsigned int maxLevelIncrease;
-    unsigned int maxLevelDecrease;
-    unsigned int decUnreachableHead;
-    unsigned int decNonTreeArc;
-    unsigned int incUnreachableTail;
-    unsigned int incNonTreeArc;
-    unsigned int reruns;
-    unsigned int maxReQueued;
-    unsigned int maxAffected;
-    unsigned int totalAffected;
+    unsigned long long  movesDown;
+    unsigned long long  movesUp;
+    unsigned long long levelIncrease;
+    unsigned long long levelDecrease;
+    unsigned long long maxLevelIncrease;
+    unsigned long long maxLevelDecrease;
+    unsigned long long decUnreachableHead;
+    unsigned long long decNonTreeArc;
+    unsigned long long incUnreachableTail;
+    unsigned long long incNonTreeArc;
+    unsigned long long reruns;
+    unsigned long long maxReQueued;
+    unsigned long long maxAffected;
+    unsigned long long totalAffected;
 
     void restoreTree(ESVertexData *vd);
     void cleanup();
@@ -113,9 +113,9 @@ private:
     bool checkTree();
     void rerun();
     typedef BucketQueue<ESVertexData*, ES_Priority> PriorityQueue;
-    unsigned int process(ESVertexData *vd, PriorityQueue &queue,
+    unsigned long long process(ESVertexData *vd, PriorityQueue &queue,
                      FastPropertyMap<bool> &inQueue,
-                     FastPropertyMap<unsigned int> &timesInQueue,
+                     FastPropertyMap<unsigned long long> &timesInQueue,
                      bool &limitReached);
 };
 

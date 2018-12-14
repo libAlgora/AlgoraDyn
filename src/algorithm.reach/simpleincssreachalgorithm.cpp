@@ -66,18 +66,18 @@ struct SimpleIncSSReachAlgorithm::Reachability {
     bool relateToReachable;
     bool radicalReset;
 
-    unsigned int numReachable;
-    unsigned long numUnreached;
-    unsigned long numRereached;
-    unsigned long numUnknown;
-    unsigned long numReached;
-    unsigned long numTracebacks;
-    unsigned long maxUnreached;
-    unsigned long maxRereached;
-    unsigned long maxUnknown;
-    unsigned long maxReached;
-    unsigned long maxTracebacks;
-    unsigned long numReReachFromSource;
+    unsigned long long numReachable;
+    unsigned long long numUnreached;
+    unsigned long long numRereached;
+    unsigned long long numUnknown;
+    unsigned long long numReached;
+    unsigned long long numTracebacks;
+    unsigned long long maxUnreached;
+    unsigned long long maxRereached;
+    unsigned long long maxUnknown;
+    unsigned long long maxReached;
+    unsigned long long maxTracebacks;
+    unsigned long long numReReachFromSource;
 
     Reachability(SimpleIncSSReachAlgorithm *p, bool r, bool sf, double maxUS)
         : parent(p), diGraph(nullptr), source(nullptr), reverse(r), searchForward(sf), maxUnknownStateRatio(maxUS),
@@ -113,7 +113,7 @@ struct SimpleIncSSReachAlgorithm::Reachability {
 #endif
     }
 
-    unsigned int propagate(const Vertex *from, State s, bool collectVertices, bool setPred,
+    unsigned long long propagate(const Vertex *from, State s, bool collectVertices, bool setPred,
                            bool force) {
         PRINT_DEBUG("Propagating " << printState(s) << " from " << from << ".");
         BreadthFirstSearch<FastPropertyMap> bfs(false);

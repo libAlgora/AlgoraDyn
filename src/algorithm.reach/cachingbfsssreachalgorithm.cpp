@@ -29,7 +29,7 @@ CachingBFSSSReachAlgorithm::CachingBFSSSReachAlgorithm()
     : DynamicSSReachAlgorithm(), initialized(false),
       arcAdded(false), arcRemoved(false)
 {
-    levels.setDefaultValue(-1);
+    levels.setDefaultValue(bfs.INFINITY);
     bfs.useModifiableProperty(&levels);
     bfs.orderAsValues(false);
 }
@@ -61,9 +61,9 @@ void CachingBFSSSReachAlgorithm::run()
 
 bool CachingBFSSSReachAlgorithm::query(const Vertex *t)
 {
-    if (t == source || (initialized && !arcRemoved && levels(t) != -1)) {
+    if (t == source || (initialized && !arcRemoved && levels(t) != bfs.INFINITY)) {
         return true;
-    } else if (initialized && !arcAdded && levels(t) == -1) {
+    } else if (initialized && !arcAdded && levels(t) == bfs.INFINITY) {
         return false;
     }
     if (!initialized || arcAdded || arcRemoved) {
@@ -72,7 +72,7 @@ bool CachingBFSSSReachAlgorithm::query(const Vertex *t)
         }
         run();
     }
-    return levels(t) != -1;
+    return levels(t) != bfs.INFINITY;
 }
 
 void CachingBFSSSReachAlgorithm::onDiGraphSet()
@@ -95,7 +95,7 @@ void CachingBFSSSReachAlgorithm::onDiGraphUnset()
 
 void CachingBFSSSReachAlgorithm::onVertexAdd(Vertex *v)
 {
-    levels[v] = -1;
+    levels[v] = bfs.INFINITY;
 }
 
 void CachingBFSSSReachAlgorithm::onVertexRemove(Vertex *v)
@@ -117,7 +117,7 @@ void CachingBFSSSReachAlgorithm::onArcAdd(Arc *a)
 
     auto tail = a->getTail();
 
-    if (levels(head) != -1 || levels(tail) == -1) {
+    if (levels(head) != bfs.INFINITY || levels(tail) == bfs.INFINITY) {
         return;
     }
 
@@ -136,7 +136,7 @@ void CachingBFSSSReachAlgorithm::onArcRemove(Arc *a)
         return;
     }
 
-    if (levels(head) == -1) {
+    if (levels(head) == bfs.INFINITY) {
         return;
     }
 

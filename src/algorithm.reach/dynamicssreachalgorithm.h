@@ -33,7 +33,7 @@ namespace Algora {
 class DynamicSSReachAlgorithm : public DynamicDiGraphAlgorithm
 {
 public:
-    typedef unsigned long long int pr_val;
+    typedef unsigned long long pr_val;
     typedef std::vector<std::pair<std::string, pr_val>> Profile;
 
     explicit DynamicSSReachAlgorithm() : DynamicDiGraphAlgorithm(), source(nullptr) { }

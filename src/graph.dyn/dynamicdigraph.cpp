@@ -77,9 +77,9 @@ struct OperationSet : public Operation {
 struct AddVertexOperation : public Operation {
     Vertex *vertex;
     Vertex *constructionVertex;
-    unsigned int vertexId;
+    unsigned long long vertexId;
 
-    AddVertexOperation(Vertex *cv, unsigned int vId) : vertex(nullptr), constructionVertex(cv), vertexId(vId) { }
+    AddVertexOperation(Vertex *cv, unsigned long long vId) : vertex(nullptr), constructionVertex(cv), vertexId(vId) { }
 
     virtual void apply(IncidenceListGraph *graph) override {
         vertex = graph->addVertex();
@@ -131,14 +131,14 @@ struct DynamicDiGraph::CheshireCat {
     IncidenceListGraph dynGraph;
     IncidenceListGraph constructionGraph;
 
-    std::vector<unsigned int> timestamps;
+    std::vector<unsigned long long> timestamps;
     std::vector<Operation*> operations;
-    std::vector<unsigned int> offset;
+    std::vector<unsigned long long> offset;
     OperationSet antedated;
 
-    unsigned int timeIndex;
-    unsigned int opIndex;
-    unsigned int numVertices;
+    unsigned long long timeIndex;
+    unsigned long long opIndex;
+    unsigned long long numVertices;
 
     std::vector<AddVertexOperation*> vertices;
     std::unordered_map<Arc*,AddArcOperation*> constructionArcMap;
@@ -181,14 +181,14 @@ struct DynamicDiGraph::CheshireCat {
         offset.clear();
     }
 
-    void checkTimestamp(unsigned int timestamp) {
+    void checkTimestamp(unsigned long long timestamp) {
         if (!timestamps.empty() && timestamp < timestamps.back()) {
             throw std::invalid_argument("Timestamps must be non-decreasing.");
         }
         extendTime(timestamp);
     }
 
-    void extendTime(unsigned int timestamp) {
+    void extendTime(unsigned long long timestamp) {
         if (timestamps.empty() || timestamps.back() < timestamp) {
             PRINT_DEBUG( "Extending time from " << (timestamps.empty() ? 0U : timestamps.back()) << " to " << timestamp )
             timestamps.push_back(timestamp);
@@ -196,7 +196,7 @@ struct DynamicDiGraph::CheshireCat {
         }
     }
 
-    unsigned int addVertex(unsigned int timestamp, bool atEnd, unsigned int vertexId = 0U, bool okIfExists = false) {
+    unsigned long long addVertex(unsigned long long timestamp, bool atEnd, unsigned long long vertexId = 0U, bool okIfExists = false) {
         checkTimestamp(timestamp);
 
         if (atEnd) {
@@ -216,7 +216,7 @@ struct DynamicDiGraph::CheshireCat {
         return vertexId;
     }
 
-    void removeVertex(unsigned int vertexId, unsigned int timestamp) {
+    void removeVertex(unsigned long long vertexId, unsigned long long timestamp) {
         if (vertexId >= vertices.size() || vertices.at(vertexId) == nullptr) {
             throw std::invalid_argument("Vertex ID does not exist.");
         }
@@ -238,11 +238,11 @@ struct DynamicDiGraph::CheshireCat {
         vertices[vertexId] = nullptr;
     }
 
-    void addArc(unsigned int tailId, unsigned int headId, unsigned int timestamp, bool antedateVertexAddition)
+    void addArc(unsigned long long tailId, unsigned long long headId, unsigned long long timestamp, bool antedateVertexAddition)
     {
         checkTimestamp(timestamp);
 
-        unsigned int maxId = tailId > headId ? tailId : headId;
+        unsigned long long maxId = tailId > headId ? tailId : headId;
         if (maxId >= vertices.size()) {
             vertices.resize(maxId + 1, nullptr);
         }
@@ -288,7 +288,7 @@ struct DynamicDiGraph::CheshireCat {
         constructionArcMap[ca] = aao;
     }
 
-    Arc *findArc(unsigned int tailId, unsigned int headId) {
+    Arc *findArc(unsigned long long tailId, unsigned long long headId) {
         if (tailId >= vertices.size() || headId >= vertices.size()) {
             return nullptr;
         }
@@ -309,7 +309,7 @@ struct DynamicDiGraph::CheshireCat {
         return ca;
     }
 
-    void removeArc(unsigned int tailId, unsigned int headId, unsigned int timestamp, bool removeIsolatedEnds) {
+    void removeArc(unsigned long long tailId, unsigned long long headId, unsigned long long timestamp, bool removeIsolatedEnds) {
         Arc *ca = findArc(tailId, headId);
         if (!ca) {
             throw std::invalid_argument("Arc does not exist.");
@@ -352,7 +352,7 @@ struct DynamicDiGraph::CheshireCat {
         }
     }
 
-    void compact(unsigned int num) {
+    void compact(unsigned long long num) {
         std::vector<Operation*> ops;
         for (auto i = 0U; i < num; i++) {
             auto *last = operations.back();
@@ -408,7 +408,7 @@ struct DynamicDiGraph::CheshireCat {
             return false;
         }
 
-        unsigned int maxOp = operations.size();
+        unsigned long long maxOp = operations.size();
         if (timeIndex + 1 < timestamps.size()) {
             maxOp = offset[timeIndex + 1];
         }
@@ -420,8 +420,8 @@ struct DynamicDiGraph::CheshireCat {
         return true;
     }
 
-    unsigned int findTimeIndex(unsigned int timestamp) const {
-        unsigned int tIndex = 0U;
+    unsigned long long findTimeIndex(unsigned long long timestamp) const {
+        unsigned long long tIndex = 0U;
         while (tIndex < timestamps.size() && timestamps[tIndex] < timestamp) {
             tIndex++;
         }
@@ -443,18 +443,18 @@ struct DynamicDiGraph::CheshireCat {
         return false;
     }
 
-    unsigned int countOperations(unsigned int timeFrom, unsigned int timeUntil, Operation::Type type) const {
-        unsigned int tIndexFrom = findTimeIndex(timeFrom);
+    unsigned long long countOperations(unsigned long long timeFrom, unsigned long long timeUntil, Operation::Type type) const {
+        unsigned long long tIndexFrom = findTimeIndex(timeFrom);
         if (tIndexFrom >= timestamps.size()) {
                 return 0U;
         }
-        unsigned int tIndexUntil = findTimeIndex(timeUntil) + 1;
+        unsigned long long tIndexUntil = findTimeIndex(timeUntil) + 1;
         if (tIndexUntil <= tIndexFrom) {
             return 0U;
         }
-        unsigned int opIndexMax = tIndexUntil < offset.size() ? offset[tIndexUntil] : operations.size();
-        unsigned int numOperations = 0U;
-        for (unsigned int opI = offset[tIndexFrom]; opI < opIndexMax; opI++) {
+        unsigned long long opIndexMax = tIndexUntil < offset.size() ? offset[tIndexUntil] : operations.size();
+        unsigned long long numOperations = 0U;
+        for (unsigned long long opI = offset[tIndexFrom]; opI < opIndexMax; opI++) {
             Operation *op = operations[opI];
             if (op->getType() == type) {
                 numOperations++;
@@ -473,21 +473,21 @@ struct DynamicDiGraph::CheshireCat {
         return numOperations;
     }
 
-    void squashTimes(unsigned int timeFrom, unsigned int timeUntil) {
-        unsigned int squashOn = findTimeIndex(timeFrom);
-        unsigned int squashMax = findTimeIndex(timeUntil) + 1;
+    void squashTimes(unsigned long long timeFrom, unsigned long long timeUntil) {
+        unsigned long long squashOn = findTimeIndex(timeFrom);
+        unsigned long long squashMax = findTimeIndex(timeUntil) + 1;
         timestamps.erase(timestamps.cbegin() + squashOn + 1, timestamps.cbegin() + squashMax);
         offset.erase(offset.cbegin() + squashOn + 1, offset.cbegin() + squashMax);
     }
 
-    Vertex *vertexForId(unsigned int vertexId) const {
+    Vertex *vertexForId(unsigned long long vertexId) const {
         if (vertexId >= vertices.size() || vertices.at(vertexId) == nullptr) {
             return nullptr;
         }
         return vertices.at(vertexId)->vertex;
     }
 
-    unsigned int getSizeOfLastDelta() {
+    unsigned long long getSizeOfLastDelta() {
         if (timeIndex + 1U == offset.size()) {
             return operations.size() - offset[timeIndex];
         }
@@ -511,48 +511,48 @@ DiGraph *DynamicDiGraph::getDiGraph() const
     return &(grin->dynGraph);
 }
 
-unsigned int DynamicDiGraph::getCurrentTime() const
+unsigned long long DynamicDiGraph::getCurrentTime() const
 {
     return grin->timestamps.empty() || (grin->timeIndex == 0U && grin->opIndex == 0U)
             ? 0U : grin->timestamps[grin->timeIndex];
 }
 
-unsigned int DynamicDiGraph::getMaxTime() const
+unsigned long long DynamicDiGraph::getMaxTime() const
 {
     return grin->timestamps.empty() ? 0U : grin->timestamps.back();
 }
 
-unsigned int DynamicDiGraph::getNumberOfDeltas() const
+unsigned long long DynamicDiGraph::getNumberOfDeltas() const
 {
     return grin->timestamps.size();
 }
 
-unsigned int DynamicDiGraph::getCurrentGraphSize() const
+unsigned long long DynamicDiGraph::getCurrentGraphSize() const
 {
     return grin->constructionGraph.getSize();
 }
 
-unsigned int DynamicDiGraph::getCurrentArcSize() const
+unsigned long long DynamicDiGraph::getCurrentArcSize() const
 {
     return grin->constructionArcMap.size();
 }
 
-unsigned int DynamicDiGraph::addVertex(unsigned int timestamp)
+unsigned long long DynamicDiGraph::addVertex(unsigned long long timestamp)
 {
     return grin->addVertex(timestamp, true);
 }
 
-void DynamicDiGraph::addVertex(unsigned int vertexId, unsigned int timestamp)
+void DynamicDiGraph::addVertex(unsigned long long vertexId, unsigned long long timestamp)
 {
     grin->addVertex(timestamp, false, vertexId);
 }
 
-void DynamicDiGraph::removeVertex(unsigned int vertexId, unsigned int timestamp)
+void DynamicDiGraph::removeVertex(unsigned long long vertexId, unsigned long long timestamp)
 {
     grin->removeVertex(vertexId, timestamp);
 }
 
-void DynamicDiGraph::addArc(unsigned int tailId, unsigned int headId, unsigned int timestamp, bool antedateVertexAdditions)
+void DynamicDiGraph::addArc(unsigned long long tailId, unsigned long long headId, unsigned long long timestamp, bool antedateVertexAdditions)
 {
     if (grin->doubleArcIsRemoval && hasArc(tailId, headId)) {
         grin->removeArc(tailId, headId, timestamp, antedateVertexAdditions);
@@ -561,12 +561,12 @@ void DynamicDiGraph::addArc(unsigned int tailId, unsigned int headId, unsigned i
     }
 }
 
-void DynamicDiGraph::removeArc(unsigned int tailId, unsigned int headId, unsigned int timestamp, bool removeIsolatedEnds)
+void DynamicDiGraph::removeArc(unsigned long long tailId, unsigned long long headId, unsigned long long timestamp, bool removeIsolatedEnds)
 {
     grin->removeArc(tailId, headId, timestamp, removeIsolatedEnds);
 }
 
-bool DynamicDiGraph::hasArc(unsigned int tailId, unsigned int headId)
+bool DynamicDiGraph::hasArc(unsigned long long tailId, unsigned long long headId)
 {
     return grin->findArc(tailId, headId) != nullptr;
 }
@@ -576,7 +576,7 @@ void DynamicDiGraph::clear()
     grin->clear();
 }
 
-void DynamicDiGraph::compact(unsigned int num)
+void DynamicDiGraph::compact(unsigned long long num)
 {
     if (num < 1U) {
         throw std::invalid_argument("Can only compact positive number of operations.");
@@ -626,42 +626,42 @@ bool DynamicDiGraph::lastOpWasMultiple() const
     return grin->lastOpHadType(Operation::Type::MULTIPLE);
 }
 
-Vertex *DynamicDiGraph::getCurrentVertexForId(unsigned int vertexId) const
+Vertex *DynamicDiGraph::getCurrentVertexForId(unsigned long long vertexId) const
 {
     return grin->vertexForId(vertexId);
 }
 
-unsigned int DynamicDiGraph::idOfIthVertex(unsigned int i) const
+unsigned long long DynamicDiGraph::idOfIthVertex(unsigned long long i) const
 {
-    return stoul(grin->dynGraph.vertexAt(i)->getName());
+    return stoull(grin->dynGraph.vertexAt(i)->getName());
 }
 
-unsigned int DynamicDiGraph::getSizeOfLastDelta() const
+unsigned long long DynamicDiGraph::getSizeOfLastDelta() const
 {
     return grin->getSizeOfLastDelta();
 }
 
-unsigned int DynamicDiGraph::countVertexAdditions(unsigned int timeFrom, unsigned int timeUntil) const
+unsigned long long DynamicDiGraph::countVertexAdditions(unsigned long long timeFrom, unsigned long long timeUntil) const
 {
     return grin->countOperations(timeFrom, timeUntil, Operation::Type::VERTEX_ADDITION);
 }
 
-unsigned int DynamicDiGraph::countVertexRemovals(unsigned int timeFrom, unsigned int timeUntil) const
+unsigned long long DynamicDiGraph::countVertexRemovals(unsigned long long timeFrom, unsigned long long timeUntil) const
 {
     return grin->countOperations(timeFrom, timeUntil, Operation::Type::VERTEX_REMOVAL);
 }
 
-unsigned int DynamicDiGraph::countArcAdditions(unsigned int timeFrom, unsigned int timeUntil) const
+unsigned long long DynamicDiGraph::countArcAdditions(unsigned long long timeFrom, unsigned long long timeUntil) const
 {
     return grin->countOperations(timeFrom, timeUntil, Operation::Type::ARC_ADDITION);
 }
 
-unsigned int DynamicDiGraph::countArcRemovals(unsigned int timeFrom, unsigned int timeUntil) const
+unsigned long long DynamicDiGraph::countArcRemovals(unsigned long long timeFrom, unsigned long long timeUntil) const
 {
     return grin->countOperations(timeFrom, timeUntil, Operation::Type::ARC_REMOVAL);
 }
 
-void DynamicDiGraph::squashTimes(unsigned int timeFrom, unsigned int timeUntil)
+void DynamicDiGraph::squashTimes(unsigned long long timeFrom, unsigned long long timeUntil)
 {
     grin->reset();
     grin->squashTimes(timeFrom, timeUntil);

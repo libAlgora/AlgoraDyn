@@ -29,8 +29,6 @@
 #include "graph/vertex.h"
 #include "algorithm.basic.traversal/breadthfirstsearch.h"
 #include "algorithm/digraphalgorithmexception.h"
-#include "datastructure/bucketqueue.h"
-#include "property/fastpropertymap.h"
 
 //#define DEBUG_SIMPLEESTREE
 
@@ -45,81 +43,6 @@
 
 namespace Algora {
 
-struct SimpleESTree::VertexData {
-    static const unsigned int UNREACHABLE = UINT_MAX;
-    static unsigned int graphSize;
-
-    Vertex *vertex;
-    VertexData *parent;
-    unsigned int level;
-
-    VertexData(Vertex *v, VertexData *p = nullptr, unsigned int l = UINT_MAX)
-        : vertex(v), parent(p), level(l) {
-        if (p != nullptr) {
-            level = p->level + 1;
-        }
-    }
-
-    void reset(VertexData *p = nullptr, unsigned int l = UINT_MAX) {
-        parent = p;
-        level = l;
-        if (p != nullptr) {
-            level = p->level + 1;
-        }
-    }
-
-    void setUnreachable() {
-        parent = nullptr;
-        level = UNREACHABLE;
-    }
-
-    bool isReachable() const {
-        return level != UNREACHABLE;
-    }
-
-    unsigned int priority() const {
-        return isReachable() ? level : graphSize + 1U;
-    }
-
-    bool isParent(VertexData *p) {
-        return p == parent;
-    }
-
-    bool hasValidParent() const {
-        return parent != nullptr && parent->level + 1 == level;
-    }
-
-    Vertex *getParent() const {
-        if (parent == nullptr) {
-            return nullptr;
-        }
-        return parent->vertex;
-    }
-};
-
-unsigned int SimpleESTree::VertexData::graphSize = 0U;
-
-std::ostream& operator<<(std::ostream& os, const SimpleESTree::VertexData *vd) {
-    if (vd == nullptr) {
-        os << " null ";
-        return os;
-    }
-
-    os << vd->vertex << ": ";
-    //os << "parent: [" << vd->parent << "] ; level: " << vd->level;
-    os << "parent: [";
-    if (vd->parent) {
-      os << vd->parent->vertex << ", level: " << vd->parent->level;
-    } else {
-        os << "null";
-    }
-    os << "] ; level: " << vd->level;
-    return os;
-}
-
-struct ESNode_Priority { int operator()(const SimpleESTree::VertexData *vd) { return vd->priority(); }};
-typedef BucketQueue<SimpleESTree::VertexData*, ESNode_Priority> PriorityQueue;
-
 #ifdef DEBUG_SIMPLEESTREE
 void printQueue(PriorityQueue q) {
     std::cerr << "PriorityQueue: ";
@@ -131,15 +54,8 @@ void printQueue(PriorityQueue q) {
 }
 #endif
 
-unsigned int process(DiGraph *graph, SimpleESTree::VertexData *vd, PriorityQueue &queue,
-                     const FastPropertyMap<SimpleESTree::VertexData*> &data,
-                     FastPropertyMap<bool> &reachable,
-                     FastPropertyMap<bool> &inQueue,
-                     FastPropertyMap<unsigned int> &timesInQueue, unsigned int limit,
-										 bool &limitReached, unsigned int &maxRequeued,
-										 unsigned int &verticesConsidered, unsigned int &arcsConsidered);
 
-SimpleESTree::SimpleESTree(unsigned int requeueLimit, double maxAffectedRatio)
+SimpleESTree::SimpleESTree(unsigned long long requeueLimit, double maxAffectedRatio)
     : DynamicSSReachAlgorithm(), root(nullptr),
       initialized(false), requeueLimit(requeueLimit),
       maxAffectedRatio(maxAffectedRatio), movesDown(0U), movesUp(0U),
@@ -159,9 +75,9 @@ SimpleESTree::~SimpleESTree()
     cleanup();
 }
 
-unsigned int SimpleESTree::getDepthOfBFSTree() const
+unsigned long long SimpleESTree::getDepthOfBFSTree() const
 {
-    auto maxLevel = 0U;
+    auto maxLevel = 0ULL;
     diGraph->mapVertices([&](Vertex *v) {
         if (reachable(v) && data(v)->level > maxLevel) {
             maxLevel = data(v)->level;
@@ -170,9 +86,9 @@ unsigned int SimpleESTree::getDepthOfBFSTree() const
     return maxLevel + 1U;
 }
 
-unsigned int SimpleESTree::getNumReachable() const
+unsigned long long SimpleESTree::getNumReachable() const
 {
-    auto numR = 0U;
+    auto numR = 0ULL;
     diGraph->mapVertices([&](Vertex *v) {
         if (reachable(v)) {
             numR++;
@@ -198,7 +114,7 @@ void SimpleESTree::run()
    }
    bfs.setStartVertex(root);
    if (data[root] == nullptr) {
-      data[root] = new VertexData(root, nullptr, 0);
+      data[root] = new SESVertexData(root, nullptr, 0);
    } else {
        data[root]->reset(nullptr, 0);
    }
@@ -211,7 +127,7 @@ void SimpleESTree::run()
         Vertex *t = a->getTail();
         Vertex *h = a->getHead();
         if (data[h] == nullptr) {
-            data[h] = new VertexData(h, data(t));
+            data[h] = new SESVertexData(h, data(t));
         } else {
             data[h]->reset(data(t));
         }
@@ -228,12 +144,11 @@ void SimpleESTree::run()
         prVertexConsidered();
 #endif
        if (data(v) == nullptr) {
-           data[v] = new VertexData(v);
+           data[v] = new SESVertexData(v);
            PRINT_DEBUG( v << " is a unreachable.")
        }
    });
 
-   VertexData::graphSize = diGraph->getSize();
    initialized = true;
    PRINT_DEBUG("Initializing completed.");
 
@@ -310,7 +225,6 @@ void SimpleESTree::onDiGraphSet()
     totalAffected = 0U;
     data.resetAll(diGraph->getSize());
     reachable.resetAll(diGraph->getSize());
-    VertexData::graphSize = diGraph->getSize();
 }
 
 void SimpleESTree::onDiGraphUnset()
@@ -321,8 +235,7 @@ void SimpleESTree::onDiGraphUnset()
 
 void SimpleESTree::onVertexAdd(Vertex *v)
 {
-    data[v] = new VertexData(v);
-    VertexData::graphSize++;
+    data[v] = new SESVertexData(v);
 }
 
 void SimpleESTree::onArcAdd(Arc *a)
@@ -338,16 +251,16 @@ void SimpleESTree::onArcAdd(Arc *a)
         return;
     }
 
-    Vertex *tail = a->getTail();
-    Vertex *head = a->getHead();
+    auto tail = a->getTail();
+    auto head = a->getHead();
 
     if (head == source) {
         PRINT_DEBUG("Head is source.")
         return;
     }
 
-    VertexData *td = data(tail);
-    VertexData *hd = data(head);
+    auto td = data(tail);
+    auto hd = data(head);
 
     assert(td != nullptr);
     assert(hd != nullptr);
@@ -390,10 +303,10 @@ void SimpleESTree::onArcAdd(Arc *a)
             PRINT_DEBUG( "Loop ignored.");
             return false;
         }
-        Vertex *at = a->getTail();
-        Vertex *ah = a->getHead();
-        VertexData *atd = data(at);
-        VertexData *ahd = data(ah);
+        auto at = a->getTail();
+        auto ah = a->getHead();
+        auto atd = data(at);
+        auto ahd = data(ah);
 
 #ifdef COLLECT_PR_DATA
         prVertexConsidered();
@@ -401,7 +314,7 @@ void SimpleESTree::onArcAdd(Arc *a)
         if (!ahd->isReachable() ||  atd->level + 1 < ahd->level) {
             movesUp++;
             auto newLevel = atd->level + 1;
-            unsigned int dec;
+            unsigned long long dec;
             if (!ahd->isReachable()) {
                 dec = n - newLevel;
             } else {
@@ -434,13 +347,11 @@ void SimpleESTree::onArcAdd(Arc *a)
 
 void SimpleESTree::onVertexRemove(Vertex *v)
 {
-    VertexData::graphSize--;
-
     if (!initialized) {
         return;
     }
 
-     VertexData *vd = data(v);
+     auto vd = data(v);
      if (vd != nullptr) {
          delete vd;
          data.resetToDefault(v);
@@ -473,7 +384,7 @@ void SimpleESTree::onArcRemove(Arc *a)
     PRINT_DEBUG("Stored data of tail: " << data(tail));
     PRINT_DEBUG("Stored data of head: " << data(head));
 
-    VertexData *hd = data(head);
+    auto hd = data(head);
     if (hd == nullptr) {
         PRINT_DEBUG("Head of arc is unreachable (and never was). Nothing to do.")
         throw std::logic_error("Should not happen");
@@ -486,7 +397,7 @@ void SimpleESTree::onArcRemove(Arc *a)
         return;
     }
 
-    VertexData *td = data(tail);
+    auto td = data(tail);
     if (hd->isParent(td)) {
         hd->parent = nullptr;
         restoreTree(hd);
@@ -553,14 +464,14 @@ bool SimpleESTree::checkTree()
    BreadthFirstSearch<FastPropertyMap> bfs;
    bfs.setStartVertex(source);
    bfs.levelAsValues(true);
-   FastPropertyMap<int> levels(-1);
+   FastPropertyMap<unsigned long long> levels(bfs.INFINITY);
    levels.resetAll(diGraph->getSize());
    bfs.useModifiableProperty(&levels);
    runAlgorithm(bfs, diGraph);
 
    bool ok = true;
    diGraph->mapVertices([&](Vertex *v) {
-       auto bfsLevel = levels[v] < 0 ? SimpleESTree::VertexData::UNREACHABLE : levels[v];
+       auto bfsLevel = levels[v] == bfs.INFINITY ? SESVertexData::UNREACHABLE : levels[v];
        if (data[v]->level != bfsLevel) {
            std::cerr << "Level mismatch for vertex " << data[v]
                         << ": expected level " << bfsLevel << std::endl;
@@ -580,20 +491,19 @@ void SimpleESTree::rerun()
     run();
 }
 
-void SimpleESTree::restoreTree(SimpleESTree::VertexData *rd)
+void SimpleESTree::restoreTree(SESVertexData *rd)
 {
     PriorityQueue queue;
+    queue.setLimit(diGraph->getSize());
     FastPropertyMap<bool> inQueue(false, "", diGraph->getSize());
-    FastPropertyMap<unsigned int> timesInQueue(0U, "", diGraph->getSize());
+    FastPropertyMap<unsigned long long> timesInQueue(0ULL, "", diGraph->getSize());
     queue.push(rd);
-    inQueue[rd->vertex] = true;
-		timesInQueue[rd->vertex]++;
+    inQueue[rd->getVertex()] = true;
+    timesInQueue[rd->getVertex()]++;
     PRINT_DEBUG("Initialized queue with " << rd << ".")
     bool limitReached = false;
-    auto affected = 0U;
-    auto affectedLimit = maxAffectedRatio * VertexData::graphSize;
-    auto verticesConsidered = 0U;
-    auto arcsConsidered = 0U;
+    auto affected = 0ULL;
+    auto affectedLimit = maxAffectedRatio * diGraph->getSize();
 
     while (!queue.empty()) {
         IF_DEBUG(printQueue(queue))
@@ -603,16 +513,10 @@ void SimpleESTree::restoreTree(SimpleESTree::VertexData *rd)
 #ifdef COLLECT_PR_DATA
         prVertexConsidered();
 #endif
-        unsigned int levels = process(diGraph, vd, queue, data, reachable, inQueue, timesInQueue, requeueLimit,
-                                      limitReached, maxReQueued, verticesConsidered, arcsConsidered);
+        unsigned long long levels = process(vd, queue, inQueue, timesInQueue,
+                                      limitReached);
         affected++;
 
-#ifdef COLLECT_PR_DATA
-        prVerticesConsidered(verticesConsidered);
-        prArcsConsidered(arcsConsidered);
-        verticesConsidered = 0U;
-        arcsConsidered = 0U;
-#endif
         if (limitReached || (affected > affectedLimit && !queue.empty())) {
             rerun();
             break;
@@ -644,29 +548,25 @@ void SimpleESTree::cleanup()
     initialized = false;
 }
 
-unsigned int process(DiGraph *graph, SimpleESTree::VertexData *vd, PriorityQueue &queue,
-                     const FastPropertyMap<SimpleESTree::VertexData *> &data,
-                     FastPropertyMap<bool> &reachable,
+unsigned long long SimpleESTree::process(SESVertexData *vd, PriorityQueue &queue,
                      FastPropertyMap<bool> &inQueue,
-                     FastPropertyMap<unsigned int> &timesInQueue,
-                     unsigned int limit, bool &limitReached,
-                     unsigned int &maxRequeued,
-                     unsigned int &verticesConsidered,
-                     unsigned int &arcsConsidered) {
-#ifndef COLLECT_PR_DATA
-    (void)verticesConsidered;
-    (void)arcsConsidered;
-#endif
+                     FastPropertyMap<unsigned long long> &timesInQueue,
+                     bool &limitReached) {
 
     if (vd->level == 0UL) {
         PRINT_DEBUG("No need to process source vertex " << vd << ".");
         return 0U;
     }
 
-    PRINT_DEBUG("Processing vertex " << vd << ".");
-    Vertex *v = vd->vertex;
+#ifdef COLLECT_PR_DATA
+    auto verticesConsidered = 0U;
+    auto arcsConsidered = 0U;
+#endif
 
-    auto oldParent = vd->parent;
+    PRINT_DEBUG("Processing vertex " << vd << ".");
+    Vertex *v = vd->getVertex();
+
+    auto oldParent = vd->getParentData();
 
     if (vd->hasValidParent()) {
         PRINT_DEBUG("Parent still valid. No further processing required.");
@@ -677,12 +577,12 @@ unsigned int process(DiGraph *graph, SimpleESTree::VertexData *vd, PriorityQueue
     }
 
     auto parent = oldParent;
-    unsigned int oldVLevel = vd->level;
-    unsigned int minParentLevel = parent == nullptr ? SimpleESTree::VertexData::UNREACHABLE : parent->level;
+    auto oldVLevel = vd->level;
+    auto minParentLevel = parent == nullptr ? SESVertexData::UNREACHABLE : parent->level;
 
     PRINT_DEBUG("Min parent level is " << minParentLevel << ".");
 
-    graph->mapIncomingArcsUntil(v, [&](Arc *a) {
+    diGraph->mapIncomingArcsUntil(v, [&](Arc *a) {
 #ifdef COLLECT_PR_DATA
             arcsConsidered++;
 #endif
@@ -703,8 +603,8 @@ unsigned int process(DiGraph *graph, SimpleESTree::VertexData *vd, PriorityQueue
         }
     }, [&oldVLevel, &minParentLevel](const Arc *) { return minParentLevel + 1 == oldVLevel; });
 
-    unsigned int levelDiff = 0U;
-    auto n = graph->getSize();
+    unsigned long long levelDiff = 0ULL;
+    auto n = diGraph->getSize();
 
     if ((parent == nullptr || minParentLevel >= n - 1)
             && vd->isReachable()) {
@@ -714,7 +614,7 @@ unsigned int process(DiGraph *graph, SimpleESTree::VertexData *vd, PriorityQueue
         PRINT_DEBUG("No parent or parent is unreachable. Vertex is unreachable. Level diff " << levelDiff);
     } else if (parent != oldParent || oldVLevel <= minParentLevel) {
         assert(parent->isReachable());
-        assert(minParentLevel != SimpleESTree::VertexData::UNREACHABLE);
+        assert(minParentLevel != SESVertexData::UNREACHABLE);
         vd->level = minParentLevel + 1;
         vd->parent = parent;
         assert (vd->level >= oldVLevel);
@@ -724,7 +624,7 @@ unsigned int process(DiGraph *graph, SimpleESTree::VertexData *vd, PriorityQueue
 
     if (levelDiff > 0U) {
         PRINT_DEBUG("Updating children...");
-        graph->mapOutgoingArcsUntil(vd->vertex, [&](Arc *a) {
+        diGraph->mapOutgoingArcsUntil(vd->vertex, [&](Arc *a) {
 #ifdef COLLECT_PR_DATA
             arcsConsidered++;
 #endif
@@ -737,11 +637,11 @@ unsigned int process(DiGraph *graph, SimpleESTree::VertexData *vd, PriorityQueue
             verticesConsidered++;
 #endif
             if (hd->isParent(vd) && !inQueue[head]) {
-                if (timesInQueue[head] < limit) {
+                if (timesInQueue[head] < requeueLimit) {
                     PRINT_DEBUG("    Adding child " << hd << " to queue...");
                     timesInQueue[head]++;
-                    if (timesInQueue[head] > maxRequeued) {
-                        maxRequeued = timesInQueue[head];
+                    if (timesInQueue[head] > maxReQueued) {
+                        maxReQueued = timesInQueue[head];
                     }
                     queue.push(hd);
                     inQueue[head] = true;
@@ -753,6 +653,11 @@ unsigned int process(DiGraph *graph, SimpleESTree::VertexData *vd, PriorityQueue
             }
         }, [&limitReached](const Arc *) { return limitReached; });
     }
+
+#ifdef COLLECT_PR_DATA
+        prVerticesConsidered(verticesConsidered);
+        prArcsConsidered(arcsConsidered);
+#endif
 
     return levelDiff;
 }

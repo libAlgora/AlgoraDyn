@@ -46,12 +46,12 @@
 namespace Algora {
 
 struct Entry {
-    unsigned int tail;
-    unsigned int head;
+    unsigned long long tail;
+    unsigned long long head;
     bool add;
-    unsigned int timestamp;
+    unsigned long long timestamp;
 
-    Entry(unsigned int t, unsigned int h, bool a, unsigned int m)
+    Entry(unsigned long long t, unsigned long long h, bool a, unsigned long long m)
         : tail(t), head(h), add(a), timestamp(m) {}
 };
 bool operator<(const Entry &lhs, const Entry &rhs) {
@@ -96,10 +96,10 @@ bool KonectNetworkReader::provideDynamicDiGraph(DynamicDiGraph *dynGraph)
         }
         try {
             //PRINT_DEBUG("Trying to parse tokens: " << tokens[0] << "; " << tokens[1] << "; " << tokens[2] << "; " << tokens[3])
-            unsigned int tail = std::stoul(tokens[0]);
-            unsigned int head = std::stoul(tokens[1]);
+            auto tail = std::stoull(tokens[0]);
+            auto head = std::stoull(tokens[1]);
             int plusMinus = std::stoi(tokens[2]);
-            unsigned long timestamp = std::stoul(tokens[3]);
+            auto timestamp = std::stoull(tokens[3]);
             if (plusMinus > 0) {
                 entries.emplace_back(tail, head, true, timestamp);
             } else if (plusMinus < 0) {
@@ -116,7 +116,7 @@ bool KonectNetworkReader::provideDynamicDiGraph(DynamicDiGraph *dynGraph)
         }
     }
     std::stable_sort(entries.begin(), entries.end());
-    unsigned int errors = 0;
+    auto errors = 0ULL;
     std::string lastError;
     for (const Entry &e : entries) {
         if (e.add) {

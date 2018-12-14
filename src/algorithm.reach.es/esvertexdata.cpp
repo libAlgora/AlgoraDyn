@@ -18,8 +18,8 @@
 
 namespace Algora {
 
-ESVertexData::ESVertexData(FastPropertyMap<unsigned int> *inNeighborIndices, Vertex *v,
-                           ESVertexData *p, const Arc *treeArc, unsigned int l)
+ESVertexData::ESVertexData(FastPropertyMap<unsigned long long> *inNeighborIndices, Vertex *v,
+                           ESVertexData *p, const Arc *treeArc, unsigned long long l)
     : parentIndex(0U), level(l), vertex(v), inNeighborIndices(inNeighborIndices)
 {
     if (p != nullptr) {
@@ -29,7 +29,7 @@ ESVertexData::ESVertexData(FastPropertyMap<unsigned int> *inNeighborIndices, Ver
     }
 }
 
-void ESVertexData::reset(ESVertexData *p, const Arc *treeArc, unsigned int l)
+void ESVertexData::reset(ESVertexData *p, const Arc *treeArc, unsigned long long l)
 {
     inNeighbors.clear();
     recycledIndices.clear();
@@ -64,7 +64,7 @@ void ESVertexData::addInNeighbor(ESVertexData *in, const Arc *a)
     }
 }
 
-unsigned int ESVertexData::reparent(ESVertexData *in, const Arc *a)
+unsigned long long ESVertexData::reparent(ESVertexData *in, const Arc *a)
 {
     auto inLevel = in->level;
     if (inLevel >= level) {
