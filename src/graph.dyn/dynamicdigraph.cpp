@@ -145,7 +145,16 @@ struct DynamicDiGraph::CheshireCat {
 
     bool doubleArcIsRemoval;
 
-    CheshireCat() : timeIndex(0U), opIndex(0U), doubleArcIsRemoval(false) { clear(); }
+    unsigned long numResets;
+    unsigned long long curVertexSize;
+    unsigned long long curArcSize;
+    unsigned long long maxVertexSize;
+    unsigned long long maxArcSize;
+
+    CheshireCat() : timeIndex(0U), opIndex(0U), doubleArcIsRemoval(false),
+        numResets(0U),
+        curVertexSize(0ULL), curArcSize(0ULL), maxVertexSize(0ULL), maxArcSize(0ULL)
+        { clear(); }
     ~CheshireCat() {
         clear();
     }
@@ -153,11 +162,18 @@ struct DynamicDiGraph::CheshireCat {
     void reset() {
         timeIndex = 0U;
         opIndex = 0U;
-        dynGraph.clear();
+        if (numResets == 0U) {
+            dynGraph.clearAndRelease();
+            dynGraph.reserveVertexCapacity(maxVertexSize);
+            dynGraph.reserveArcCapacity(maxArcSize);
+        } else {
+            dynGraph.clear();
+        }
 
         for (auto op : operations) {
             op->reset();
         }
+        numResets++;
     }
 
     void init() {
@@ -172,6 +188,10 @@ struct DynamicDiGraph::CheshireCat {
         constructionArcMap.clear();
         constructionGraph.clear();
         timestamps.clear();
+        curVertexSize = 0ULL;
+        curArcSize = 0ULL;
+        maxVertexSize = 0ULL;
+        maxArcSize = 0ULL;
 
         for (auto op : operations) {
             delete op;
@@ -213,6 +233,11 @@ struct DynamicDiGraph::CheshireCat {
         operations.push_back(avo);
         vertices[vertexId] = avo;
 
+        curVertexSize++;
+        if (curVertexSize > maxVertexSize) {
+            maxVertexSize = curVertexSize;
+        }
+
         return vertexId;
     }
 
@@ -236,6 +261,8 @@ struct DynamicDiGraph::CheshireCat {
         RemoveVertexOperation *rvo = new RemoveVertexOperation(avo);
         operations.push_back(rvo);
         vertices[vertexId] = nullptr;
+
+        curVertexSize--;
     }
 
     void addArc(unsigned long long tailId, unsigned long long headId, unsigned long long timestamp, bool antedateVertexAddition)
@@ -263,6 +290,7 @@ struct DynamicDiGraph::CheshireCat {
                 avoTail = new AddVertexOperation(cv, tailId);
                 os->operations.push_back(avoTail);
                 vertices[tailId] = avoTail;
+                curVertexSize++;
 
                 if (tailId == headId) {
                     avoHead = avoTail;
@@ -273,6 +301,11 @@ struct DynamicDiGraph::CheshireCat {
                 avoHead = new AddVertexOperation(cv, headId);
                 os->operations.push_back(avoHead);
                 vertices[headId] = avoHead;
+                curVertexSize++;
+            }
+
+            if (curVertexSize > maxVertexSize) {
+                maxVertexSize = curVertexSize;
             }
         }
 
@@ -286,6 +319,11 @@ struct DynamicDiGraph::CheshireCat {
             operations.push_back(aao);
         }
         constructionArcMap[ca] = aao;
+
+        curArcSize++;
+        if (curArcSize > maxArcSize) {
+            maxArcSize = curArcSize;
+        }
     }
 
     Arc *findArc(unsigned long long tailId, unsigned long long headId) {
@@ -336,12 +374,14 @@ struct DynamicDiGraph::CheshireCat {
                     RemoveVertexOperation *rvo = new RemoveVertexOperation(avoTail);
                     op->operations.push_back(rvo);
                     vertices[tailId] = nullptr;
+                    curVertexSize--;
                 }
                 if (tailId != headId && head->isIsolated()) {
                     constructionGraph.removeVertex(avoHead->constructionVertex);
                     RemoveVertexOperation *rvo = new RemoveVertexOperation(avoHead);
                     op->operations.push_back(rvo);
                     vertices[headId] = nullptr;
+                    curVertexSize--;
                 }
                 operations.push_back(op);
             } else {
@@ -350,6 +390,7 @@ struct DynamicDiGraph::CheshireCat {
         } else {
             operations.push_back(rao);
         }
+        curArcSize--;
     }
 
     void compact(unsigned long long num) {
