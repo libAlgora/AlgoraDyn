@@ -478,14 +478,14 @@ bool OldESTree::checkTree()
    BreadthFirstSearch<FastPropertyMap> bfs;
    bfs.setStartVertex(source);
    bfs.levelAsValues(true);
-   FastPropertyMap<unsigned long long> levels(bfs.INFINITY);
+   FastPropertyMap<unsigned long long> levels(bfs.INF);
    levels.resetAll(diGraph->getSize());
    bfs.useModifiableProperty(&levels);
    runAlgorithm(bfs, diGraph);
 
    bool ok = true;
    diGraph->mapVertices([&](Vertex *v) {
-       auto bfsLevel = levels[v] == bfs.INFINITY ? ESVertexData::UNREACHABLE : levels[v];
+       auto bfsLevel = levels[v] == bfs.INF ? ESVertexData::UNREACHABLE : levels[v];
        if (data[v]->level != bfsLevel) {
            std::cerr << "Level mismatch for vertex " << data[v]
                         << ": expected level " << bfsLevel << std::endl;
