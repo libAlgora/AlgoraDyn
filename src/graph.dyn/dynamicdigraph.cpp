@@ -162,10 +162,27 @@ struct DynamicDiGraph::CheshireCat {
     void reset() {
         timeIndex = 0U;
         opIndex = 0U;
-        if (numResets == 0U) {
-            dynGraph.clearAndRelease();
-            dynGraph.reserveVertexCapacity(maxVertexSize);
-            dynGraph.reserveArcCapacity(maxArcSize);
+        if (numResets == 2U) {
+            //dynGraph.clearAndRelease();
+            //dynGraph.reserveVertexCapacity(maxVertexSize);
+            //dynGraph.reserveArcCapacity(maxArcSize);
+            std::vector<Vertex*> vertices;
+            vertices.reserve(maxVertexSize);
+            std::vector<Arc*> arcs;
+            arcs.reserve(maxArcSize);
+            dynGraph.clear();
+            for (auto i = 0UL; i < maxVertexSize; i++) {
+                vertices.push_back(dynGraph.addVertex());
+            }
+            for (auto i = 0UL; i < maxArcSize; i++) {
+                arcs.push_back(dynGraph.addArc(vertices.at(0), vertices.at(1)));
+            }
+            for (auto a : arcs) {
+                dynGraph.removeArc(a);
+            }
+            for (auto v : vertices) {
+                dynGraph.removeVertex(v);
+            }
         } else {
             dynGraph.clear();
         }
