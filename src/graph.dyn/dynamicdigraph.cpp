@@ -55,7 +55,7 @@ struct OperationSet : public Operation {
     std::vector<Operation*> operations;
     Type type = MULTIPLE;
 
-    virtual ~OperationSet() {
+    virtual ~OperationSet() override {
         for (auto op : operations) {
             delete op;
         }
