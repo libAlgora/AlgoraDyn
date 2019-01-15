@@ -45,8 +45,6 @@ public:
     virtual bool query(const Vertex *t) override;
 
     // DynamicDiGraphAlgorithm interface
-    virtual void onVertexAdd(Vertex *) override;
-    virtual void onVertexRemove(Vertex *) override;
     virtual void onArcAdd(Arc *a) override;
     virtual void onArcRemove(Arc *a) override;
 
@@ -60,11 +58,8 @@ protected:
     virtual void onSourceSet() override;
 
 private:
-    DepthFirstSearch<FastPropertyMap> dfs;
-    FastPropertyMap<DFSResult> dfsResults;
-    bool initialized;
-    bool arcAdded;
-    bool arcRemoved;
+    struct CheshireCat;
+    CheshireCat *grin;
 };
 
 }

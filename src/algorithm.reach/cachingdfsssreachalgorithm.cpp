@@ -25,86 +25,99 @@
 
 namespace Algora {
 
+struct CachingDFSSSReachAlgorithm::CheshireCat {
+
+    DepthFirstSearch<FastPropertyMap> dfs;
+    bool initialized;
+    bool arcAdded;
+    bool arcRemoved;
+
+    CachingDFSSSReachAlgorithm *parent;
+    DiGraph *graph;
+    Vertex *source;
+
+    CheshireCat()
+        : initialized(false), arcAdded(false), arcRemoved(false) {
+        dfs.computeValues(false);
+    }
+
+    void run()
+    {
+        dfs.setStartVertex(source);
+        dfs.setGraph(graph);
+        if (!dfs.prepare()) {
+            throw DiGraphAlgorithmException(parent, "Could not prepare DFS algorithm.");
+        }
+        dfs.run();
+        dfs.deliver();
+        initialized = true;
+        arcAdded = false;
+        arcRemoved = false;
+
+#ifdef COLLECT_PR_DATA
+        parent->prReset();
+        parent->prVerticesConsidered(graph->getSize());
+        parent->prArcsConsidered(graph->getNumArcs());
+#endif
+    }
+
+    bool query(const Vertex *t)
+    {
+        if (t == source || (initialized && !arcRemoved && dfs.vertexDiscovered(t))) {
+            return true;
+        } else if (initialized && !arcAdded && !dfs.vertexDiscovered(t)) {
+            return false;
+        }
+        if (!initialized || arcAdded || arcRemoved) {
+            run();
+        }
+        return dfs.vertexDiscovered(t);
+    }
+};
+
 CachingDFSSSReachAlgorithm::CachingDFSSSReachAlgorithm()
-    : DynamicSSReachAlgorithm(), initialized(false),
-      arcAdded(false), arcRemoved(false)
+    : DynamicSSReachAlgorithm(), grin(new CheshireCat)
 {
-    dfsResults.setDefaultValue(DFSResult());
-    dfs.useModifiableProperty(&dfsResults);
+    grin->parent = this;
 }
 
 CachingDFSSSReachAlgorithm::~CachingDFSSSReachAlgorithm()
 {
-
+    delete grin;
 }
 
 void CachingDFSSSReachAlgorithm::run()
 {
-    dfsResults.resetAll(diGraph->getSize());
-    dfs.setStartVertex(source);
-    if (!dfs.prepare()) {
-       throw DiGraphAlgorithmException(this, "Could not prepare DFS algorithm.");
-    }
-    dfs.run();
-    dfs.deliver();
-    initialized = true;
-    arcAdded = false;
-    arcRemoved = false;
-
-#ifdef COLLECT_PR_DATA
-    prReset();
-    prVerticesConsidered(diGraph->getSize());
-    prArcsConsidered(diGraph->getNumArcs());
-#endif
+    grin->run();
 }
 
 bool CachingDFSSSReachAlgorithm::query(const Vertex *t)
 {
-    if (t == source || (initialized && !arcRemoved && dfsResults[t].dfsNumber >= 0)) {
-        return true;
-    } else if (initialized && !arcAdded && dfsResults[t].dfsNumber < 0) {
-        return false;
-    }
-    if (!initialized || arcAdded || arcRemoved) {
-        if (!prepare()) {
-            throw DiGraphAlgorithmException(this, "Could not prepare myself.");
-        }
-        run();
-    }
-    return dfsResults[t].dfsNumber >= 0;
+    return grin->query(t);
 }
 
 void CachingDFSSSReachAlgorithm::onDiGraphSet()
 {
     DynamicSSReachAlgorithm::onDiGraphSet();
-    dfs.setGraph(diGraph);
-    dfsResults.resetAll(diGraph->getSize());
-    initialized = false;
-    arcAdded = false;
-    arcRemoved = false;
+    grin->initialized = false;
+    grin->arcAdded = false;
+    grin->arcRemoved = false;
+    grin->graph = diGraph;
 }
 
 void CachingDFSSSReachAlgorithm::onDiGraphUnset()
 {
-    dfs.unsetGraph();
-    initialized = false;
-    arcAdded = false;
-    arcRemoved = false;
+    grin->dfs.unsetGraph();
+    grin->initialized = false;
+    grin->arcAdded = false;
+    grin->arcRemoved = false;
+    grin->graph = nullptr;
     DynamicSSReachAlgorithm::onDiGraphUnset();
-}
-
-void CachingDFSSSReachAlgorithm::onVertexAdd(Vertex *)
-{
-}
-
-void CachingDFSSSReachAlgorithm::onVertexRemove(Vertex *)
-{
-
 }
 
 void CachingDFSSSReachAlgorithm::onArcAdd(Arc *a)
 {
-    if (!initialized || arcAdded || a->isLoop()) {
+    if (!grin->initialized || grin->arcAdded || a->isLoop()) {
         return;
     }
 
@@ -116,16 +129,16 @@ void CachingDFSSSReachAlgorithm::onArcAdd(Arc *a)
 
     auto tail = a->getTail();
 
-    if (dfsResults[head].dfsNumber >= 0 || dfsResults[tail].dfsNumber < 0) {
+    if (grin->dfs.vertexDiscovered(head) || !grin->dfs.vertexDiscovered(tail)) {
         return;
     }
 
-    arcAdded = true;
+    grin->arcAdded = true;
 }
 
 void CachingDFSSSReachAlgorithm::onArcRemove(Arc *a)
 {
-    if (!initialized || arcRemoved || a->isLoop()) {
+    if (!grin->initialized || grin->arcRemoved || a->isLoop()) {
         return;
     }
 
@@ -135,17 +148,18 @@ void CachingDFSSSReachAlgorithm::onArcRemove(Arc *a)
         return;
     }
 
-    if (dfsResults[head].dfsNumber < 0) {
+    if (!grin->dfs.vertexDiscovered(head)) {
         return;
     }
 
-    arcRemoved = true;
+    grin->arcRemoved = true;
 }
 
 void CachingDFSSSReachAlgorithm::onSourceSet()
 {
     DynamicSSReachAlgorithm::onSourceSet();
-    initialized = false;
+    grin->initialized = false;
+    grin->source = source;
 }
 
 } // end namespace

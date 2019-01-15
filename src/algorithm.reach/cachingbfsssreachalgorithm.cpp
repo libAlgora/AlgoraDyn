@@ -22,111 +22,127 @@
 
 #include "cachingbfsssreachalgorithm.h"
 #include "algorithm/digraphalgorithmexception.h"
+#include "property/fastpropertymap.h"
+#include "algorithm.basic.traversal/breadthfirstsearch.h"
 
 namespace Algora {
 
+struct CachingBFSSSReachAlgorithm::CheshireCat {
+    //FastPropertyMap<unsigned long long> levels;
+    BreadthFirstSearch<FastPropertyMap> bfs;
+    bool initialized;
+    bool arcAdded;
+    bool arcRemoved;
+
+    CachingBFSSSReachAlgorithm *parent;
+    Vertex *source;
+    DiGraph *diGraph;
+
+    CheshireCat()
+        : initialized(false), arcAdded(false), arcRemoved(false) {
+        bfs.computeValues(false);
+    }
+
+    void run() {
+        bfs.setGraph(diGraph);
+        bfs.setStartVertex(source);
+        if (!bfs.prepare()) {
+            throw DiGraphAlgorithmException(parent, "Could not prepare BFS algorithm.");
+        }
+        bfs.run();
+        bfs.deliver();
+        initialized = true;
+        arcAdded = false;
+        arcRemoved = false;
+
+#ifdef COLLECT_PR_DATA
+        parent->prReset();
+        parent->prVerticesConsidered(diGraph->getSize());
+        parent->prArcsConsidered(diGraph->getNumArcs());
+#endif
+    }
+
+    bool query(const Vertex *t)
+    {
+        if (t == source || (initialized && !arcRemoved && bfs.vertexDiscovered(t))) {
+            return true;
+        } else if (initialized && !arcAdded && !bfs.vertexDiscovered(t)) {
+            return false;
+        }
+        if (!initialized || arcAdded || arcRemoved) {
+            run();
+        }
+        return bfs.vertexDiscovered(t);
+    }
+};
+
 CachingBFSSSReachAlgorithm::CachingBFSSSReachAlgorithm()
-    : DynamicSSReachAlgorithm(), initialized(false),
-      arcAdded(false), arcRemoved(false)
+    : DynamicSSReachAlgorithm(),
+		grin(new CheshireCat)
 {
-    levels.setDefaultValue(bfs.INF);
-    bfs.useModifiableProperty(&levels);
-    bfs.orderAsValues(false);
+		grin->parent = this;
 }
 
 CachingBFSSSReachAlgorithm::~CachingBFSSSReachAlgorithm()
 {
-
+	delete grin;
 }
 
 void CachingBFSSSReachAlgorithm::run()
 {
-    levels.resetAll();
-    bfs.setStartVertex(source);
-    if (!bfs.prepare()) {
-       throw DiGraphAlgorithmException(this, "Could not prepare BFS algorithm.");
-    }
-    bfs.run();
-    bfs.deliver();
-    initialized = true;
-    arcAdded = false;
-    arcRemoved = false;
-
-#ifdef COLLECT_PR_DATA
-    prReset();
-    prVerticesConsidered(diGraph->getSize());
-    prArcsConsidered(diGraph->getNumArcs());
-#endif
+	grin->run();
 }
 
 bool CachingBFSSSReachAlgorithm::query(const Vertex *t)
 {
-    if (t == source || (initialized && !arcRemoved && levels(t) != bfs.INF)) {
-        return true;
-    } else if (initialized && !arcAdded && levels(t) == bfs.INF) {
-        return false;
-    }
-    if (!initialized || arcAdded || arcRemoved) {
-        if (!prepare()) {
-            throw DiGraphAlgorithmException(this, "Could not prepare myself.");
-        }
-        run();
-    }
-    return levels(t) != bfs.INF;
+	return grin->query(t);
 }
 
 void CachingBFSSSReachAlgorithm::onDiGraphSet()
 {
     DynamicSSReachAlgorithm::onDiGraphSet();
-    bfs.setGraph(diGraph);
-    initialized = false;
-    arcAdded = false;
-    arcRemoved = false;
+    //bfs.setGraph(diGraph);
+    grin->initialized = false;
+    grin->arcAdded = false;
+    grin->arcRemoved = false;
+    grin->diGraph = diGraph;
 }
 
 void CachingBFSSSReachAlgorithm::onDiGraphUnset()
 {
-    bfs.unsetGraph();
-    initialized = false;
-    arcAdded = false;
-    arcRemoved = false;
+    grin->bfs.unsetGraph();
+    grin->initialized = false;
+    grin->arcAdded = false;
+    grin->arcRemoved = false;
+    grin->diGraph = nullptr;
     DynamicSSReachAlgorithm::onDiGraphUnset();
 }
 
-void CachingBFSSSReachAlgorithm::onVertexAdd(Vertex *v)
-{
-    levels[v] = bfs.INF;
-}
-
-void CachingBFSSSReachAlgorithm::onVertexRemove(Vertex *v)
-{
-    levels.resetToDefault(v);
-}
 
 void CachingBFSSSReachAlgorithm::onArcAdd(Arc *a)
 {
-    if (!initialized || arcAdded || a->isLoop()) {
+    if (a->isLoop()) {
         return;
     }
 
     auto head = a->getHead();
 
-    if (head == source ) {
+    if (head == source || grin->arcAdded || !grin->initialized) {
         return;
     }
 
     auto tail = a->getTail();
 
-    if (levels(head) != bfs.INF || levels(tail) == bfs.INF) {
+    if (grin->bfs.vertexDiscovered(head) || !grin->bfs.vertexDiscovered(tail)) {
         return;
     }
 
-    arcAdded = true;
+    grin->arcAdded = true;
 }
 
 void CachingBFSSSReachAlgorithm::onArcRemove(Arc *a)
 {
-    if (!initialized || arcRemoved || a->isLoop()) {
+    if (!grin->initialized || grin->arcRemoved || a->isLoop()) {
         return;
     }
 
@@ -136,19 +152,20 @@ void CachingBFSSSReachAlgorithm::onArcRemove(Arc *a)
         return;
     }
 
-    if (levels(head) == bfs.INF) {
+    if (!grin->bfs.vertexDiscovered(head)) {
         return;
     }
 
-    arcRemoved = true;
+    grin->arcRemoved = true;
 }
 
 void CachingBFSSSReachAlgorithm::onSourceSet()
 {
     DynamicSSReachAlgorithm::onSourceSet();
-    initialized = false;
-    arcAdded = false;
-    arcRemoved = false;
+    grin->initialized = false;
+    grin->arcAdded = false;
+    grin->arcRemoved = false;
+    grin->source = source;
 }
 
 } // end namespace

@@ -24,8 +24,6 @@
 #define CACHINGBFSSSREACHALGORITHM_H
 
 #include "algorithm.reach/dynamicssreachalgorithm.h"
-#include "algorithm.basic.traversal/breadthfirstsearch.h"
-#include "property/fastpropertymap.h"
 
 namespace Algora {
 
@@ -45,8 +43,6 @@ public:
     virtual bool query(const Vertex *t) override;
 
     // DynamicDiGraphAlgorithm interface
-    virtual void onVertexAdd(Vertex *v) override;
-    virtual void onVertexRemove(Vertex *v) override;
     virtual void onArcAdd(Arc *a) override;
     virtual void onArcRemove(Arc *a) override;
 
@@ -60,11 +56,8 @@ protected:
     virtual void onSourceSet() override;
 
 private:
-    BreadthFirstSearch<FastPropertyMap> bfs;
-    FastPropertyMap<unsigned long long> levels;
-    bool initialized;
-    bool arcAdded;
-    bool arcRemoved;
+    struct CheshireCat;
+    CheshireCat *grin;
 };
 
 }
