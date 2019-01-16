@@ -51,6 +51,8 @@ public:
                     };
     }
 
+    virtual void ping() { }
+
     // DiGraphAlgorithm interface
 public:
     virtual bool prepare() override { return source != nullptr && DynamicDiGraphAlgorithm::prepare() && diGraph->containsVertex(source); }
