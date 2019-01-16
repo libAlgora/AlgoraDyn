@@ -52,16 +52,16 @@ bool StaticBFSSSReachAlgorithm::query(const Vertex *t)
     bfs.setStartVertex(source);
     bool reachable = false;
 #ifdef COLLECT_PR_DATA
-    bfs.onArcDiscover([&](const Arc *) {
+    bfs.onArcDiscover([t,&reachable,this](const Arc *) {
         prArcConsidered();
         return true;
     });
-    bfs.onVertexDiscover([&](const Vertex *) {
+    bfs.onVertexDiscover([t,&reachable,this](const Vertex *) {
         prVertexConsidered();
         return true;
     });
 #endif
-    bfs.setArcStopCondition([&](const Arc *a) {
+    bfs.setArcStopCondition([t,&reachable](const Arc *a) {
         if (a->getHead() == t) {
             reachable = true;
         }
