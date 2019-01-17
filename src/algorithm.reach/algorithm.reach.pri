@@ -3,7 +3,6 @@ message("pri file being processed: $$PWD")
 HEADERS += \
     $$PWD/dynamicssreachalgorithm.h \
     $$PWD/simpleincssreachalgorithm.h \
-    $$PWD/bimpleincssreachalgorithm.h \
     $$PWD/cachingbfsssreachalgorithm.h \
     $$PWD/lazybfsssreachalgorithm.h \
     $$PWD/staticbfsssreachalgorithm.h \
@@ -13,7 +12,6 @@ HEADERS += \
 
 SOURCES += \
     $$PWD/simpleincssreachalgorithm.cpp \
-    $$PWD/bimpleincssreachalgorithm.cpp \
     $$PWD/cachingbfsssreachalgorithm.cpp \
     $$PWD/lazybfsssreachalgorithm.cpp \
     $$PWD/staticbfsssreachalgorithm.cpp \
