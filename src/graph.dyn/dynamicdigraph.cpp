@@ -138,12 +138,15 @@ struct DynamicDiGraph::CheshireCat {
 
     unsigned long long timeIndex;
     unsigned long long opIndex;
-    unsigned long long numVertices;
+    //unsigned long long numVertices;
+
+    bool doubleArcIsRemoval;
 
     std::vector<AddVertexOperation*> vertices;
     std::unordered_map<Arc*,AddArcOperation*> constructionArcMap;
 
-    bool doubleArcIsRemoval;
+    std::unordered_map<Vertex*,unsigned long long> vertexToIdMap;
+    unsigned long long vertexToIdMapNextOpIndex;
 
     unsigned long numResets;
     unsigned long long curVertexSize;
@@ -152,7 +155,7 @@ struct DynamicDiGraph::CheshireCat {
     unsigned long long maxArcSize;
 
     CheshireCat() : timeIndex(0U), opIndex(0U), doubleArcIsRemoval(false),
-        numResets(0U),
+        vertexToIdMapNextOpIndex(0ULL), numResets(0U),
         curVertexSize(0ULL), curArcSize(0ULL), maxVertexSize(0ULL), maxArcSize(0ULL)
         { clear(); }
     ~CheshireCat() {
@@ -186,6 +189,9 @@ struct DynamicDiGraph::CheshireCat {
         } else {
             dynGraph.clear();
         }
+        vertexToIdMap.clear();
+        vertexToIdMapNextOpIndex = 0ULL;
+
 
         for (auto op : operations) {
             op->reset();
@@ -551,6 +557,20 @@ struct DynamicDiGraph::CheshireCat {
         }
         return offset[timeIndex + 1U] - offset[timeIndex];
     }
+
+    unsigned long long idOfIthVertex(unsigned long long i) {
+        for (;vertexToIdMapNextOpIndex < opIndex; vertexToIdMapNextOpIndex++) {
+            Operation *op = operations[vertexToIdMapNextOpIndex];
+            if (op->getType() == Operation::Type::VERTEX_ADDITION) {
+                AddVertexOperation *avo = dynamic_cast<AddVertexOperation*>(op);
+                vertexToIdMap[avo->vertex] = avo->vertexId;
+            } else  if (op->getType() == Operation::Type::VERTEX_REMOVAL) {
+                RemoveVertexOperation *rvo = dynamic_cast<RemoveVertexOperation*>(op);
+                vertexToIdMap.erase(rvo->addOp->vertex);
+            }
+        }
+        return vertexToIdMap.at(dynGraph.vertexAt(i));
+    }
 };
 
 DynamicDiGraph::DynamicDiGraph()
@@ -689,9 +709,10 @@ Vertex *DynamicDiGraph::getCurrentVertexForId(unsigned long long vertexId) const
     return grin->vertexForId(vertexId);
 }
 
-unsigned long long DynamicDiGraph::idOfIthVertex(unsigned long long i) const
+unsigned long long DynamicDiGraph::idOfIthVertex(unsigned long long i)
 {
-    return stoull(grin->dynGraph.vertexAt(i)->getName());
+    //return stoull(grin->dynGraph.vertexAt(i)->getName());
+    return grin->idOfIthVertex(i);
 }
 
 unsigned long long DynamicDiGraph::getSizeOfLastDelta() const

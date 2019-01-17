@@ -61,7 +61,7 @@ public:
     bool lastOpWasArcRemoval() const;
     bool lastOpWasMultiple() const;
     Vertex *getCurrentVertexForId(unsigned long long vertexId) const;
-    unsigned long long idOfIthVertex(unsigned long long i) const;
+    unsigned long long idOfIthVertex(unsigned long long i);
     unsigned long long getSizeOfLastDelta() const;
 
     unsigned long long countVertexAdditions(unsigned long long timeFrom, unsigned long long timeUntil) const;
