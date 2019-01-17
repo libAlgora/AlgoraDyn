@@ -29,7 +29,7 @@ namespace Algora {
 
 struct CachingBFSSSReachAlgorithm::CheshireCat {
     //FastPropertyMap<unsigned long long> levels;
-    BreadthFirstSearch<FastPropertyMap> bfs;
+    BreadthFirstSearch<FastPropertyMap,false> bfs;
     bool initialized;
     bool arcAdded;
     bool arcRemoved;

@@ -107,7 +107,7 @@ void SimpleESTree::run()
 
     reachable.resetAll(diGraph->getSize());
 
-   BreadthFirstSearch<FastPropertyMap> bfs(false);
+   BreadthFirstSearch<FastPropertyMap,false> bfs(false);
    root = source;
    if (root == nullptr) {
        root = diGraph->getAnyVertex();
@@ -292,7 +292,7 @@ void SimpleESTree::onArcAdd(Arc *a)
         hd->parent = td;
     }
 
-    BreadthFirstSearch<FastPropertyMap> bfs(false);
+    BreadthFirstSearch<FastPropertyMap,false> bfs(false);
     bfs.setStartVertex(head);
     bfs.onArcDiscover([&](const Arc *a) {
         PRINT_DEBUG( "Discovering arc (" << a->getTail() << ", " << a->getHead() << ")...");

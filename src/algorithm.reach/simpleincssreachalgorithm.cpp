@@ -116,7 +116,7 @@ struct SimpleIncSSReachAlgorithm::Reachability {
     unsigned long long propagate(const Vertex *from, State s, bool collectVertices, bool setPred,
                            bool force) {
         PRINT_DEBUG("Propagating " << printState(s) << " from " << from << ".");
-        BreadthFirstSearch<FastPropertyMap> bfs(false);
+        BreadthFirstSearch<FastPropertyMap,false> bfs(false);
         bfs.setGraph(diGraph);
         bfs.setStartVertex(from);
         if (!setPred) {
@@ -201,7 +201,7 @@ struct SimpleIncSSReachAlgorithm::Reachability {
     bool checkReachability(const Vertex *u, std::vector<const Vertex*> &visitedUnknown) {
         assert (u != source);
         PRINT_DEBUG("Trying to find reachable predecessor of " << u << ".");
-        BreadthFirstSearch<FastPropertyMap> bfs(false);
+        BreadthFirstSearch<FastPropertyMap,false> bfs(false);
         bfs.setGraph(diGraph);
         bfs.reverseArcDirection(true);
         bfs.setStartVertex(u);
@@ -436,7 +436,7 @@ struct SimpleIncSSReachAlgorithm::Reachability {
 
     bool verifyReachability() const {
         FastPropertyMap<bool> lr(false);
-        BreadthFirstSearch<FastPropertyMap> bfs(false);
+        BreadthFirstSearch<FastPropertyMap,false> bfs(false);
         bfs.setStartVertex(source);
         bfs.onVertexDiscover([&](const Vertex *v) {
             lr[v] = true;

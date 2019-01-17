@@ -86,7 +86,7 @@ void ESTreeML::run()
 
    reachable.resetAll(diGraph->getSize());
 
-   BreadthFirstSearch<FastPropertyMap> bfs(false);
+   BreadthFirstSearch<FastPropertyMap,false> bfs(false);
    root = source;
    if (root == nullptr) {
        root = diGraph->getAnyVertex();
@@ -307,7 +307,7 @@ void ESTreeML::onArcAdd(Arc *a)
         reachable[head] = true;
     }
 
-    BreadthFirstSearch<FastPropertyMap> bfs(false);
+    BreadthFirstSearch<FastPropertyMap,false> bfs(false);
     bfs.setStartVertex(head);
     bfs.onArcDiscover([&](const Arc *a) {
         PRINT_DEBUG( "Discovering arc (" << a->getTail() << ", " << a->getHead() << ")...");
