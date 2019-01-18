@@ -559,15 +559,28 @@ struct DynamicDiGraph::CheshireCat {
     }
 
     unsigned long long idOfIthVertex(unsigned long long i) {
-        for (;vertexToIdMapNextOpIndex < opIndex; vertexToIdMapNextOpIndex++) {
-            Operation *op = operations[vertexToIdMapNextOpIndex];
+
+        std::function<void(Operation*)> updateMap;
+        updateMap = [this,&updateMap](Operation *op) {
             if (op->getType() == Operation::Type::VERTEX_ADDITION) {
                 AddVertexOperation *avo = dynamic_cast<AddVertexOperation*>(op);
                 vertexToIdMap[avo->vertex] = avo->vertexId;
-            } else  if (op->getType() == Operation::Type::VERTEX_REMOVAL) {
+                PRINT_DEBUG("Mapped " << avo->vertex <<  " to id " << avo->vertexId << ".");
+            } else if (op->getType() == Operation::Type::VERTEX_REMOVAL) {
                 RemoveVertexOperation *rvo = dynamic_cast<RemoveVertexOperation*>(op);
                 vertexToIdMap.erase(rvo->addOp->vertex);
+                PRINT_DEBUG("Removed mapping of " << rvo->addOp->vertex << ".");
+            } else if (op->getType() == Operation::Type::MULTIPLE) {
+                OperationSet *os = dynamic_cast<OperationSet*>(op);
+                for (auto o : os->operations) {
+                    updateMap(o);
+                }
             }
+        };
+
+        for (;vertexToIdMapNextOpIndex < opIndex; vertexToIdMapNextOpIndex++) {
+            Operation *op = operations[vertexToIdMapNextOpIndex];
+            updateMap(op);
         }
         return vertexToIdMap.at(dynGraph.vertexAt(i));
     }
