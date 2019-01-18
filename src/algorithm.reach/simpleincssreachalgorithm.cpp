@@ -34,7 +34,7 @@
 #include <cassert>
 #include <algorithm>
 
-//#define DEBUG_SISSREACH
+#define DEBUG_SISSREACH
 
 #ifdef DEBUG_SISSREACH
 #include <iostream>
@@ -132,7 +132,7 @@ struct SimpleIncSSReachAlgorithm::Reachability {
             }
         }
 
-        bfs.onArcDiscover([&](const Arc *a) {
+        bfs.onArcDiscover([this,from,s,collectVertices,setPred,force](const Arc *a) {
             PRINT_DEBUG("Discovering arc (" << a->getTail() << ", " << a->getHead() << ")" );
 #ifdef COLLECT_PR_DATA
             parent->prArcConsidered();
@@ -186,7 +186,7 @@ struct SimpleIncSSReachAlgorithm::Reachability {
         });
 
 #ifdef COLLECT_PR_DATA
-        bfs.onVertexDiscover([&](const Vertex *) {
+        bfs.onVertexDiscover([this](const Vertex *) {
             parent->prVertexConsidered();
             return true;
         });
@@ -210,7 +210,7 @@ struct SimpleIncSSReachAlgorithm::Reachability {
         visitedUnknown.push_back(u);
 
 #ifdef COLLECT_PR_DATA
-        bfs.onArcDiscover([&](const Arc *) {
+        bfs.onArcDiscover([this](const Arc *) {
             parent->prArcConsidered();
             return true;
         });
@@ -218,7 +218,7 @@ struct SimpleIncSSReachAlgorithm::Reachability {
 
         FastPropertyMap<Vertex*> succ;
         Vertex *reachableAncestor = nullptr;
-        bfs.onTreeArcDiscover([&](const Arc* a) {
+        bfs.onTreeArcDiscover([this,&visitedUnknown,&succ,&reachableAncestor](const Arc* a) {
 
             auto v = a->getTail();
             auto head = a->getHead();
@@ -243,8 +243,8 @@ struct SimpleIncSSReachAlgorithm::Reachability {
             }
             return true;
         });
-        bfs.setArcStopCondition([&](const Arc*) { return reachableAncestor != nullptr; });
-        bfs.setVertexStopCondition([&](const Vertex*) { return reachableAncestor != nullptr; });
+        bfs.setArcStopCondition([&reachableAncestor](const Arc*) { return reachableAncestor != nullptr; });
+        bfs.setVertexStopCondition([&reachableAncestor](const Vertex*) { return reachableAncestor != nullptr; });
         if (!bfs.prepare()) {
             throw DiGraphAlgorithmException(nullptr, "Could not prepare BFS algorithm.");
         }
@@ -438,7 +438,7 @@ struct SimpleIncSSReachAlgorithm::Reachability {
         FastPropertyMap<bool> lr(false);
         BreadthFirstSearch<FastPropertyMap,false> bfs(false);
         bfs.setStartVertex(source);
-        bfs.onVertexDiscover([&](const Vertex *v) {
+        bfs.onVertexDiscover([&lr](const Vertex *v) {
             lr[v] = true;
             return true;
         });

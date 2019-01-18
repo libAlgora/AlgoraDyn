@@ -119,7 +119,7 @@ void SimpleESTree::run()
        data[root]->reset(nullptr, 0);
    }
    reachable[root] = true;
-   bfs.onTreeArcDiscover([&](Arc *a) {
+   bfs.onTreeArcDiscover([this](Arc *a) {
 #ifdef COLLECT_PR_DATA
         prVertexConsidered();
         prArcConsidered();
@@ -139,7 +139,7 @@ void SimpleESTree::run()
    });
    runAlgorithm(bfs, diGraph);
 
-   diGraph->mapVertices([&](Vertex *v) {
+   diGraph->mapVertices([this](Vertex *v) {
 #ifdef COLLECT_PR_DATA
         prVertexConsidered();
 #endif
@@ -294,7 +294,7 @@ void SimpleESTree::onArcAdd(Arc *a)
 
     BreadthFirstSearch<FastPropertyMap,false> bfs(false);
     bfs.setStartVertex(head);
-    bfs.onArcDiscover([&](const Arc *a) {
+    bfs.onArcDiscover([this,&n](const Arc *a) {
         PRINT_DEBUG( "Discovering arc (" << a->getTail() << ", " << a->getHead() << ")...");
 #ifdef COLLECT_PR_DATA
         prArcConsidered();
