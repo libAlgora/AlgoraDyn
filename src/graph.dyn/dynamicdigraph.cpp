@@ -578,6 +578,9 @@ struct DynamicDiGraph::CheshireCat {
             }
         };
 
+        if (vertexToIdMapNextOpIndex == 0U) {
+            updateMap(&antedated);
+        }
         for (;vertexToIdMapNextOpIndex < opIndex; vertexToIdMapNextOpIndex++) {
             Operation *op = operations[vertexToIdMapNextOpIndex];
             updateMap(op);
