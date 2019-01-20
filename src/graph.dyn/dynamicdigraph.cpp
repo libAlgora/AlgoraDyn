@@ -154,9 +154,12 @@ struct DynamicDiGraph::CheshireCat {
     unsigned long long maxVertexSize;
     unsigned long long maxArcSize;
 
+    bool graphChangedSinceLastReset;
+
     CheshireCat() : timeIndex(0U), opIndex(0U), doubleArcIsRemoval(false),
         vertexToIdMapNextOpIndex(0ULL), numResets(0U),
-        curVertexSize(0ULL), curArcSize(0ULL), maxVertexSize(0ULL), maxArcSize(0ULL)
+        curVertexSize(0ULL), curArcSize(0ULL), maxVertexSize(0ULL), maxArcSize(0ULL),
+        graphChangedSinceLastReset(false)
         { clear(); }
     ~CheshireCat() {
         clear();
@@ -165,27 +168,10 @@ struct DynamicDiGraph::CheshireCat {
     void reset() {
         timeIndex = 0U;
         opIndex = 0U;
-        if (numResets == 2U) {
-            //dynGraph.clearAndRelease();
-            //dynGraph.reserveVertexCapacity(maxVertexSize);
-            //dynGraph.reserveArcCapacity(maxArcSize);
-            std::vector<Vertex*> vertices;
-            vertices.reserve(maxVertexSize);
-            std::vector<Arc*> arcs;
-            arcs.reserve(maxArcSize);
-            dynGraph.clear();
-            for (auto i = 0UL; i < maxVertexSize; i++) {
-                vertices.push_back(dynGraph.addVertex());
-            }
-            for (auto i = 0UL; i < maxArcSize; i++) {
-                arcs.push_back(dynGraph.addArc(vertices.at(0), vertices.at(1)));
-            }
-            for (auto a : arcs) {
-                dynGraph.removeArc(a);
-            }
-            for (auto v : vertices) {
-                dynGraph.removeVertex(v);
-            }
+        if (graphChangedSinceLastReset) {
+            dynGraph.clearAndRelease();
+            dynGraph.reserveVertexCapacity(maxVertexSize);
+            dynGraph.reserveArcCapacity(maxArcSize);
         } else {
             dynGraph.clear();
         }
@@ -197,6 +183,8 @@ struct DynamicDiGraph::CheshireCat {
             op->reset();
         }
         numResets++;
+
+        graphChangedSinceLastReset = false;
     }
 
     void init() {
@@ -261,6 +249,8 @@ struct DynamicDiGraph::CheshireCat {
             maxVertexSize = curVertexSize;
         }
 
+        graphChangedSinceLastReset = true;
+
         return vertexId;
     }
 
@@ -286,6 +276,8 @@ struct DynamicDiGraph::CheshireCat {
         vertices[vertexId] = nullptr;
 
         curVertexSize--;
+
+        graphChangedSinceLastReset = true;
     }
 
     void addArc(unsigned long long tailId, unsigned long long headId, unsigned long long timestamp, bool antedateVertexAddition)
@@ -347,6 +339,8 @@ struct DynamicDiGraph::CheshireCat {
         if (curArcSize > maxArcSize) {
             maxArcSize = curArcSize;
         }
+
+        graphChangedSinceLastReset = true;
     }
 
     Arc *findArc(unsigned long long tailId, unsigned long long headId) {
@@ -414,6 +408,8 @@ struct DynamicDiGraph::CheshireCat {
             operations.push_back(rao);
         }
         curArcSize--;
+
+        graphChangedSinceLastReset = true;
     }
 
     void compact(unsigned long long num) {
