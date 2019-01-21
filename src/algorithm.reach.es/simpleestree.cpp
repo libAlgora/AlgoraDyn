@@ -267,7 +267,9 @@ void SimpleESTree::onArcAdd(Arc *a)
 
     if (!td->isReachable()) {
         PRINT_DEBUG("Tail is unreachable.")
+#ifdef COLLECT_PR_DATA
         incUnreachableTail++;
+#endif
         return;
     }
 
@@ -276,17 +278,21 @@ void SimpleESTree::onArcAdd(Arc *a)
     //update...
     if (hd->level <= td->level + 1) {
         // arc does not change anything
+#ifdef COLLECT_PR_DATA
         incNonTreeArc++;
+#endif
         PRINT_DEBUG("Not a tree arc.")
         return;
     } else {
         PRINT_DEBUG("Is a new tree arc.")
+#ifdef COLLECT_PR_DATA
         movesUp++;
         if (!hd->isReachable()) {
             levelDecrease += (n -  (td->level + 1));
         } else {
             levelDecrease += (hd->level - (td->level + 1));
         }
+#endif
         hd->level = td->level + 1;
         reachable[head] = true;
         hd->parent = td;
@@ -312,6 +318,7 @@ void SimpleESTree::onArcAdd(Arc *a)
         prVertexConsidered();
 #endif
         if (!ahd->isReachable() ||  atd->level + 1 < ahd->level) {
+#ifdef COLLECT_PR_DATA
             movesUp++;
             auto newLevel = atd->level + 1;
             unsigned long long dec;
@@ -324,6 +331,7 @@ void SimpleESTree::onArcAdd(Arc *a)
             if (dec > maxLevelDecrease) {
                 maxLevelDecrease = dec;
             }
+#endif
             ahd->level = atd->level + 1;
             ahd->parent = atd;
             reachable[ah] = true;
@@ -393,7 +401,9 @@ void SimpleESTree::onArcRemove(Arc *a)
 
     if (!hd->isReachable()) {
         PRINT_DEBUG("Head of arc is already unreachable. Nothing to do.")
+#ifdef COLLECT_PR_DATA
         decUnreachableHead++;
+#endif
         return;
     }
 
@@ -403,7 +413,9 @@ void SimpleESTree::onArcRemove(Arc *a)
         restoreTree(hd);
     } else {
         PRINT_DEBUG("Arc is not a tree arc. Nothing to do.")
+#ifdef COLLECT_PR_DATA
         decNonTreeArc++;
+#endif
     }
 
    IF_DEBUG(
@@ -512,26 +524,31 @@ void SimpleESTree::restoreTree(SESVertexData *rd)
         inQueue.resetToDefault(vd->vertex);
 #ifdef COLLECT_PR_DATA
         prVertexConsidered();
+        unsigned long long levels =
 #endif
-        unsigned long long levels = process(vd, queue, inQueue, timesInQueue,
+                process(vd, queue, inQueue, timesInQueue,
                                       limitReached);
         affected++;
 
         if (limitReached || (affected > affectedLimit && !queue.empty())) {
             rerun();
             break;
+#ifdef COLLECT_PR_DATA
         } else if (levels > 0U) {
             movesDown++;
             levelIncrease += levels;
             if (levels > maxLevelIncrease) {
                 maxLevelIncrease = levels;
             }
+#endif
         }
     }
+#ifdef COLLECT_PR_DATA
     totalAffected += affected;
     if (affected > maxAffected) {
         maxAffected = affected;
     }
+#endif
 }
 
 void SimpleESTree::cleanup()
@@ -582,9 +599,9 @@ unsigned long long SimpleESTree::process(SESVertexData *vd, PriorityQueue &queue
 
     PRINT_DEBUG("Min parent level is " << minParentLevel << ".");
 
-    diGraph->mapIncomingArcsUntil(v, [&](Arc *a) {
+    diGraph->mapIncomingArcsUntil(v, [this,&parent,&minParentLevel,&oldVLevel](Arc *a) {
 #ifdef COLLECT_PR_DATA
-            arcsConsidered++;
+            prArcConsidered();
 #endif
         if (a->isLoop()) {
             PRINT_DEBUG( "Loop ignored.");
@@ -592,7 +609,7 @@ unsigned long long SimpleESTree::process(SESVertexData *vd, PriorityQueue &queue
         }
         auto pd = data(a->getTail());
 #ifdef COLLECT_PR_DATA
-            verticesConsidered++;
+            prVertexConsidered();
 #endif
         auto pLevel = pd->level;
         if (pLevel < minParentLevel) {
@@ -624,9 +641,9 @@ unsigned long long SimpleESTree::process(SESVertexData *vd, PriorityQueue &queue
 
     if (levelDiff > 0U) {
         PRINT_DEBUG("Updating children...");
-        diGraph->mapOutgoingArcsUntil(vd->vertex, [&](Arc *a) {
+        diGraph->mapOutgoingArcsUntil(vd->vertex, [this,&inQueue,&timesInQueue,&queue,vd,&limitReached](Arc *a) {
 #ifdef COLLECT_PR_DATA
-            arcsConsidered++;
+            prArcConsidered();
 #endif
             if (a->isLoop()) {
                 return;
@@ -634,7 +651,7 @@ unsigned long long SimpleESTree::process(SESVertexData *vd, PriorityQueue &queue
             Vertex *head = a->getHead();
             auto *hd = data(head);
 #ifdef COLLECT_PR_DATA
-            verticesConsidered++;
+            prVertexConsidered();
 #endif
             if (hd->isParent(vd) && !inQueue[head]) {
                 if (timesInQueue[head] < requeueLimit) {

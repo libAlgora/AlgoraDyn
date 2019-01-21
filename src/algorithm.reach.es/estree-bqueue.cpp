@@ -99,7 +99,7 @@ void OldESTree::run()
        data[root]->reset(nullptr, nullptr, 0U);
    }
    reachable[root] = true;
-   bfs.onTreeArcDiscover([&](Arc *a) {
+   bfs.onTreeArcDiscover([this](Arc *a) {
 #ifdef COLLECT_PR_DATA
         prVertexConsidered();
         prArcConsidered();
@@ -114,7 +114,7 @@ void OldESTree::run()
         }
         reachable[h] = true;
    });
-   bfs.onNonTreeArcDiscover([&](Arc *a) {
+   bfs.onNonTreeArcDiscover([this](Arc *a) {
         if (a->isLoop() || a->getHead() == source) {
             return;
         }
@@ -130,7 +130,7 @@ void OldESTree::run()
    });
    runAlgorithm(bfs, diGraph);
 
-   diGraph->mapArcs([&](Arc *a) {
+   diGraph->mapArcs([this](Arc *a) {
 #ifdef COLLECT_PR_DATA
         prArcConsidered();
 #endif
@@ -156,7 +156,7 @@ void OldESTree::run()
        }
    });
 
-   diGraph->mapVertices([&](Vertex *v) {
+   diGraph->mapVertices([this](Vertex *v) {
 #ifdef COLLECT_PR_DATA
         prVertexConsidered();
 #endif
@@ -291,7 +291,9 @@ void OldESTree::onArcAdd(Arc *a)
 
     if (!td->isReachable()) {
         PRINT_DEBUG("Tail is unreachable.")
+#ifdef COLLECT_PR_DATA
         incUnreachableTail++;
+#endif
         return;
     }
 
@@ -300,17 +302,21 @@ void OldESTree::onArcAdd(Arc *a)
     if (diff == 0U) {
         // arc does not change anything
         PRINT_DEBUG("Does not decrease level.")
+#ifdef COLLECT_PR_DATA
         incNonTreeArc++;
+#endif
         return;
     } else {
         PRINT_DEBUG("Is a new tree arc, diff is " << diff);
+#ifdef COLLECT_PR_DATA
         movesUp++;
+#endif
         reachable[head] = true;
     }
 
     BreadthFirstSearch<FastPropertyMap,false> bfs(false);
     bfs.setStartVertex(head);
-    bfs.onArcDiscover([&](const Arc *a) {
+    bfs.onArcDiscover([this](const Arc *a) {
         PRINT_DEBUG( "Discovering arc (" << a->getTail() << ", " << a->getHead() << ")...");
 #ifdef COLLECT_PR_DATA
         prArcConsidered();
@@ -329,14 +335,16 @@ void OldESTree::onArcAdd(Arc *a)
 #endif
         if (diff > 0U) {
             PRINT_DEBUG("Is a new tree arc.");
-            movesUp++;
             reachable[ah] = true;
+#ifdef COLLECT_PR_DATA
+            movesUp++;
             if (diff > maxLevelDecrease) {
                 if (diff - diGraph->getSize() > 0) {
                     diff -= (ESVertexData::UNREACHABLE - diGraph->getSize());
                 }
                 maxLevelDecrease = diff;
             }
+#endif
         }
         return diff > 0U;
 
@@ -410,13 +418,17 @@ void OldESTree::onArcRemove(Arc *a)
 
     if (!hd->isReachable()) {
         PRINT_DEBUG("Head of arc is already unreachable. Nothing to do.")
+#ifdef COLLECT_PR_DATA
         decUnreachableHead++;
+#endif
         return;
     }
 
     if (hd->level <= td->level || !isParent) {
         PRINT_DEBUG("Arc is not a tree arc. Nothing to do.");
+#ifdef COLLECT_PR_DATA
         decNonTreeArc++;
+#endif
     } else {
         restoreTree(hd);
     }
@@ -540,7 +552,7 @@ unsigned long long OldESTree::process(ESVertexData *vd, PriorityQueue &queue, Fa
     auto oldVLevel = vd->getLevel();
     auto levelDiff = 0ULL;
 
-    auto enqueue = [&](ESVertexData *vd) {
+    auto enqueue = [this,vd,&queue,&inQueue,&timesInQueue,&limitReached](ESVertexData *vd) {
         auto vertex = vd->getVertex();
         if (timesInQueue[vertex] < requeueLimit) {
             PRINT_DEBUG("    Adding " << vd << " to queue...");
@@ -604,9 +616,9 @@ unsigned long long OldESTree::process(ESVertexData *vd, PriorityQueue &queue, Fa
         }
     }
     if (levelChanged) {
-        diGraph->mapOutgoingArcsUntil(vd->getVertex(), [&](Arc *a) {
+        diGraph->mapOutgoingArcsUntil(vd->getVertex(), [this,&enqueue,&inQueue,vd](Arc *a) {
 #ifdef COLLECT_PR_DATA
-            arcsConsidered++;
+            prArcConsidered();
 #endif
             if (a->isLoop()) {
               PRINT_DEBUG("    Ignoring loop.");
@@ -614,7 +626,7 @@ unsigned long long OldESTree::process(ESVertexData *vd, PriorityQueue &queue, Fa
             }
             Vertex *head = a->getHead();
 #ifdef COLLECT_PR_DATA
-            verticesConsidered++;
+            prVertexConsidered();
 #endif
             auto *hd = data(head);
             if (hd->isParent(vd) && !inQueue[head]) {
