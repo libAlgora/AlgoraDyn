@@ -107,6 +107,8 @@ private:
     unsigned long long maxReQueued;
     unsigned long long maxAffected;
     unsigned long long totalAffected;
+    unsigned long long rerunRequeued;
+    unsigned long long rerunNumAffected;
 
     void restoreTree(SESVertexData *rd);
     void cleanup();

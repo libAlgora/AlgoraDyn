@@ -64,7 +64,8 @@ SimpleESTree::SimpleESTree(unsigned long long requeueLimit, double maxAffectedRa
       decUnreachableHead(0U), decNonTreeArc(0U),
       incUnreachableTail(0U), incNonTreeArc(0U),
       reruns(0U), maxReQueued(0U),
-      maxAffected(0U), totalAffected(0U)
+      maxAffected(0U), totalAffected(0U),
+      rerunRequeued(0U), rerunNumAffected(0U)
 {
     data.setDefaultValue(nullptr);
     reachable.setDefaultValue(false);
@@ -181,6 +182,8 @@ std::string SimpleESTree::getProfilingInfo() const
     ss << "total affected vertices: " << totalAffected << std::endl;
     ss << "maximum number of affected vertices: " << maxAffected << std::endl;
     ss << "#reruns: " << reruns << std::endl;
+    ss << "#reruns because requeue limit reached: " << rerunRequeued << std::endl;
+    ss << "#reruns because max. number of affected vertices reached: " << rerunNumAffected << std::endl;
     return ss.str();
 }
 
@@ -203,6 +206,8 @@ DynamicSSReachAlgorithm::Profile SimpleESTree::getProfile() const
     profile.push_back(std::make_pair(std::string("total_affected"), totalAffected));
     profile.push_back(std::make_pair(std::string("max_affected"), maxAffected));
     profile.push_back(std::make_pair(std::string("rerun"), reruns));
+    profile.push_back(std::make_pair(std::string("rerun_requeue_limit"), rerunRequeued));
+    profile.push_back(std::make_pair(std::string("rerun_max_affected"), rerunNumAffected));
     return profile;
 }
 
@@ -223,6 +228,8 @@ void SimpleESTree::onDiGraphSet()
     maxReQueued = 0U;
     maxAffected = 0U;
     totalAffected = 0U;
+    rerunRequeued = 0U;
+    rerunNumAffected = 0U;
     data.resetAll(diGraph->getSize());
     reachable.resetAll(diGraph->getSize());
 }
@@ -495,7 +502,9 @@ bool SimpleESTree::checkTree()
 
 void SimpleESTree::rerun()
 {
+#ifdef COLLECT_PR_DATA
     reruns++;
+#endif
     diGraph->mapVertices([&](Vertex *v) {
         data[v]->reset();
     });
@@ -526,11 +535,18 @@ void SimpleESTree::restoreTree(SESVertexData *rd)
         prVertexConsidered();
         unsigned long long levels =
 #endif
-                process(vd, queue, inQueue, timesInQueue,
-                                      limitReached);
+        process(vd, queue, inQueue, timesInQueue, limitReached);
         affected++;
 
-        if (limitReached || (affected > affectedLimit && !queue.empty())) {
+        if (limitReached || ((affected > affectedLimit) && !queue.empty())) {
+#ifdef COLLECT_PR_DATA
+            if (limitReached) {
+                rerunRequeued++;
+            }
+            if ((affected > affectedLimit) && !queue.empty()) {
+                rerunNumAffected++;
+            }
+#endif
             rerun();
             break;
 #ifdef COLLECT_PR_DATA
