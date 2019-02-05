@@ -523,7 +523,7 @@ void SimpleESTree::restoreTree(SESVertexData *rd)
     timesInQueue[rd->getVertex()]++;
     PRINT_DEBUG("Initialized queue with " << rd << ".")
     bool limitReached = false;
-    auto affected = 0ULL;
+    auto processed = 0ULL;
     auto affectedLimit = maxAffectedRatio * diGraph->getSize();
 
     while (!queue.empty()) {
@@ -536,14 +536,15 @@ void SimpleESTree::restoreTree(SESVertexData *rd)
         unsigned long long levels =
 #endif
         process(vd, queue, inQueue, timesInQueue, limitReached);
-        affected++;
+        processed++;
 
-        if (limitReached || ((affected > affectedLimit) && !queue.empty())) {
+        //if (limitReached || ((affected > affectedLimit) && !queue.empty())) {
+        if (limitReached || ((processed + queue.size() > affectedLimit) && !queue.empty())) {
 #ifdef COLLECT_PR_DATA
             if (limitReached) {
                 rerunRequeued++;
             }
-            if ((affected > affectedLimit) && !queue.empty()) {
+            if ((processed + queue.size() > affectedLimit) && !queue.empty()) {
                 rerunNumAffected++;
             }
 #endif
@@ -560,9 +561,9 @@ void SimpleESTree::restoreTree(SESVertexData *rd)
         }
     }
 #ifdef COLLECT_PR_DATA
-    totalAffected += affected;
-    if (affected > maxAffected) {
-        maxAffected = affected;
+    totalAffected += processed;
+    if (processed > maxAffected) {
+        maxAffected = processed;
     }
 #endif
 }
