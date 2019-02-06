@@ -695,8 +695,8 @@ void OldESTree::restoreTree(ESVertexData *vd)
 #endif
             rerun();
             break;
-        } else if (levels > 0U) {
 #ifdef COLLECT_PR_DATA
+        } else if (levels > 0U) {
             movesDown++;
             levelIncrease += levels;
             PRINT_DEBUG("total level increase " << levelIncrease);

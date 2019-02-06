@@ -681,8 +681,9 @@ void ESTreeQ::restoreTree(ESVertexData *vd)
         inQueue[vd->getVertex()] = false;
 #ifdef COLLECT_PR_DATA
         prVertexConsidered();
+        auto levels =
 #endif
-        auto levels = process(vd, queue, inQueue, timesInQueue, limitReached);
+                process(vd, queue, inQueue, timesInQueue, limitReached);
         processed++;
 
         if (limitReached || ((processed + queue.size() > affectedLimit) && !queue.empty())) {
@@ -696,8 +697,8 @@ void ESTreeQ::restoreTree(ESVertexData *vd)
 #endif
             rerun();
             break;
-        } else if (levels > 0U) {
 #ifdef COLLECT_PR_DATA
+        } else if (levels > 0U) {
             movesDown++;
             levelIncrease += levels;
             PRINT_DEBUG("total level increase " << levelIncrease);
