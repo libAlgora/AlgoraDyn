@@ -25,11 +25,11 @@
 
 #include "algorithm.reach/dynamicssreachalgorithm.h"
 #include "esvertexdata.h"
-#include "datastructure/bucketqueue.h"
 #include "property/propertymap.h"
 #include "property/fastpropertymap.h"
 #include <climits>
 #include <sstream>
+#include "datastructure/bucketqueue.h"
 
 namespace Algora {
 
@@ -106,6 +106,8 @@ private:
     unsigned long long maxReQueued;
     unsigned long long maxAffected;
     unsigned long long totalAffected;
+    unsigned long long rerunRequeued;
+    unsigned long long rerunNumAffected;
 
     void restoreTree(ESVertexData *vd);
     void cleanup();

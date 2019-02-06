@@ -538,7 +538,6 @@ void SimpleESTree::restoreTree(SESVertexData *rd)
         process(vd, queue, inQueue, timesInQueue, limitReached);
         processed++;
 
-        //if (limitReached || ((affected > affectedLimit) && !queue.empty())) {
         if (limitReached || ((processed + queue.size() > affectedLimit) && !queue.empty())) {
 #ifdef COLLECT_PR_DATA
             if (limitReached) {
