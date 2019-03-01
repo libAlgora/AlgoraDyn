@@ -315,8 +315,8 @@ struct SimpleIncSSReachAlgorithm::Reachability {
                                           floor(log2(relateTo)) : floor(maxUnknownStateRatio * relateTo));
         if (unknown > compareTo) {
             PRINT_DEBUG("Maximum allowed unknown state ratio exceeded, " << unknown << " > " << compareTo << ", recomputing.");
-            numReReachFromSource++;
 #ifdef COLLECT_PR_DATA
+            numReReachFromSource++;
             parent->prReset();
 #endif
 
