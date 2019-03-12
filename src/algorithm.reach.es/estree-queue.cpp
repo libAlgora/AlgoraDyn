@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2013 - 2018 : Kathrin Hanauer
+ * Copyright (C) 2013 - 2019 : Kathrin Hanauer
  *
  * This file is part of Algora.
  *
