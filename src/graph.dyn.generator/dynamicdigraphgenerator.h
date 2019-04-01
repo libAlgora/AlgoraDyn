@@ -23,38 +23,49 @@
 #ifndef DYNAMICDIGRAPHGENERATOR_H
 #define DYNAMICDIGRAPHGENERATOR_H
 
-#include "graph.dyn/dynamicdigraph.h"
+#include "pipe/dynamicdigraphprovider.h"
 
 namespace Algora {
 
-class DynamicDiGraphGenerator
+class DynamicDiGraphGenerator : public DynamicDiGraphProvider
 {
 public:
-    virtual bool nextInstance() override;
-    virtual DynamicDiGraph &getGraph() const override;
+    DynamicDiGraphGenerator()
+        : DynamicDiGraphProvider(),
+          num_ops(0ULL), prop_addition(0U), prop_deletion(0U), prop_advance(0U), multiplier(0U),
+          num_additions(0ULL), num_deletions(0ULL), num_advances(0ULL) { }
+    virtual ~DynamicDiGraphGenerator();
 
-    void setNumOperations(unsigned long long ops);
-    void setArcAdditionProportion(unsigned int propAdd);
-    void setArcRemovalProportion(unsigned int propRemove);
-    void setAdvanceTimeProportion(unsigned int propTime);
-    void setMultiplier(unsigned int multiplier);
+    void setNumOperations(unsigned long long ops) { num_ops = ops; }
+    void setArcAdditionProportion(unsigned int propAdd) { prop_addition = propAdd; }
+    void setArcRemovalProportion(unsigned int propRemove) { prop_deletion = propRemove; }
+    void setAdvanceTimeProportion(unsigned int propAdvance) { prop_advance = propAdvance; }
+    void setMultiplier(unsigned int times) { multiplier = times; }
 
-    unsigned long long getInitialGraphSize() const;
-    unsigned long long getInitialArcSize() const;
-    unsigned long long getNumOperations() const;
-    unsigned int getArcAdditionProportion() const;
-    unsigned int getArcRemovalProportion() const;
-    unsigned int getAdvanceTimeProportion() const;
+    unsigned long long getNumOperations() const { return num_ops; }
+    unsigned int getArcAdditionProportion() const { return prop_addition; }
+    unsigned int getArcRemovalProportion() const { return prop_deletion; }
+    unsigned int getAdvanceTimeProportion() const { return prop_advance; }
+    unsigned int getMultiplier() const { return multiplier; }
 
-    virtual unsigned long long numArcAdditions() const override;
-    virtual unsigned long long numArcRemovals() const override;
-    virtual unsigned long long numQueries() const override;
-    virtual unsigned long long numDeltas() const override;
+    unsigned long long numArcAdditions() const { return num_additions; }
+    unsigned long long numArcRemovals() const { return num_deletions; }
+    unsigned long long numTimeAdvances() const { return num_advances; }
+    unsigned long long numDeltas() const { return num_advances + 1ULL; }
 
-    virtual std::string getConfiguration() const override;
-    virtual std::string getConfigurationAsJson(const std::string &indent) const override;
-    virtual std::string getName() const noexcept override { return "Random Instance Provider"; }
+private:
+    unsigned long long num_ops;
+    unsigned int prop_addition;
+    unsigned int prop_deletion;
+    unsigned int prop_advance;
+    unsigned int multiplier;
+
+    unsigned long long num_additions;
+    unsigned long long num_deletions;
+    unsigned long long num_advances;
 };
+
+DynamicDiGraphGenerator::~DynamicDiGraphGenerator() {}
 
 }
 
