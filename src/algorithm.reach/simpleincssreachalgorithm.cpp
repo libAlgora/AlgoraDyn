@@ -53,7 +53,7 @@ struct SimpleIncSSReachAlgorithm::Reachability {
 
     SimpleIncSSReachAlgorithm *parent;
     FastPropertyMap<State> reachability;
-    FastPropertyMap<Vertex*> pred;
+    FastPropertyMap<Arc*> pred;
     DiGraph *diGraph;
     Vertex *source;
     std::vector<const Vertex*> changedStateVertices;
@@ -141,9 +141,9 @@ struct SimpleIncSSReachAlgorithm::Reachability {
             auto v = a->getHead();
 
             PRINT_DEBUG("Reaching " << v << " via " << p << " with state " << printState(reachability(v))
-                        << " and pred " << pred(v));
+                        << " and tree arc " << pred(v));
 
-            if (pred(v) != nullptr && pred(v) != p) {
+            if (pred(v) != nullptr && pred(v) != a) {
                 PRINT_DEBUG(v << " already has another predecessor.");
                 return false;
             }
@@ -159,9 +159,9 @@ struct SimpleIncSSReachAlgorithm::Reachability {
             }
 
             if (setPred && (pred(v) == nullptr || force)) {
-                pred[v] = p;
+                pred[v] = a;
                 PRINT_DEBUG("Set predecessor.");
-            } else if (!setPred && pred(v) == p) {
+            } else if (!setPred && pred(v) == a) {
                 pred.resetToDefault(v);
                 PRINT_DEBUG("Deleted predecessor.");
             } else {
@@ -216,7 +216,7 @@ struct SimpleIncSSReachAlgorithm::Reachability {
         });
 #endif
 
-        FastPropertyMap<Vertex*> succ;
+        FastPropertyMap<Arc*> succ;
         Vertex *reachableAncestor = nullptr;
         bfs.onTreeArcDiscover([this,&visitedUnknown,&succ,&reachableAncestor](const Arc* a) {
 
@@ -232,11 +232,11 @@ struct SimpleIncSSReachAlgorithm::Reachability {
             switch (reachability(v)) {
             case State::REACHABLE:
                 reachableAncestor = v;
-                succ[v] = head;
+                succ[v] = a;
                 return false;
             case State::UNKNOWN:
                 visitedUnknown.push_back(v);
-                succ[v] = head;
+                succ[v] = a;
                 return true;
             case State::UNREACHABLE:
                 return false;
@@ -253,10 +253,10 @@ struct SimpleIncSSReachAlgorithm::Reachability {
 
         if (reachableAncestor != nullptr) {
             auto *t = reachableAncestor;
-            auto *h = succ[reachableAncestor];
+            auto *a = succ[reachableAncestor];
             while (t != u) {
 #ifdef COLLECT_PR_DATA
-            parent->prVertexConsidered();
+                parent->prVertexConsidered();
 #endif
                 pred[h] = t;
                 reachability[h] = State::REACHABLE;
@@ -673,7 +673,19 @@ bool SimpleIncSSReachAlgorithm::query(const Vertex *t)
 //        return reachable;
 //    });
 //    runAlgorithm(bfs, diGraph);
-//    return reachable;
+    //    return reachable;
+}
+
+std::vector<Arc *> SimpleIncSSReachAlgorithm::queryPath(const Vertex *t)
+{
+    std::vector<Arc*> path;
+    if (!query(t) || t == source) {
+        return path;
+    }
+
+    FastPropertyMap<Vertex*> pred;
+    while ()
+
 }
 
 void SimpleIncSSReachAlgorithm::dumpData(std::ostream &os)
