@@ -36,7 +36,7 @@ namespace Algora {
 class ESTreeQ : public DynamicSSReachAlgorithm
 {
 public:
-    explicit ESTreeQ(unsigned long long requeueLimit = UINT_MAX, double maxAffectedRatio = 1.0);
+    explicit ESTreeQ(unsigned long long requeueLimit = ULLONG_MAX, double maxAffectedRatio = 1.0);
     virtual ~ESTreeQ();
     void setRequeueLimit(unsigned long long limit) {
         requeueLimit = limit;
