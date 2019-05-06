@@ -34,7 +34,7 @@ class SimpleIncSSReachAlgorithm : public DynamicSSReachAlgorithm
 {
 public:
     explicit SimpleIncSSReachAlgorithm(bool reverse = false, bool searchForward = false, double maxUS = 1.0, bool radicalReset = false);
-    virtual ~SimpleIncSSReachAlgorithm();
+    virtual ~SimpleIncSSReachAlgorithm() override;
     void setMaxUnknownStateSqrt();
     void setMaxUnknownStateLog();
     /** relate unknown state ratio to #reachable vertices or #all vertices **/
