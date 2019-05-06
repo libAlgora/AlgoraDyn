@@ -27,6 +27,7 @@
 #include <climits>
 #include <iostream>
 #include <property/fastpropertymap.h>
+#include <cassert>
 
 namespace Algora {
 
@@ -42,9 +43,9 @@ public:
     static constexpr unsigned long long UNREACHABLE = ULLONG_MAX;
 
     ESVertexData(FastPropertyMap<unsigned long long> *inNeighborIndices,
-            Vertex *v, ESVertexData *p = nullptr, const Arc *treeArc = nullptr, unsigned long long l = UNREACHABLE);
+            Vertex *v, ESVertexData *p = nullptr, Arc *a = nullptr, unsigned long long l = UNREACHABLE);
 
-    void reset(ESVertexData *p = nullptr, const Arc *treeArc = nullptr, unsigned long long l = UNREACHABLE);
+    void reset(ESVertexData *p = nullptr, Arc *a = nullptr, unsigned long long l = UNREACHABLE);
 
     void setUnreachable();
     bool isReachable() const;
@@ -52,18 +53,21 @@ public:
         return isReachable() ? level : UNREACHABLE;
     }
     Vertex *getVertex() const { return vertex; }
+    Arc *getTreeArc() const;
 
-    void addInNeighbor(ESVertexData *in, const Arc *a);
-    unsigned long long reparent(ESVertexData *in, const Arc *a);
+    void addInNeighbor(ESVertexData *in, Arc *a);
+    unsigned long long reparent(ESVertexData *in, Arc *a);
     void findAndRemoveInNeighbor(ESVertexData *in, const Arc *a);
 
-    bool isParent(ESVertexData *p);
+    bool isParent(const ESVertexData *p);
+    bool isTreeArc(const Arc *a);
     ESVertexData *getParentData() const;
     Vertex *getParent() const;
 
     bool checkIntegrity() const;
 
     std::vector<ESVertexData*> inNeighbors;
+    std::vector<Arc*> inArcs;
     unsigned long long parentIndex;
     unsigned long long level;
 

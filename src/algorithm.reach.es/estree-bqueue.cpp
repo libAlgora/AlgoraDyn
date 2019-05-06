@@ -323,7 +323,8 @@ void OldESTree::onArcAdd(Arc *a)
 
     BreadthFirstSearch<FastPropertyMap,false> bfs(false);
     bfs.setStartVertex(head);
-    bfs.onArcDiscover([this](const Arc *a) {
+    bfs.onArcDiscover([this](const Arc *ca) {
+        auto *a = const_cast<Arc*>(ca);
         PRINT_DEBUG( "Discovering arc (" << a->getTail() << ", " << a->getHead() << ")...");
 #ifdef COLLECT_PR_DATA
         prArcConsidered();
