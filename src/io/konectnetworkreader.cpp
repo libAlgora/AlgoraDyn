@@ -72,7 +72,7 @@ KonectNetworkReader::~KonectNetworkReader()
 bool KonectNetworkReader::provideDynamicDiGraph(DynamicDiGraph *dynGraph)
 {
     lastError.clear();
-    if (StreamDiGraphReader::inputStream == 0) {
+    if (StreamDiGraphReader::inputStream == nullptr) {
         lastError = "No input stream.";
         return false;
     }

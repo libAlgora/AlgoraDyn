@@ -37,11 +37,11 @@ public:
     typedef std::vector<std::pair<std::string, pr_val>> Profile;
 
     explicit DynamicSSReachAlgorithm() : DynamicDiGraphAlgorithm(), source(nullptr) { }
-    virtual ~DynamicSSReachAlgorithm() { }
+    virtual ~DynamicSSReachAlgorithm() override { }
 
     void setSource(Vertex *s) { source = s; onSourceSet(); }
     virtual bool query(const Vertex *t) = 0;
-    virtual std::vector<Arc*> queryPath(const Vertex *t) { return std::vector<Arc*>; }
+    virtual std::vector<Arc*> queryPath(const Vertex *) { return std::vector<Arc*>(); }
 
     virtual void dumpData(std::ostream&) { }
     virtual Profile getProfile() const {
