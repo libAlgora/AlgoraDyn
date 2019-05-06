@@ -421,7 +421,7 @@ void OldESTree::onArcRemove(Arc *a)
     }
 
     ESVertexData *td = data(tail);
-    bool isParent = hd->isParent(td);
+    bool isParent = hd->isTreeArc(a);
     hd->findAndRemoveInNeighbor(td, a);
 
     if (!hd->isReachable()) {
@@ -468,6 +468,25 @@ bool OldESTree::query(const Vertex *t)
     }
     assert(checkTree());
     return reachable(t);
+}
+
+std::vector<Arc *> OldESTree::queryPath(const Vertex *t)
+{
+    std::vector<Arc*> path;
+    if (!query(t) || t == source) {
+        return path;
+    }
+
+    while (t != source) {
+        auto *a = data(t)->getTreeArc();
+        path.push_back(a);
+        t = a->getTail();
+    }
+    assert(!path.empty());
+
+    std::reverse(path.begin(), path.end());
+
+    return path;
 }
 
 void OldESTree::dumpData(std::ostream &os)
@@ -637,7 +656,7 @@ unsigned long long OldESTree::process(ESVertexData *vd, PriorityQueue &queue, Fa
             prVertexConsidered();
 #endif
             auto *hd = data(head);
-            if (hd->isParent(vd) && !inQueue[head]) {
+            if (hd->isTreeArc(a) && !inQueue[head]) {
                 enqueue(hd);
             } else {
               PRINT_DEBUG("    NOT adding " << hd << " to queue: not a child of " << vd)

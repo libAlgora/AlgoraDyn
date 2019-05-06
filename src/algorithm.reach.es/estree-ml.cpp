@@ -420,7 +420,6 @@ void ESTreeML::onArcRemove(Arc *a)
     }
 
     ESVertexData *td = data(tail);
-    //bool isParent = hd->isParent(td);
     bool isParent = hd->isTreeArc(a);
     hd->findAndRemoveInNeighbor(td, a);
 
@@ -706,7 +705,7 @@ void ESTreeML::restoreTree(ESVertexData *vd)
     PriorityQueue queue;
     queue.setLimit(diGraph->getSize());
     FastPropertyMap<bool> inQueue(false, "", diGraph->getSize());
-    FastPropertyMap<unsigned long long> timesInQueue(0U, "", diGraph->getSize());
+    FastPropertyMap<unsigned long long> timesInQueue(0ULL, "", diGraph->getSize());
     queue.push(vd);
     inQueue[vd->getVertex()] = true;
     timesInQueue[vd->getVertex()]++;
