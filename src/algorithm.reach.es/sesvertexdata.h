@@ -25,10 +25,12 @@
 
 #include <climits>
 #include <iostream>
+#include <cassert>
 
 namespace Algora {
 
 class Vertex;
+class Arc;
 
 class SESVertexData
 {
@@ -37,16 +39,17 @@ class SESVertexData
 public:
     static constexpr unsigned long long UNREACHABLE = ULLONG_MAX;
 
-    SESVertexData(Vertex *v, SESVertexData *p = nullptr, unsigned long long l = UNREACHABLE)
-        : vertex(v), parent(p), level(l) {
+    SESVertexData(Vertex *v, SESVertexData *p = nullptr, Arc *a = nullptr, unsigned long long l = UNREACHABLE)
+        : vertex(v), parent(p), treeArc(a), level(l) {
         if (p != nullptr) {
             level = p->level + 1;
         }
     }
 
-    void reset(SESVertexData *p = nullptr, unsigned long long l = UNREACHABLE) {
+    void reset(SESVertexData *p = nullptr, Arc *a = nullptr, unsigned long long l = UNREACHABLE) {
         parent = p;
         level = l;
+        treeArc = a;
         if (p != nullptr) {
             level = p->level + 1;
         }
@@ -58,21 +61,34 @@ public:
 
     Vertex *getVertex() const { return vertex; }
     SESVertexData *getParentData() const { return parent; }
+    Arc *getTreeArc() const { return treeArc; }
 
     void setUnreachable() {
         parent = nullptr;
+        treeArc = nullptr;
         level = UNREACHABLE;
+    }
+
+    void setParent(SESVertexData *pd, Arc *a) {
+        parent = pd;
+        treeArc = a;
+        level = pd->getLevel() + 1U;
     }
 
     bool isReachable() const {
         return level != UNREACHABLE;
     }
 
-    bool isParent(SESVertexData *p) {
+    bool isTreeArc(const Arc *a) {
+        return a == treeArc;
+    }
+
+    bool isParent(const SESVertexData *p) {
         return p == parent;
     }
 
     bool hasValidParent() const {
+        assert(parent != nullptr || treeArc == nullptr);
         return parent != nullptr && parent->level + 1 == level;
     }
 
@@ -86,6 +102,7 @@ public:
 //private:
     Vertex *vertex;
     SESVertexData *parent;
+    Arc *treeArc;
     unsigned long long level;
 };
 
