@@ -94,9 +94,6 @@ struct SimpleIncSSReachAlgorithm::Reachability {
         source = src;
         reachability.resetAll();
         pred.resetAll();
-        //if (source != nullptr) {
-        //    reachability[source] = State::REACHABLE;
-        //}
         numReachable = 0UL;
 #ifdef COLLECT_PR_DATA
         numUnreached = 0UL;
