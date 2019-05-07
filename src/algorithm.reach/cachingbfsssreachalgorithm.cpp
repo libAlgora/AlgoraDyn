@@ -28,11 +28,11 @@
 namespace Algora {
 
 struct CachingBFSSSReachAlgorithm::CheshireCat {
-    //FastPropertyMap<unsigned long long> levels;
     BreadthFirstSearch<FastPropertyMap,false> bfs;
     bool initialized;
     bool arcAdded;
     bool arcRemoved;
+    FastPropertyMap<Arc*> treeArc;
 
     CachingBFSSSReachAlgorithm *parent;
     Vertex *source;
@@ -41,16 +41,17 @@ struct CachingBFSSSReachAlgorithm::CheshireCat {
     CheshireCat()
         : initialized(false), arcAdded(false), arcRemoved(false) {
         bfs.computeValues(false);
+        treeArc.setDefaultValue(nullptr);
     }
 
     void run() {
-        bfs.setGraph(diGraph);
+        treeArc.resetAll();
         bfs.setStartVertex(source);
-        if (!bfs.prepare()) {
-            throw DiGraphAlgorithmException(parent, "Could not prepare BFS algorithm.");
-        }
-        bfs.run();
-        bfs.deliver();
+        bfs.onTreeArcDiscover([this](const Arc *a) {
+            treeArc[a->getHead()] = const_cast<Arc*>(a);
+            return true;
+        });
+        runAlgorithm(bfs, diGraph);
         initialized = true;
         arcAdded = false;
         arcRemoved = false;
@@ -74,6 +75,32 @@ struct CachingBFSSSReachAlgorithm::CheshireCat {
         }
         return bfs.vertexDiscovered(t);
     }
+
+    void constructPath(const Vertex *t, std::vector<Arc *> &path) {
+        while (t != source) {
+            auto *a = treeArc(t);
+            path.push_back(a);
+            t = a->getTail();
+        }
+        assert(!path.empty());
+
+        std::reverse(path.begin(), path.end());
+    }
+
+    void queryPath(const Vertex *t, std::vector<Arc *> &path) {
+        if (t == source || (initialized && !arcAdded && !bfs.vertexDiscovered(t))) {
+            return;
+        } else if (initialized && !arcRemoved && bfs.vertexDiscovered(t)) {
+            constructPath(t, path);
+            return;
+        }
+        if (!initialized || arcAdded || arcRemoved) {
+            run();
+        }
+        if (bfs.vertexDiscovered(t)) {
+            constructPath(t, path);
+        }
+    }
 };
 
 CachingBFSSSReachAlgorithm::CachingBFSSSReachAlgorithm()
@@ -95,13 +122,20 @@ void CachingBFSSSReachAlgorithm::run()
 
 bool CachingBFSSSReachAlgorithm::query(const Vertex *t)
 {
-	return grin->query(t);
+    return grin->query(t);
+}
+
+std::vector<Arc *> CachingBFSSSReachAlgorithm::queryPath(const Vertex *t)
+{
+    std::vector<Arc*> path;
+    grin->queryPath(t, path);
+    assert (!query(t) || !path.empty() || t == source);
+    return path;
 }
 
 void CachingBFSSSReachAlgorithm::onDiGraphSet()
 {
     DynamicSSReachAlgorithm::onDiGraphSet();
-    //bfs.setGraph(diGraph);
     grin->initialized = false;
     grin->arcAdded = false;
     grin->arcRemoved = false;
@@ -152,7 +186,7 @@ void CachingBFSSSReachAlgorithm::onArcRemove(Arc *a)
         return;
     }
 
-    if (!grin->bfs.vertexDiscovered(head)) {
+    if (a != grin->treeArc(head)) {
         return;
     }
 

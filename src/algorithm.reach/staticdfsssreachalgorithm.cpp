@@ -20,6 +20,9 @@
  *   http://algora.xaikal.org
  */
 
+
+#include <cassert>
+
 #include "staticdfsssreachalgorithm.h"
 #include "property/fastpropertymap.h"
 
@@ -69,6 +72,53 @@ bool StaticDFSSSReachAlgorithm::query(const Vertex *t)
     });
     runAlgorithm(dfs, diGraph);
     return reachable;
+}
+
+std::vector<Arc *> StaticDFSSSReachAlgorithm::queryPath(const Vertex *t)
+{
+    std::vector<Arc*> path;
+    if (t == source) {
+        return path;
+    }
+
+    DepthFirstSearch<FastPropertyMap> dfs(false);
+    dfs.setStartVertex(source);
+    FastPropertyMap<Arc*> treeArc(nullptr);
+    bool reachable = false;
+#ifdef COLLECT_PR_DATA
+    dfs.onArcDiscover([this](const Arc *) {
+        prArcConsidered();
+        return true;
+    });
+    dfs.onVertexDiscover([this](const Vertex *) {
+        prVertexConsidered();
+        return true;
+    });
+#endif
+    dfs.onTreeArcDiscover([t,&reachable,&treeArc](const Arc *a) {
+        auto head = a->getHead();
+        treeArc[head] = const_cast<Arc*>(a);
+        if (head == t) {
+            reachable = true;
+        }
+        return reachable;
+    });
+    dfs.setArcStopCondition([&reachable](const Arc *) {
+        return reachable;
+    });
+    runAlgorithm(dfs, diGraph);
+
+    if (reachable) {
+        while (t != source) {
+            auto *a = treeArc(t);
+            path.push_back(a);
+            t = a->getTail();
+        }
+        assert(!path.empty());
+        std::reverse(path.begin(), path.end());
+    }
+
+    return path;
 }
 
 }
