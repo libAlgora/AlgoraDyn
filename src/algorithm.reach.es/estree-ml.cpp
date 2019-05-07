@@ -86,6 +86,7 @@ void ESTreeML::run()
    PRINT_DEBUG("Initializing ESTreeML...")
 
    reachable.resetAll(diGraph->getSize());
+   inNeighborIndices.resetAll(diGraph->getNumArcs());
 
    BreadthFirstSearch<FastPropertyMap,false> bfs(false);
    root = source;
