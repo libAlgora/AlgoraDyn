@@ -28,7 +28,6 @@
 #include "property/fastpropertymap.h"
 #include "datastructure/bucketqueue.h"
 #include "sesvertexdata.h"
-#include <climits>
 #include <sstream>
 
 namespace Algora {
@@ -36,7 +35,7 @@ namespace Algora {
 class SimpleESTree : public DynamicSSReachAlgorithm
 {
 public:
-    explicit SimpleESTree(unsigned long long requeueLimit = ULLONG_MAX, double maxAffectedRatio = 1.0);
+    explicit SimpleESTree(unsigned long long requeueLimit = 5, double maxAffectedRatio = .5);
     virtual ~SimpleESTree();
     void setRequeueLimit(unsigned long long limit) {
         requeueLimit = limit;

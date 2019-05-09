@@ -27,7 +27,6 @@
 #include "esvertexdata.h"
 #include "property/propertymap.h"
 #include "property/fastpropertymap.h"
-#include <climits>
 #include <sstream>
 #include "datastructure/bucketqueue.h"
 
@@ -36,7 +35,7 @@ namespace Algora {
 class OldESTree : public DynamicSSReachAlgorithm
 {
 public:
-    explicit OldESTree(unsigned long long requeueLimit = UINT_MAX, double maxAffectedRatio = 1.0);
+    explicit OldESTree(unsigned long long requeueLimit = 5U, double maxAffectedRatio = 0.5);
     virtual ~OldESTree();
     void setRequeueLimit(unsigned long long limit) {
         requeueLimit = limit;

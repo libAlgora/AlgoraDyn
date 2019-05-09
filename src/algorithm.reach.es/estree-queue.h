@@ -27,7 +27,6 @@
 #include "esvertexdata.h"
 #include "property/propertymap.h"
 #include "property/fastpropertymap.h"
-#include <climits>
 #include <sstream>
 #include <boost/circular_buffer.hpp>
 
@@ -36,7 +35,7 @@ namespace Algora {
 class ESTreeQ : public DynamicSSReachAlgorithm
 {
 public:
-    explicit ESTreeQ(unsigned long long requeueLimit = ULLONG_MAX, double maxAffectedRatio = 1.0);
+    explicit ESTreeQ(unsigned long long requeueLimit = 5, double maxAffectedRatio = 0.5);
     virtual ~ESTreeQ();
     void setRequeueLimit(unsigned long long limit) {
         requeueLimit = limit;

@@ -27,7 +27,6 @@
 #include "esvertexdata.h"
 #include "property/propertymap.h"
 #include "property/fastpropertymap.h"
-#include <climits>
 #include <sstream>
 #include "datastructure/bucketqueue.h"
 
@@ -36,7 +35,7 @@ namespace Algora {
 class ESTreeML : public DynamicSSReachAlgorithm
 {
 public:
-    explicit ESTreeML(unsigned long long requeueLimit = ULLONG_MAX, double maxAffectedRatio = 1.0);
+    explicit ESTreeML(unsigned long long requeueLimit = 5, double maxAffectedRatio = 0.5);
     virtual ~ESTreeML();
     void setRequeueLimit(unsigned long long limit) {
         requeueLimit = limit;
