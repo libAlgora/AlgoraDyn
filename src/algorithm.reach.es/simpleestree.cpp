@@ -115,9 +115,9 @@ void SimpleESTree::run()
    }
    bfs.setStartVertex(root);
    if (data[root] == nullptr) {
-      data[root] = new SESVertexData(root, nullptr, 0);
+      data[root] = new SESVertexData(root, nullptr, nullptr, 0);
    } else {
-       data[root]->reset(nullptr, 0);
+       data[root]->reset(nullptr, nullptr, 0);
    }
    reachable[root] = true;
    bfs.onTreeArcDiscover([this](Arc *a) {
@@ -128,9 +128,9 @@ void SimpleESTree::run()
         Vertex *t = a->getTail();
         Vertex *h = a->getHead();
         if (data[h] == nullptr) {
-            data[h] = new SESVertexData(h, data(t));
+            data[h] = new SESVertexData(h, data(t), a);
         } else {
-            data[h]->reset(data(t));
+            data[h]->reset(data(t), a);
         }
         reachable[h] = true;
         PRINT_DEBUG( "(" << t << ", " << h << ")" << " is a tree arc.")
@@ -300,9 +300,10 @@ void SimpleESTree::onArcAdd(Arc *a)
             levelDecrease += (hd->level - (td->level + 1));
         }
 #endif
-        hd->level = td->level + 1;
+        //hd->level = td->level + 1;
+        //hd->parent = td;
+        hd->setParent(td, a);
         reachable[head] = true;
-        hd->parent = td;
     }
 
     BreadthFirstSearch<FastPropertyMap,false> bfs(false);
@@ -339,8 +340,9 @@ void SimpleESTree::onArcAdd(Arc *a)
                 maxLevelDecrease = dec;
             }
 #endif
-            ahd->level = atd->level + 1;
-            ahd->parent = atd;
+            ahd->setParent(atd, const_cast<Arc*>(a));
+            //ahd->level = atd->level + 1;
+            //ahd->parent = atd;
             reachable[ah] = true;
             PRINT_DEBUG( "(" << at << ", " << ah << ")" << " is a new tree arc.");
             return true;
@@ -387,7 +389,6 @@ void SimpleESTree::onArcRemove(Arc *a)
         return;
     }
 
-    Vertex *tail= a->getTail();
     Vertex *head = a->getHead();
 
     if (head == source) {
@@ -414,9 +415,9 @@ void SimpleESTree::onArcRemove(Arc *a)
         return;
     }
 
-    auto td = data(tail);
-    if (hd->isParent(td)) {
+    if (hd->isTreeArc(a)) {
         hd->parent = nullptr;
+        hd->treeArc = nullptr;
         restoreTree(hd);
     } else {
         PRINT_DEBUG("Arc is not a tree arc. Nothing to do.")
@@ -455,6 +456,25 @@ bool SimpleESTree::query(const Vertex *t)
     return reachable(t);
 }
 
+std::vector<Arc *> SimpleESTree::queryPath(const Vertex *t)
+{
+    std::vector<Arc*> path;
+    if (!query(t) || t == source) {
+        return path;
+    }
+
+    while (t != source) {
+        auto *a = data(t)->getTreeArc();
+        path.push_back(a);
+        t = a->getTail();
+    }
+    assert(!path.empty());
+
+    std::reverse(path.begin(), path.end());
+
+    return path;
+}
+
 void SimpleESTree::dumpData(std::ostream &os)
 {
     if (!initialized) {
@@ -473,7 +493,7 @@ void SimpleESTree::dumpTree(std::ostream &os)
     }  else {
         diGraph->mapVertices([&](Vertex *v) {
           auto vd = data[v];
-          os << v << ": L " << vd->level << ", P " << vd->getParent() << '\n';
+          os << v << ": L " << vd->level << ", A " << vd->getTreeArc() << ", P " << vd->getParent() << '\n';
         });
     }
 }
@@ -612,10 +632,11 @@ unsigned long long SimpleESTree::process(SESVertexData *vd, PriorityQueue &queue
     auto parent = oldParent;
     auto oldVLevel = vd->level;
     auto minParentLevel = parent == nullptr ? SESVertexData::UNREACHABLE : parent->level;
+    auto treeArc = vd->treeArc;
 
     PRINT_DEBUG("Min parent level is " << minParentLevel << ".");
 
-    diGraph->mapIncomingArcsUntil(v, [this,&parent,&minParentLevel,&oldVLevel](Arc *a) {
+    diGraph->mapIncomingArcsUntil(v, [this,&parent,&minParentLevel,&oldVLevel,&treeArc](Arc *a) {
 #ifdef COLLECT_PR_DATA
             prArcConsidered();
 #endif
@@ -631,6 +652,7 @@ unsigned long long SimpleESTree::process(SESVertexData *vd, PriorityQueue &queue
         if (pLevel < minParentLevel) {
             minParentLevel = pLevel;
             parent = pd;
+            treeArc = a;
             PRINT_DEBUG("Update: Min parent level now is " << minParentLevel << ", parent " << parent);
             assert (minParentLevel + 1 >= oldVLevel);
         }
@@ -648,8 +670,9 @@ unsigned long long SimpleESTree::process(SESVertexData *vd, PriorityQueue &queue
     } else if (parent != oldParent || oldVLevel <= minParentLevel) {
         assert(parent->isReachable());
         assert(minParentLevel != SESVertexData::UNREACHABLE);
-        vd->level = minParentLevel + 1;
-        vd->parent = parent;
+        //vd->level = minParentLevel + 1;
+        //vd->parent = parent;
+        vd->setParent(parent, treeArc);
         assert (vd->level >= oldVLevel);
         levelDiff = vd->level - oldVLevel;
         PRINT_DEBUG("Parent has changed, new parent is " << parent);
@@ -669,7 +692,8 @@ unsigned long long SimpleESTree::process(SESVertexData *vd, PriorityQueue &queue
 #ifdef COLLECT_PR_DATA
             prVertexConsidered();
 #endif
-            if (hd->isParent(vd) && !inQueue[head]) {
+            //if (hd->isParent(vd) && !inQueue[head]) {
+            if (hd->isTreeArc(a) && !inQueue[head]) {
                 if (timesInQueue[head] < requeueLimit) {
                     PRINT_DEBUG("    Adding child " << hd << " to queue...");
                     timesInQueue[head]++;

@@ -52,6 +52,7 @@ protected:
     // DynamicSSReachAlgorithm interface
 public:
     virtual bool query(const Vertex *t) override;
+    virtual std::vector<Arc*> queryPath(const Vertex *t) override;
 
 protected:
     virtual void onSourceSet() override;

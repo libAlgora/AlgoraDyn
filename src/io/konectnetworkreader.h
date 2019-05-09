@@ -34,7 +34,7 @@ class KonectNetworkReader : public StreamDiGraphReader
 {
 public:
     explicit KonectNetworkReader(bool antedateVertexAdditions = false, bool removeIsolatedEndVertices = false);
-    virtual ~KonectNetworkReader();
+    virtual ~KonectNetworkReader() override;
 
     std::string getLastError() const { return lastError; }
 

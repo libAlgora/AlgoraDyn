@@ -34,7 +34,7 @@ class SimpleIncSSReachAlgorithm : public DynamicSSReachAlgorithm
 {
 public:
     explicit SimpleIncSSReachAlgorithm(bool reverse = false, bool searchForward = false, double maxUS = 1.0, bool radicalReset = false);
-    virtual ~SimpleIncSSReachAlgorithm();
+    virtual ~SimpleIncSSReachAlgorithm() override;
     void setMaxUnknownStateSqrt();
     void setMaxUnknownStateLog();
     /** relate unknown state ratio to #reachable vertices or #all vertices **/
@@ -92,6 +92,7 @@ protected:
     // DynamicSSReachAlgorithm interface
 public:
     virtual bool query(const Vertex *t) override;
+    virtual std::vector<Arc*> queryPath(const Vertex *t) override;
     virtual void dumpData(std::ostream &os) override;
 
     // DynamicSSReachAlgorithm interface

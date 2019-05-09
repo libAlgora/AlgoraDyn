@@ -41,25 +41,28 @@
 namespace Algora {
 
 ESVertexData::ESVertexData(FastPropertyMap<unsigned long long> *inNeighborIndices, Vertex *v,
-                           ESVertexData *p, const Arc *treeArc, unsigned long long l)
+                           ESVertexData *p, Arc *a, unsigned long long l)
     : parentIndex(0U), level(l), vertex(v), inNeighborIndices(inNeighborIndices)
 {
     if (p != nullptr) {
-        (*inNeighborIndices)[treeArc] = 1U;
+        (*inNeighborIndices)[a] = 1U;
         inNeighbors.push_back(p);
+        inArcs.push_back(a);
         level = p->level + 1;
     }
 }
 
-void ESVertexData::reset(ESVertexData *p, const Arc *treeArc, unsigned long long l)
+void ESVertexData::reset(ESVertexData *p, Arc *a, unsigned long long l)
 {
     inNeighbors.clear();
+    inArcs.clear();
     recycledIndices.clear();
     parentIndex = 0U;
     level = l;
     if (p != nullptr) {
-        (*inNeighborIndices)[treeArc] = 1U;
+        (*inNeighborIndices)[a] = 1U;
         inNeighbors.push_back(p);
+        inArcs.push_back(a);
         level = p->level + 1;
     }
 }
@@ -68,25 +71,35 @@ void ESVertexData::setUnreachable() { parentIndex = 0U; level = UNREACHABLE; }
 
 bool ESVertexData::isReachable() const { return level != UNREACHABLE; }
 
-void ESVertexData::addInNeighbor(ESVertexData *in, const Arc *a)
+Arc *ESVertexData::getTreeArc() const
+{
+    if (parentIndex >= inNeighbors.size() || !isReachable()) {
+        return nullptr;
+    }
+    return inArcs[parentIndex];
+}
+
+void ESVertexData::addInNeighbor(ESVertexData *in, Arc *a)
 {
     assert((*inNeighborIndices)[a] == 0U);
     // try to find an empty place
     if (recycledIndices.empty()) {
         (*inNeighborIndices)[a] = inNeighbors.size() + 1U;
         inNeighbors.push_back(in);
+        inArcs.push_back(a);
         PRINT_DEBUG("Added vertex at the end (real index " << ((*inNeighborIndices)[a] - 1U) << ")");
     } else {
         auto i = recycledIndices.back();
         recycledIndices.pop_back();
         assert(inNeighbors[i] == nullptr);
         inNeighbors[i] = in;
+        inArcs[i] = a;
         (*inNeighborIndices)[a] = i + 1U;
         PRINT_DEBUG("Inserted vertex at index " << i);
     }
 }
 
-unsigned long long ESVertexData::reparent(ESVertexData *in, const Arc *a)
+unsigned long long ESVertexData::reparent(ESVertexData *in, Arc *a)
 {
     auto inLevel = in->level;
     if (inLevel >= level) {
@@ -110,17 +123,25 @@ void ESVertexData::findAndRemoveInNeighbor(ESVertexData *in, const Arc *a)
     auto index = (*inNeighborIndices)[a] - 1U;
     assert(inNeighbors[index] == in);
     inNeighbors[index] = nullptr;
+    inArcs[index] = nullptr;
     inNeighborIndices->resetToDefault(a);
     recycledIndices.push_back(index);
 }
 
-bool ESVertexData::isParent(ESVertexData *p)
+bool ESVertexData::isParent(const ESVertexData *p)
 {
     if (parentIndex >= inNeighbors.size() || !isReachable()) {
         return false;
     }
     return inNeighbors[parentIndex] == p;
+}
 
+bool ESVertexData::isTreeArc(const Arc *a)
+{
+    if (parentIndex >= inNeighbors.size() || !isReachable()) {
+        return false;
+    }
+    return inArcs[parentIndex] == a;
 }
 
 ESVertexData *ESVertexData::getParentData() const

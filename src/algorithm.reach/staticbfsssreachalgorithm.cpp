@@ -20,6 +20,8 @@
  *   http://algora.xaikal.org
  */
 
+#include <cassert>
+
 #include "staticbfsssreachalgorithm.h"
 #include "property/fastpropertymap.h"
 
@@ -52,11 +54,11 @@ bool StaticBFSSSReachAlgorithm::query(const Vertex *t)
     bfs.setStartVertex(source);
     bool reachable = false;
 #ifdef COLLECT_PR_DATA
-    bfs.onArcDiscover([t,&reachable,this](const Arc *) {
+    bfs.onArcDiscover([this](const Arc *) {
         prArcConsidered();
         return true;
     });
-    bfs.onVertexDiscover([t,&reachable,this](const Vertex *) {
+    bfs.onVertexDiscover([this](const Vertex *) {
         prVertexConsidered();
         return true;
     });
@@ -69,6 +71,54 @@ bool StaticBFSSSReachAlgorithm::query(const Vertex *t)
     });
     runAlgorithm(bfs, diGraph);
     return reachable;
+}
+
+std::vector<Arc *> StaticBFSSSReachAlgorithm::queryPath(const Vertex *t)
+{
+    std::vector<Arc*> path;
+    if (t == source) {
+        return path;
+    }
+
+    BreadthFirstSearch<FastPropertyMap,false> bfs(false, false);
+    bfs.setStartVertex(source);
+    FastPropertyMap<Arc*> treeArc(nullptr);
+    bool reachable = false;
+#ifdef COLLECT_PR_DATA
+    bfs.onArcDiscover([this](const Arc *) {
+        prArcConsidered();
+        return true;
+    });
+    bfs.onVertexDiscover([this](const Vertex *) {
+        prVertexConsidered();
+        return true;
+    });
+#endif
+    bfs.onTreeArcDiscover([t,&reachable, &treeArc](const Arc *a) {
+        auto head = a->getHead();
+        treeArc[head] = const_cast<Arc*>(a);
+        if (head == t) {
+            reachable = true;
+        }
+        return reachable;
+    });
+    bfs.setArcStopCondition([&reachable](const Arc *) {
+        return reachable;
+    });
+    runAlgorithm(bfs, diGraph);
+
+    if (reachable) {
+        while (t != source) {
+            auto *a = treeArc(t);
+            path.push_back(a);
+            t = a->getTail();
+        }
+        assert(!path.empty());
+
+        std::reverse(path.begin(), path.end());
+    }
+
+    return path;
 }
 
 }

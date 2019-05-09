@@ -38,9 +38,13 @@ struct LazyDFSSSReachAlgorithm::CheshireCat {
     Vertex *source;
     std::vector<Arc*> stack;
     FastPropertyMap<bool> discovered;
+    FastPropertyMap<Arc*> treeArc;
 
     CheshireCat(LazyDFSSSReachAlgorithm *p)
-        : parent(p), initialized(false), arcAdded(false), arcRemoved(false), exhausted(false) { discovered.setDefaultValue(false); }
+        : parent(p), initialized(false), arcAdded(false), arcRemoved(false), exhausted(false) {
+        discovered.setDefaultValue(false);
+        treeArc.setDefaultValue(nullptr);
+    }
 
     bool searchOn(const Vertex *t) {
         if (!initialized) {
@@ -49,6 +53,7 @@ struct LazyDFSSSReachAlgorithm::CheshireCat {
                 stack.push_back(a);
             });
             discovered.resetAll();
+            treeArc.resetAll();
             discovered[source] = true;
 #ifdef COLLECT_PR_DATA
             parent->prReset();
@@ -56,7 +61,7 @@ struct LazyDFSSSReachAlgorithm::CheshireCat {
         }
         bool stop = false;
         while (!stop && !stack.empty()) {
-            const Arc *a = stack.back();
+            Arc *a = stack.back();
             stack.pop_back();
             Vertex *v = a->getHead();
             if (discovered(v)) {
@@ -66,6 +71,7 @@ struct LazyDFSSSReachAlgorithm::CheshireCat {
             parent->prVertexConsidered();
 #endif
             discovered[v] = true;
+            treeArc[v] = a;
             if (v == t) {
                 stop = true;
             }
@@ -77,9 +83,6 @@ struct LazyDFSSSReachAlgorithm::CheshireCat {
                 Vertex *head = a->getHead();
                 if (!discovered(head)) {
                     stack.push_back(a);
-                    if (head == t) {
-                      stop = true;
-                    }
                 }
             });
         }
@@ -100,6 +103,33 @@ struct LazyDFSSSReachAlgorithm::CheshireCat {
             initialized = false;
         }
         return searchOn(t) || discovered(t);
+    }
+
+    void constructPath(const Vertex *t, std::vector<Arc *> &path) {
+        while (t != source) {
+            auto *a = treeArc(t);
+            path.push_back(a);
+            t = a->getTail();
+        }
+        assert(!path.empty());
+
+        std::reverse(path.begin(), path.end());
+    }
+
+    void queryPath(const Vertex *t, std::vector<Arc *> &path) {
+        if (t == source || (exhausted && !arcAdded && !discovered(t))) {
+            return;
+        } else if (initialized && !arcRemoved && discovered(t)) {
+            constructPath(t, path);
+            return;
+        }
+        if (arcAdded || arcRemoved) {
+            initialized = false;
+        }
+
+        if (searchOn(t) || discovered(t)) {
+            constructPath(t, path);
+        }
     }
 };
 
@@ -172,7 +202,7 @@ void LazyDFSSSReachAlgorithm::onArcRemove(Arc *a)
         return;
     }
 
-    if (grin->exhausted && !grin->discovered(head)) {
+    if ((grin->exhausted || grin->discovered(head)) && a != grin->treeArc(head)) {
         return;
     }
 
@@ -182,6 +212,14 @@ void LazyDFSSSReachAlgorithm::onArcRemove(Arc *a)
 bool LazyDFSSSReachAlgorithm::query(const Vertex *t)
 {
     return grin->query(t);
+}
+
+std::vector<Arc *> LazyDFSSSReachAlgorithm::queryPath(const Vertex *t)
+{
+    std::vector<Arc*> path;
+    grin->queryPath(t, path);
+    assert (!query(t) || !path.empty() || t == source);
+    return path;
 }
 
 void LazyDFSSSReachAlgorithm::onSourceSet()

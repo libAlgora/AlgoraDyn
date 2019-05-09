@@ -41,6 +41,7 @@ public:
 
     // DynamicSSReachAlgorithm interface
     virtual bool query(const Vertex *t) override;
+    virtual std::vector<Arc*> queryPath(const Vertex *t) override;
 
     // DynamicDiGraphAlgorithm interface
     virtual void onArcAdd(Arc *a) override;

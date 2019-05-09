@@ -38,10 +38,12 @@ struct LazyBFSSSReachAlgorithm::CheshireCat {
     Vertex *source;
     boost::circular_buffer<Vertex*> queue;
     FastPropertyMap<bool> discovered;
+    FastPropertyMap<Arc*> treeArc;
 
     CheshireCat(LazyBFSSSReachAlgorithm *p)
         : parent(p), initialized(false), arcAdded(false), arcRemoved(false), exhausted(false) {
         discovered.setDefaultValue(false);
+        treeArc.setDefaultValue(nullptr);
     }
 
     void searchOn(const Vertex *t) {
@@ -50,6 +52,7 @@ struct LazyBFSSSReachAlgorithm::CheshireCat {
             queue.set_capacity(graph->getSize());
             queue.push_back(source);
             discovered.resetAll();
+            treeArc.resetAll();
             discovered[source] = true;
 #ifdef COLLECT_PR_DATA
             parent->prReset();
@@ -70,6 +73,7 @@ struct LazyBFSSSReachAlgorithm::CheshireCat {
                 if (!discovered(head)) {
                     queue.push_back(head);
                     discovered[head] = true;
+                    treeArc[head] = a;
                     if (head == t) {
                         stop = true;
                     }
@@ -93,6 +97,34 @@ struct LazyBFSSSReachAlgorithm::CheshireCat {
         }
         searchOn(t);
         return discovered(t);
+    }
+
+    void constructPath(const Vertex *t, std::vector<Arc *> &path) {
+        while (t != source) {
+            auto *a = treeArc(t);
+            path.push_back(a);
+            t = a->getTail();
+        }
+        assert(!path.empty());
+
+        std::reverse(path.begin(), path.end());
+    }
+
+    void queryPath(const Vertex *t, std::vector<Arc *> &path) {
+        if (t == source || (exhausted && !arcAdded && !discovered(t))) {
+            return;
+        } else if (initialized && !arcRemoved && discovered(t)) {
+            constructPath(t, path);
+            return;
+        }
+        if (arcAdded || arcRemoved) {
+            initialized = false;
+        }
+
+        searchOn(t);
+        if (discovered(t)) {
+            constructPath(t, path);
+        }
     }
 };
 
@@ -165,7 +197,7 @@ void LazyBFSSSReachAlgorithm::onArcRemove(Arc *a)
         return;
     }
 
-    if (grin->exhausted && !grin->discovered(head)) {
+    if ((grin->exhausted || grin->discovered(head)) && a != grin->treeArc(head)) {
         return;
     }
 
@@ -175,6 +207,14 @@ void LazyBFSSSReachAlgorithm::onArcRemove(Arc *a)
 bool LazyBFSSSReachAlgorithm::query(const Vertex *t)
 {
     return grin->query(t);
+}
+
+std::vector<Arc *> LazyBFSSSReachAlgorithm::queryPath(const Vertex *t)
+{
+    std::vector<Arc*> path;
+    grin->queryPath(t, path);
+    assert (!query(t) || !path.empty() || t == source);
+    return path;
 }
 
 void LazyBFSSSReachAlgorithm::onSourceSet()

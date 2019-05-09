@@ -20,6 +20,8 @@
  *   http://algora.xaikal.org
  */
 
+#include <cassert>
+
 #include "cachingdfsssreachalgorithm.h"
 #include "algorithm/digraphalgorithmexception.h"
 
@@ -31,38 +33,38 @@ struct CachingDFSSSReachAlgorithm::CheshireCat {
     bool initialized;
     bool arcAdded;
     bool arcRemoved;
+    FastPropertyMap<Arc*> treeArc;
 
     CachingDFSSSReachAlgorithm *parent;
-    DiGraph *graph;
+    DiGraph *diGraph;
     Vertex *source;
 
     CheshireCat()
         : initialized(false), arcAdded(false), arcRemoved(false) {
         dfs.computeValues(false);
+        treeArc.setDefaultValue(nullptr);
     }
 
-    void run()
-    {
+    void run() {
+        treeArc.resetAll();
         dfs.setStartVertex(source);
-        dfs.setGraph(graph);
-        if (!dfs.prepare()) {
-            throw DiGraphAlgorithmException(parent, "Could not prepare DFS algorithm.");
-        }
-        dfs.run();
-        dfs.deliver();
+        dfs.onTreeArcDiscover([this](const Arc *a) {
+            treeArc[a->getHead()] = const_cast<Arc*>(a);
+            return true;
+        });
+        runAlgorithm(dfs, diGraph);
         initialized = true;
         arcAdded = false;
         arcRemoved = false;
 
 #ifdef COLLECT_PR_DATA
         parent->prReset();
-        parent->prVerticesConsidered(graph->getSize());
-        parent->prArcsConsidered(graph->getNumArcs());
+        parent->prVerticesConsidered(diGraph->getSize());
+        parent->prArcsConsidered(diGraph->getNumArcs());
 #endif
     }
 
-    bool query(const Vertex *t)
-    {
+    bool query(const Vertex *t) {
         if (t == source || (initialized && !arcRemoved && dfs.vertexDiscovered(t))) {
             return true;
         } else if (initialized && !arcAdded && !dfs.vertexDiscovered(t)) {
@@ -72,6 +74,33 @@ struct CachingDFSSSReachAlgorithm::CheshireCat {
             run();
         }
         return dfs.vertexDiscovered(t);
+    }
+
+    void constructPath(const Vertex *t, std::vector<Arc *> &path) {
+        while (t != source) {
+            auto *a = treeArc(t);
+            path.push_back(a);
+            t = a->getTail();
+        }
+        assert(!path.empty());
+
+        std::reverse(path.begin(), path.end());
+    }
+
+    void queryPath(const Vertex *t, std::vector<Arc *> &path) {
+        if (t == source || (initialized && !arcAdded && !dfs.vertexDiscovered(t))) {
+            return;
+        } else if (initialized && !arcRemoved && dfs.vertexDiscovered(t)) {
+            constructPath(t, path);
+            return;
+        }
+        if (!initialized || arcAdded || arcRemoved) {
+            run();
+        }
+
+        if (dfs.vertexDiscovered(t)) {
+            constructPath(t, path);
+        }
     }
 };
 
@@ -96,13 +125,21 @@ bool CachingDFSSSReachAlgorithm::query(const Vertex *t)
     return grin->query(t);
 }
 
+std::vector<Arc *> CachingDFSSSReachAlgorithm::queryPath(const Vertex *t)
+{
+    std::vector<Arc*> path;
+    grin->queryPath(t, path);
+    assert (!query(t) || !path.empty() || t == source);
+    return path;
+}
+
 void CachingDFSSSReachAlgorithm::onDiGraphSet()
 {
     DynamicSSReachAlgorithm::onDiGraphSet();
     grin->initialized = false;
     grin->arcAdded = false;
     grin->arcRemoved = false;
-    grin->graph = diGraph;
+    grin->diGraph = diGraph;
 }
 
 void CachingDFSSSReachAlgorithm::onDiGraphUnset()
@@ -111,7 +148,7 @@ void CachingDFSSSReachAlgorithm::onDiGraphUnset()
     grin->initialized = false;
     grin->arcAdded = false;
     grin->arcRemoved = false;
-    grin->graph = nullptr;
+    grin->diGraph = nullptr;
     DynamicSSReachAlgorithm::onDiGraphUnset();
 }
 
@@ -148,7 +185,7 @@ void CachingDFSSSReachAlgorithm::onArcRemove(Arc *a)
         return;
     }
 
-    if (!grin->dfs.vertexDiscovered(head)) {
+    if (a != grin->treeArc(head)) {
         return;
     }
 
