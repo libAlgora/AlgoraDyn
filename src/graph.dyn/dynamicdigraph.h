@@ -38,6 +38,7 @@ public:
 
     DiGraph *getDiGraph() const;
     unsigned long long getCurrentTime() const;
+    unsigned long long getTimeOfXthNextDelta(unsigned long long x, bool forward) const;
     unsigned long long getMaxTime() const;
     unsigned long long getNumberOfDeltas() const;
     unsigned long long getCurrentGraphSize() const;

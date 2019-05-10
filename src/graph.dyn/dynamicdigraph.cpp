@@ -607,6 +607,26 @@ unsigned long long DynamicDiGraph::getCurrentTime() const
             ? 0U : grin->timestamps[grin->timeIndex];
 }
 
+unsigned long long DynamicDiGraph::getTimeOfXthNextDelta(unsigned long long x, bool forward) const
+{
+    if (grin->timestamps.empty()) {
+        return 0U;
+    }
+    auto tIndex = grin->timeIndex;
+    if (!forward && x > tIndex) {
+        tIndex = 0ULL;
+    } else if (!forward) {
+        tIndex -= x;
+    } else {
+        tIndex += x;
+        if (tIndex >= grin->timestamps.size()) {
+            tIndex = grin->timestamps.size() - 1U;
+        }
+    }
+
+    return grin->timestamps[tIndex];
+}
+
 unsigned long long DynamicDiGraph::getMaxTime() const
 {
     return grin->timestamps.empty() ? 0U : grin->timestamps.back();
