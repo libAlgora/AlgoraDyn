@@ -1,6 +1,7 @@
 message("pri file being processed: $$PWD")
 
 HEADERS += \
-    $$PWD/dynamicdigraphgenerator.h \
+    $$PWD/randomdynamicdigraphgenerator.h
 
 SOURCES += \
+    $$PWD/randomdynamicdigraphgenerator.cpp
