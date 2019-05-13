@@ -63,18 +63,21 @@ void DynamicDiGraphStatistics::analyzeDynamicDiGraph(DynamicDiGraph *dyGraph)
     minArcAdditions = 0ULL;
     maxArcAdditions = 0ULL;
     medArcAdditions = 0ULL;
+    sumArcAdditions = 0ULL;
     avgArcAdditions = 0.0;
     std::vector<unsigned long long> arcAdditions;
 
     minArcRemovals = 0ULL;
     maxArcRemovals = 0ULL;
     medArcRemovals = 0ULL;
+    sumArcRemovals = 0ULL;
     avgArcRemovals = 0.0;
     std::vector<unsigned long long> arcRemovals;
 
     minTimeDelta = 0ULL;
     maxTimeDelta = 0ULL;
     medTimeDelta = 0ULL;
+    sumTimeDelta = 0ULL;
     avgTimeDelta = 0.0;
     std::vector<unsigned long long> timeDeltas;
 
@@ -121,19 +124,22 @@ void DynamicDiGraphStatistics::analyzeDynamicDiGraph(DynamicDiGraph *dyGraph)
     minArcAdditions = *(p.first);
     maxArcAdditions = *(p.second);
     medArcAdditions = medianOf(arcAdditions);
-    avgArcAdditions = (1.0 * std::accumulate(std::begin(arcAdditions), std::end(arcAdditions), 0ULL)) / arcAdditions.size();
+    sumArcAdditions = std::accumulate(std::begin(arcAdditions), std::end(arcAdditions), 0ULL);
+    avgArcAdditions = (1.0 * sumArcAdditions) / arcAdditions.size();
 
     p = std::minmax_element(std::begin(arcRemovals), std::end(arcRemovals));
     minArcRemovals = *(p.first);
     maxArcRemovals = *(p.second);
     medArcRemovals = medianOf(arcRemovals);
-    avgArcRemovals = (1.0 * std::accumulate(std::begin(arcRemovals), std::end(arcRemovals), 0ULL)) / arcRemovals.size();
+    sumArcRemovals = std::accumulate(std::begin(arcRemovals), std::end(arcRemovals), 0ULL);
+    avgArcRemovals = (1.0 * sumArcRemovals) / arcRemovals.size();
 
     p = std::minmax_element(std::begin(timeDeltas), std::end(timeDeltas));
     minTimeDelta = *(p.first);
     maxTimeDelta = *(p.second);
     medTimeDelta = medianOf(timeDeltas);
-    avgTimeDelta = (1.0 * std::accumulate(std::begin(timeDeltas), std::end(timeDeltas), 0ULL)) / timeDeltas.size();
+    sumTimeDelta = std::accumulate(std::begin(timeDeltas), std::end(timeDeltas), 0ULL);
+    avgTimeDelta = (1.0 * sumTimeDelta) / timeDeltas.size();
 }
 
 

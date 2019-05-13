@@ -51,16 +51,19 @@ public:
     unsigned long long minimumArcAdditions() const { return minArcAdditions; }
     unsigned long long maximumArcAdditions() const { return maxArcAdditions; }
     unsigned long long medianArcAdditions() const { return medArcAdditions; }
+    unsigned long long totalArcAdditions() const { return sumArcAdditions; }
     double averageArcAdditions() const { return avgArcAdditions; }
 
     unsigned long long minimumArcRemovals() const { return minArcRemovals; }
     unsigned long long maximumArcsRemovals() const { return maxArcRemovals; }
     unsigned long long medianArcRemovals() const { return medArcRemovals; }
+    unsigned long long totalArcRemovals() const { return sumArcRemovals; }
     double averageArcRemovals() const { return avgArcRemovals; }
 
     unsigned long long minimumTimeDelta() const { return minTimeDelta; }
     unsigned long long maximumTimeDelta() const { return maxTimeDelta; }
     unsigned long long medianTimeDelta() const { return medTimeDelta; }
+    unsigned long long totalTimeDelta() const { return sumTimeDelta; }
     double averageTimeDelta() const { return avgTimeDelta; }
 
 private:
@@ -81,16 +84,19 @@ private:
     unsigned long long minArcAdditions;
     unsigned long long maxArcAdditions;
     unsigned long long medArcAdditions;
+    unsigned long long sumArcAdditions;
     double avgArcAdditions;
 
     unsigned long long minArcRemovals;
     unsigned long long maxArcRemovals;
     unsigned long long medArcRemovals;
+    unsigned long long sumArcRemovals;
     double avgArcRemovals;
 
     unsigned long long minTimeDelta;
     unsigned long long maxTimeDelta;
     unsigned long long medTimeDelta;
+    unsigned long long sumTimeDelta;
     double avgTimeDelta;
 };
 
