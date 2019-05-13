@@ -4,16 +4,19 @@
 #include <random>
 #include <tuple>
 
+#include "graph.dyn/dynamicdigraph.h"
+
 namespace Algora {
 
 class DynamicDiGraph;
 class Vertex;
 
-//template <unsigned int V = 1, unsigned int A = 0>
 class RandomQueryGenerator
 {
-    enum struct NUM_QUERY_RELATION : std::int8_t { TIMEDIFF_IN_DELTA, OPS_IN_DELTA };
 public:
+    typedef std::vector<DynamicDiGraph::VertexIdentifier> VertexQueryList;
+    enum struct NUM_QUERY_RELATION : std::int8_t { TIMEDIFF_IN_DELTA, OPS_IN_DELTA };
+
     RandomQueryGenerator();
 
     void setSeed(unsigned long long s) { seed = s; initialized = false; }
@@ -21,7 +24,8 @@ public:
     void setRelativeNumberOfQueries(double n, const NUM_QUERY_RELATION &r) { relativeQueries = n; relateTo = r; absoluteQueries = 0.0; }
 
     //std::vector<std::tuple<Vertex*>> generateQueries();
-    std::vector<Vertex*> generateVertexQueries(const DynamicDiGraph *dyGraph);
+    VertexQueryList generateVertexQueries(const DynamicDiGraph *dyGraph);
+    std::vector<VertexQueryList> generateAllVertexQueries(DynamicDiGraph *dyGraph);
 
 
 private:

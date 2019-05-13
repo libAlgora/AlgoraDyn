@@ -47,7 +47,7 @@ public:
     void setArcRemovalProportion(unsigned int p) { propDeletion = p; }
     void setAdvanceTimeProportion(unsigned int p) { propAdvance = p; }
     void setMultiplier(unsigned int times) { multiplier = times; }
-    void setSeed(unsigned int s) { seed = s; }
+    void setSeed(unsigned long long s) { seed = s; }
 
     unsigned long long getInitialGraphSize() const { return iGraphSize; }
     unsigned long long getInitialArcSize() const { return iArcSize; }
