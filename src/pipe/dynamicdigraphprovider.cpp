@@ -20,29 +20,12 @@
  *   http://algora.xaikal.org
  */
 
-#ifndef DYNAMICDIGRAPHPROVIDER_H
-#define DYNAMICDIGRAPHPROVIDER_H
-
-#include <string>
+#include "dynamicdigraphprovider.h"
 
 namespace Algora {
 
-class DynamicDiGraph;
+std::string DynamicDiGraphProvider::getConfiguration() const { return std::string(); }
 
-class DynamicDiGraphProvider
-{
-public:
-    DynamicDiGraphProvider() { }
-    virtual ~DynamicDiGraphProvider() { }
-
-    virtual bool isGraphAvailable() = 0;
-    virtual bool provideDynamicDiGraph(DynamicDiGraph *dyGraph) = 0;
-
-    virtual std::string getConfiguration() const;
-    virtual std::string getConfigurationAsJson(const std::string &/*indent*/) const;
-    virtual std::string getName() const noexcept { return "Dynamic Digraph Provider"; }
-};
+std::string DynamicDiGraphProvider::getConfigurationAsJson(const std::string &) const {  return std::string(); }
 
 }
-
-#endif // DYNAMICDIGRAPHPROVIDER_H

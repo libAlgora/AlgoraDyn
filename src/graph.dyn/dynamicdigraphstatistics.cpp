@@ -38,7 +38,7 @@ typename C::value_type medianOf(const C &container, const typename C::value_type
         return emptyValue;
     }
     auto half = v.size() / 2;
-    std::nth_element(v.begin(), v.begin()+half, v.end());
+    std::nth_element(v.begin(), v.begin() + static_cast<typename C::difference_type>(half), v.end());
     return v[half];
 }
 
