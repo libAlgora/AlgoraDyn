@@ -52,6 +52,7 @@ public:
     void removeVertex(VertexIdentifier vertexId, DynamicTime timestamp);
     void addArc(VertexIdentifier tailId, VertexIdentifier headId, DynamicTime timestamp, bool antedateVertexAdditions = false);
     void removeArc(VertexIdentifier tailId, VertexIdentifier headId, DynamicTime timestamp, bool removeIsolatedEnds = false);
+    void noop(DynamicTime timestamp);
     bool hasArc(VertexIdentifier tailId, VertexIdentifier headId);
     void clear();
     void compact(unsigned long long num);
@@ -64,6 +65,7 @@ public:
     bool lastOpWasArcAddition() const;
     bool lastOpWasArcRemoval() const;
     bool lastOpWasMultiple() const;
+    bool lastOpWasNoop() const;
     Vertex *getCurrentVertexForId(VertexIdentifier vertexId) const;
     VertexIdentifier idOfIthVertex(unsigned long long i);
     unsigned long long getSizeOfLastDelta() const;

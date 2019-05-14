@@ -44,7 +44,7 @@
 namespace Algora {
 
 struct Operation {
-    enum Type { VERTEX_ADDITION, VERTEX_REMOVAL, ARC_ADDITION, ARC_REMOVAL, MULTIPLE };
+    enum Type { VERTEX_ADDITION, VERTEX_REMOVAL, ARC_ADDITION, ARC_REMOVAL, MULTIPLE, NONE };
     virtual ~Operation() {}
     virtual void apply(IncidenceListGraph *graph) = 0;
     virtual Type getType() const = 0;
@@ -73,6 +73,12 @@ struct OperationSet : public Operation {
         }
     }
 };
+
+struct NoOperation : public Operation {
+    virtual void apply(IncidenceListGraph *) override {}
+    virtual Type getType() const override { return NONE; }
+};
+
 
 struct AddVertexOperation : public Operation {
     Vertex *vertex;
@@ -341,6 +347,12 @@ struct DynamicDiGraph::CheshireCat {
         }
 
         graphChangedSinceLastReset = true;
+    }
+
+    void noop(DynamicTime timestamp) {
+        checkTimestamp(timestamp);
+        NoOperation *nop = new NoOperation;
+        operations.push_back(nop);
     }
 
     Arc *findArc(VertexIdentifier tailId, VertexIdentifier headId) {
@@ -676,6 +688,11 @@ void DynamicDiGraph::removeArc(VertexIdentifier tailId, VertexIdentifier headId,
     grin->removeArc(tailId, headId, timestamp, removeIsolatedEnds);
 }
 
+void DynamicDiGraph::noop(DynamicDiGraph::DynamicTime timestamp)
+{
+    grin->noop(timestamp);
+}
+
 bool DynamicDiGraph::hasArc(VertexIdentifier tailId, VertexIdentifier headId)
 {
     return grin->findArc(tailId, headId) != nullptr;
@@ -734,6 +751,11 @@ bool DynamicDiGraph::lastOpWasArcRemoval() const
 bool DynamicDiGraph::lastOpWasMultiple() const
 {
     return grin->lastOpHadType(Operation::Type::MULTIPLE);
+}
+
+bool DynamicDiGraph::lastOpWasNoop() const
+{
+    return grin->lastOpHadType(Operation::Type::NONE);
 }
 
 Vertex *DynamicDiGraph::getCurrentVertexForId(VertexIdentifier vertexId) const
