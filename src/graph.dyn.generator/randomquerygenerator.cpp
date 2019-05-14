@@ -38,15 +38,22 @@ std::vector<RandomQueryGenerator::VertexQueryList> RandomQueryGenerator::generat
     auto randomVertex = std::bind(distVertex, std::ref(gen));
 
     dyGraph->resetToBigBang();
+    auto sumQueries = 0Ull;
 
-    do {
+    while (dyGraph->applyNextDelta()) {
         queriesSet.emplace_back();
         auto &queries = queriesSet.back();
         auto numQueries = computeNumQueries(dyGraph);
+        sumQueries += numQueries;
         for (auto i = 0Ull; i < numQueries; i++) {
             queries.push_back(randomVertex());
         }
-    } while (dyGraph->applyNextDelta());
+    }
+
+    // Special treatment for NOOPs at end
+    if (dyGraph->lastOpWasNoop() && queriesSet.back().empty()) {
+        queriesSet.pop_back();
+    }
 
     return queriesSet;
 
@@ -72,13 +79,13 @@ unsigned long long RandomQueryGenerator::computeNumQueries(const DynamicDiGraph 
     auto numQueries = absoluteQueries;
     if (relativeQueries > 0.0) {
         auto tsCur = dyGraph->getCurrentTime();
-        auto tsPrev = dyGraph->getTimeOfXthNextDelta(1, false);
-        if (tsPrev == tsCur) {
+        auto tsNext = dyGraph->getTimeOfXthNextDelta(1, true);
+        if (tsNext == tsCur) {
             return 0ULL;
         }
         switch (relateTo) {
         case NUM_QUERY_RELATION::TIMEDIFF_IN_DELTA:
-            numQueries = tsCur - tsPrev;
+            numQueries = tsNext - tsCur;
             break;
         case NUM_QUERY_RELATION::OPS_IN_DELTA:
             numQueries = dyGraph->countArcAdditions(tsCur, tsCur) + dyGraph->countArcRemovals(tsCur, tsCur);
