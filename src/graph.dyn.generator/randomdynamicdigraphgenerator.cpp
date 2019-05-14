@@ -139,10 +139,14 @@ bool RandomDynamicDiGraphGenerator::provideDynamicDiGraph(DynamicDiGraph *dyGrap
         } else if (r < thresholdAdvance) {
             removeRandomArc(multiplier);
         } else {
-            timestamp++;
+            timestamp += multiplier;
             numAdvances++;
         }
     }
+    if (dyGraph->getMaxTime() < timestamp) {
+        dyGraph->noop(timestamp);
+    }
+
     assert(numAdditions == dyGraph->countArcAdditions(1U, timestamp));
     assert(numDeletions == dyGraph->countArcRemovals(1U, timestamp));
     return true;
