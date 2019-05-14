@@ -113,12 +113,14 @@ void DynamicDiGraphStatistics::analyzeDynamicDiGraph(DynamicDiGraph *dyGraph)
     maxGraphSize = *(p.second);
     medGraphSize = medianOf(graphSizes);
     avgGraphSize = (1.0 * std::accumulate(std::begin(graphSizes), std::end(graphSizes), 0ULL)) / graphSizes.size();
+    fGraphSize = graphSizes.back();
 
     p = std::minmax_element(std::begin(arcSizes), std::end(arcSizes));
     minArcSize = *(p.first);
     maxArcSize = *(p.second);
     medArcSize = medianOf(arcSizes);
     avgArcSize = (1.0 * std::accumulate(std::begin(arcSizes), std::end(arcSizes), 0ULL)) / arcSizes.size();
+    fArcSize = arcSizes.back();
 
     p = std::minmax_element(std::begin(arcAdditions), std::end(arcAdditions));
     minArcAdditions = *(p.first);
