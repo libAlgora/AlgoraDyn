@@ -65,7 +65,7 @@ void RandomQueryGenerator::init()
         return;
     }
 
-    if (seed == 0U) {
+    if (seed == 0ULL) {
         std::random_device rd;
         seed = rd();
     }
