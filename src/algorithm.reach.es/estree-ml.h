@@ -36,7 +36,7 @@ class ESTreeML : public DynamicSSReachAlgorithm
 {
 public:
     explicit ESTreeML(unsigned long long requeueLimit = 5, double maxAffectedRatio = 0.5);
-    virtual ~ESTreeML();
+    virtual ~ESTreeML() override;
     void setRequeueLimit(unsigned long long limit) {
         requeueLimit = limit;
     }

@@ -170,7 +170,7 @@ bool ESVertexData::checkIntegrity() const
 
 std::ostream &operator<<(std::ostream &os, const ESVertexData *vd) {
     if (vd == nullptr) {
-        os << " null ";
+        os << "null";
         return os;
     }
 
