@@ -23,7 +23,9 @@
 message("pri file being processed: $$PWD")
 
 HEADERS += \
-    $$PWD/dynamicdigraphprovider.h
+    $$PWD/dynamicdigraphprovider.h \
+    $$PWD/dynamicdigraphqueryprovider.h
 
 SOURCES += \
-    $$PWD/dynamicdigraphprovider.cpp
+    $$PWD/dynamicdigraphprovider.cpp \
+    $$PWD/dynamicdigraphqueryprovider.cpp
