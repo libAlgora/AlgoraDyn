@@ -5,16 +5,16 @@
 #include <tuple>
 
 #include "graph.dyn/dynamicdigraph.h"
+#include "pipe/dynamicdigraphqueryprovider.h"
 
 namespace Algora {
 
 class DynamicDiGraph;
 class Vertex;
 
-class RandomQueryGenerator
+class RandomQueryGenerator : public DynamicDiGraphQueryProvider
 {
 public:
-    typedef std::vector<DynamicDiGraph::VertexIdentifier> VertexQueryList;
     enum struct NUM_QUERY_RELATION : std::int8_t { TIMEDIFF_IN_DELTA, OPS_IN_DELTA };
 
     RandomQueryGenerator();
@@ -22,19 +22,22 @@ public:
     void setSeed(unsigned long long s) { seed = s; initialized = false; }
     void setAbsoluteNumberOfQueries(unsigned int n) { absoluteQueries = n; relativeQueries = 0.0; }
     void setRelativeNumberOfQueries(double n, const NUM_QUERY_RELATION &r) { relativeQueries = n; relateTo = r; absoluteQueries = 0.0; }
+    unsigned long long getSeed() const { return seed; }
 
-    //std::vector<std::tuple<Vertex*>> generateQueries();
     VertexQueryList generateVertexQueries(const DynamicDiGraph *dyGraph);
-    std::vector<VertexQueryList> generateAllVertexQueries(DynamicDiGraph *dyGraph);
+    std::vector<VertexQueryList> provideVertexQueries(DynamicDiGraph *dyGraph) override;
 
+    // DynamicDiGraphQueryProvider interface
+public:
+    virtual std::string getName() const noexcept override { return "Random Query Generator"; }
 
 private:
     unsigned long long absoluteQueries;
     double relativeQueries;
     NUM_QUERY_RELATION relateTo;
 
-    unsigned long long seed;
     std::mt19937_64 gen;
+    unsigned long long seed;
     bool initialized;
 
     void init();

@@ -28,7 +28,7 @@ RandomQueryGenerator::VertexQueryList RandomQueryGenerator::generateVertexQuerie
     return queries;
 }
 
-std::vector<RandomQueryGenerator::VertexQueryList> RandomQueryGenerator::generateAllVertexQueries(DynamicDiGraph *dyGraph)
+std::vector<RandomQueryGenerator::VertexQueryList> RandomQueryGenerator::provideVertexQueries(DynamicDiGraph *dyGraph)
 {
     init();
     std::vector<VertexQueryList> queriesSet;
@@ -91,6 +91,7 @@ unsigned long long RandomQueryGenerator::computeNumQueries(const DynamicDiGraph 
             numQueries = dyGraph->countArcAdditions(tsCur, tsCur) + dyGraph->countArcRemovals(tsCur, tsCur);
             break;
         }
+        numQueries *= relativeQueries;
     }
     return numQueries;
 }
