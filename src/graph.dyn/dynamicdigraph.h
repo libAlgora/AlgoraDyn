@@ -23,7 +23,7 @@
 #ifndef DYNAMICDIGRAPH_H
 #define DYNAMICDIGRAPH_H
 
-//#include <vector>
+#include <vector>
 
 namespace Algora {
 
@@ -43,6 +43,7 @@ public:
     DynamicTime getCurrentTime() const;
     DynamicTime getTimeOfXthNextDelta(DynamicTime x, bool forward) const;
     DynamicTime getMaxTime() const;
+    const std::vector<DynamicTime> &getTimestamps() const;
     unsigned long long getNumberOfDeltas() const;
     unsigned long long getCurrentGraphSize() const;
     unsigned long long getCurrentArcSize() const;
@@ -69,11 +70,13 @@ public:
     Vertex *getCurrentVertexForId(VertexIdentifier vertexId) const;
     VertexIdentifier idOfIthVertex(unsigned long long i);
     unsigned long long getSizeOfLastDelta() const;
+    unsigned long long getSizeOfFinalDelta() const;
 
     unsigned long long countVertexAdditions(DynamicTime timeFrom, DynamicTime timeUntil) const;
     unsigned long long countVertexRemovals(DynamicTime timeFrom, DynamicTime timeUntil) const;
     unsigned long long countArcAdditions(DynamicTime timeFrom, DynamicTime timeUntil) const;
     unsigned long long countArcRemovals(DynamicTime timeFrom, DynamicTime timeUntil) const;
+    unsigned long long countNoops(DynamicTime timeFrom, DynamicTime timeUntil) const;
 
     void squashTimes(DynamicTime timeFrom, DynamicTime timeUntil);
     void secondArcIsRemoval(bool sir);
