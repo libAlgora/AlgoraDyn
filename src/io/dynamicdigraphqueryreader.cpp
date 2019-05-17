@@ -44,10 +44,9 @@ std::vector<DynamicDiGraphQueryProvider::VertexQueryList> DynamicDiGraphQueryRea
     dyGraph->resetToBigBang();
     auto mapIt = map.begin();
 
-    while (dyGraph->applyNextDelta()) {
-        auto graphTime = dyGraph->getCurrentTime();
+    for (const auto &graphTime : dyGraph->getTimestamps()) {
         auto mapTime = mapIt->first;
-        while (mapTime < graphTime) {
+        while (mapTime < graphTime && mapIt != map.end()) {
             std::stringstream ss;
             ss << lastError;
             ss << "WARN: Queries for time " << mapTime << " are ignored." << std::endl;
@@ -65,7 +64,7 @@ std::vector<DynamicDiGraphQueryProvider::VertexQueryList> DynamicDiGraphQueryRea
     }
 
     // Special treatment for NOOPs at end
-    if (dyGraph->lastOpWasNoop() && allQueries.back().empty()) {
+    if (dyGraph->getSizeOfFinalDelta() == dyGraph->countNoops(dyGraph->getMaxTime(), dyGraph->getMaxTime())) {
         allQueries.pop_back();
     }
 

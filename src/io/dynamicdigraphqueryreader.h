@@ -13,6 +13,9 @@ public:
     DynamicDiGraphQueryReader(std::istream *input = nullptr) : inputStream(input), lastError("") { }
     void setInputStream(std::istream *input) { inputStream = input; }
 
+    std::string getErrors() const { return lastError; }
+    void clearErrors() { lastError.clear(); }
+
     // DynamicDiGraphQueryProvider interface
 public:
     virtual std::vector<VertexQueryList> provideVertexQueries(DynamicDiGraph *dyGraph) override;
