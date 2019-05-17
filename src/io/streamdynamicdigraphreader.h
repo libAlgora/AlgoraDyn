@@ -20,36 +20,34 @@
  *   http://algora.xaikal.org
  */
 
-#ifndef KONECTNETWORKREADER_H
-#define KONECTNETWORKREADER_H
+#ifndef STREAMDYNAMICDIGRAPHREADER_H
+#define STREAMDYNAMICDIGRAPHREADER_H
 
-#include "io/streamdigraphreader.h"
-#include <string>
+#include "pipe/dynamicdigraphprovider.h"
+#include <istream>
 
 namespace Algora {
 
-class DynamicDiGraph;
-
-class KonectNetworkReader : public StreamDiGraphReader
+class StreamDynamicDiGraphReader : public DynamicDiGraphProvider
 {
 public:
-    explicit KonectNetworkReader(bool antedateVertexAdditions = false, bool removeIsolatedEndVertices = false);
-    virtual ~KonectNetworkReader() override;
+    explicit StreamDynamicDiGraphReader(std::istream *input = nullptr) : inputStream(input) { }
+    virtual ~StreamDynamicDiGraphReader() override;
 
-    std::string getErrors() const { return lastError; }
-    void clearErrors() { lastError.clear(); }
+    void setInputStream(std::istream *input) { inputStream = input; }
 
-    // DiGraphProvider interface
+    // DynamicDiGraphProvider interface
 public:
-    virtual bool provideDiGraph(DiGraph *) override { return false; }
-    virtual bool provideDynamicDiGraph(DynamicDiGraph *dynGraph);
+    virtual bool isGraphAvailable() override {
+        return inputStream != nullptr && inputStream->good() && inputStream->rdbuf()->in_avail() > 0;
+    }
 
-private:
-    std::string lastError;
-    bool antedateVertexAdditions;
-    bool removeIsolatedEndVertices;
+protected:
+    std::istream *inputStream;
 };
+
+StreamDynamicDiGraphReader::~StreamDynamicDiGraphReader() { }
 
 }
 
-#endif // KONECTNETWORKREADER_H
+#endif // STREAMDYNAMICDIGRAPHREADER_H
