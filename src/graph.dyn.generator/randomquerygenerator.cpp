@@ -33,7 +33,6 @@ std::vector<RandomQueryGenerator::VertexQueryList> RandomQueryGenerator::provide
     init();
     std::vector<VertexQueryList> queriesSet;
 
-    // assuming that vertex ids are consecutive
     std::uniform_int_distribution<DynamicDiGraph::VertexIdentifier> distVertex(0, dyGraph->getCurrentGraphSize() - 1);
     auto randomVertex = std::bind(distVertex, std::ref(gen));
 
@@ -46,7 +45,7 @@ std::vector<RandomQueryGenerator::VertexQueryList> RandomQueryGenerator::provide
         auto numQueries = computeNumQueries(dyGraph);
         sumQueries += numQueries;
         for (auto i = 0Ull; i < numQueries; i++) {
-            queries.push_back(randomVertex());
+            queries.push_back(dyGraph->idOfIthVertex(randomVertex()));
         }
     }
 
@@ -80,9 +79,6 @@ unsigned long long RandomQueryGenerator::computeNumQueries(const DynamicDiGraph 
     if (relativeQueries > 0.0) {
         auto tsCur = dyGraph->getCurrentTime();
         auto tsNext = dyGraph->getTimeOfXthNextDelta(1, true);
-        if (tsNext == tsCur) {
-            return 0ULL;
-        }
         switch (relateTo) {
         case NUM_QUERY_RELATION::TIMEDIFF_IN_DELTA:
             numQueries = tsNext - tsCur;
@@ -91,7 +87,7 @@ unsigned long long RandomQueryGenerator::computeNumQueries(const DynamicDiGraph 
             numQueries = dyGraph->countArcAdditions(tsCur, tsCur) + dyGraph->countArcRemovals(tsCur, tsCur);
             break;
         }
-        numQueries *= relativeQueries;
+        numQueries = static_cast<unsigned long long>(round(numQueries * relativeQueries));
     }
     return numQueries;
 }
