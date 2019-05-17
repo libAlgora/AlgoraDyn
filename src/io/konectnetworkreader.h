@@ -36,7 +36,8 @@ public:
     explicit KonectNetworkReader(bool antedateVertexAdditions = false, bool removeIsolatedEndVertices = false);
     virtual ~KonectNetworkReader() override;
 
-    std::string getLastError() const { return lastError; }
+    std::string getErrors() const { return lastError; }
+    void clearErrors() { lastError.clear(); }
 
     // DiGraphProvider interface
 public:

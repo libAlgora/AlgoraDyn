@@ -71,14 +71,14 @@ KonectNetworkReader::~KonectNetworkReader()
 
 bool KonectNetworkReader::provideDynamicDiGraph(DynamicDiGraph *dynGraph)
 {
-    lastError.clear();
     if (StreamDiGraphReader::inputStream == nullptr) {
-        lastError = "No input stream.";
+        lastError.append("No input stream.\n");
         return false;
     }
     const char comment = '%';
     using namespace std;
     istream &inputStream = *(StreamDiGraphReader::inputStream);
+    bool errorsOccurred = false;
 
     std::vector<Entry> entries;
 
@@ -91,8 +91,10 @@ bool KonectNetworkReader::provideDynamicDiGraph(DynamicDiGraph *dynGraph)
             continue;
         }
         if (tokens.size() != 4) {
-            lastError = "Each line must contain exactly four entries.";
-            return false;
+            lastError.append(line);
+            lastError.append(": Each line must contain exactly four entries.\n");
+            errorsOccurred = true;
+            continue;
         }
         try {
             //PRINT_DEBUG("Trying to parse tokens: " << tokens[0] << "; " << tokens[1] << "; " << tokens[2] << "; " << tokens[3])
@@ -105,43 +107,51 @@ bool KonectNetworkReader::provideDynamicDiGraph(DynamicDiGraph *dynGraph)
             } else if (plusMinus < 0) {
                 entries.emplace_back(tail, head, false, timestamp);
             } else {
-                lastError = "Don't know how to interpret a value of '0' in third column.";
-                return false;
+                lastError.append(line);
+                lastError.append(": Don't know how to interpret a value of '0' in the third column.\n");
+                errorsOccurred = true;
+                continue;
             }
         } catch (const std::invalid_argument &e) {
             stringstream ss;
+            ss << lastError;
             ss << "Could not parse line \"" << line << "\": " << e.what() << endl;
             lastError = ss.str();
-            return false;
+            errorsOccurred = true;
+            continue;
         }
     }
     std::stable_sort(entries.begin(), entries.end());
-    auto errors = 0ULL;
-    std::string lastError;
+    auto rErrors = 0ULL;
+    std::string lastRError;
     for (const Entry &e : entries) {
         if (e.add) {
             PRINT_DEBUG("Adding arc " << e.tail << ", " << e.head << " at time " << e.timestamp);
             try {
                 dynGraph->addArc(e.tail, e.head, e.timestamp, antedateVertexAdditions);
             } catch (const std::invalid_argument &e) {
-                std::cerr << e.what() << std::endl;
+                lastError.append(e.what());
             }
         } else {
             PRINT_DEBUG("Removing arc " << e.tail << ", " << e.head << " at time " << e.timestamp);
             try {
                 dynGraph->removeArc(e.tail, e.head, e.timestamp, removeIsolatedEndVertices);
             } catch (const std::invalid_argument &ia) {
-                errors++;
-                lastError = ia.what();
+                rErrors++;
+                lastRError = ia.what();
                 //std::cerr << "Error at arc " << e.tail << " -> " << e.head << " at time " << e.timestamp << ": " << ia.what() << std::endl;
             }
         }
     }
-    if (errors > 0) {
-        std::cerr << errors << " errors occurred. Last was: " << lastError << std::endl;
+    if (rErrors > 0) {
+        //std::cerr << errors << " errors occurred. Last was: " << lastError << std::endl;
+        stringstream ss;
+        ss << lastError;
+        ss << rErrors << " remove-related errors occurred. Last was: " << lastRError << std::endl;
+        lastError = ss.str();
     }
 
-    return true;
+    return !errorsOccurred;
 }
 
 }
