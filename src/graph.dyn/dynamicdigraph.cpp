@@ -55,10 +55,15 @@ struct OperationSet : public Operation {
     std::vector<Operation*> operations;
     Type type = MULTIPLE;
 
-    virtual ~OperationSet() override {
+    void clear() {
         for (auto op : operations) {
             delete op;
         }
+        operations.clear();
+    }
+
+    virtual ~OperationSet() override {
+        clear();
     }
 
     virtual void apply(IncidenceListGraph *graph) override {
@@ -184,7 +189,7 @@ struct DynamicDiGraph::CheshireCat {
         vertexToIdMap.clear();
         vertexToIdMapNextOpIndex = 0ULL;
 
-
+        antedated.reset();
         for (auto op : operations) {
             op->reset();
         }
@@ -210,11 +215,11 @@ struct DynamicDiGraph::CheshireCat {
         maxVertexSize = 0ULL;
         maxArcSize = 0ULL;
 
+        antedated.clear();
         for (auto op : operations) {
             delete op;
         }
         operations.clear();
-        antedated.operations.clear();
         offset.clear();
     }
 
