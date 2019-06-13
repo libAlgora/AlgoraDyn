@@ -44,6 +44,12 @@ void DynamicDiGraphAlgorithm::onDiGraphSet()
 
 void DynamicDiGraphAlgorithm::onDiGraphUnset()
 {
+    deregister();
+    DiGraphAlgorithm::onDiGraphUnset();
+}
+
+void DynamicDiGraphAlgorithm::deregister()
+{
     if (diGraph && registered) {
         diGraph->removeOnVertexAdd(this);
         diGraph->removeOnVertexRemove(this);
@@ -51,7 +57,6 @@ void DynamicDiGraphAlgorithm::onDiGraphUnset()
         diGraph->removeOnArcRemove(this);
         registered = false;
     }
-    DiGraphAlgorithm::onDiGraphUnset();
 }
 
 }

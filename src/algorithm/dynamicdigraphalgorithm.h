@@ -35,7 +35,7 @@ class DynamicDiGraphAlgorithm
 {
 public:
     explicit DynamicDiGraphAlgorithm() : DiGraphAlgorithm(), autoUpdate(true), registered(false) {}
-    virtual ~DynamicDiGraphAlgorithm() { }
+    virtual ~DynamicDiGraphAlgorithm() override { deregister(); }
 
     void setAutoUpdate(bool au) {
         this->autoUpdate = au;
@@ -57,6 +57,8 @@ protected:
 private:
     bool autoUpdate;
     bool registered;
+
+    void deregister();
 };
 
 }
