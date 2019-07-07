@@ -44,11 +44,11 @@
 namespace Algora {
 
 #ifdef DEBUG_SIMPLEESTREE
-void printQueue(BucketQueue<SESVertexData*, SES_Priority> q) {
+void printQueue(boost::circular_buffer<SESVertexData*> q) {
     std::cerr << "PriorityQueue: ";
     while(!q.empty()) {
-        std::cerr << q.bot()->vertex << "[" << q.bot()->level << "]" << ", ";
-        q.popBot();
+        std::cerr << q.front()->vertex << "[" << q.bot()->level << "]" << ", ";
+        q.pop_front();
     }
     std::cerr << std::endl;
 }
@@ -534,10 +534,10 @@ void SimpleESTree::rerun()
 void SimpleESTree::restoreTree(SESVertexData *rd)
 {
     PriorityQueue queue;
-    queue.setLimit(diGraph->getSize());
+    queue.set_capacity(diGraph->getSize());
     FastPropertyMap<bool> inQueue(false, "", diGraph->getSize());
     FastPropertyMap<unsigned int> timesInQueue(0U, "", diGraph->getSize());
-    queue.push(rd);
+    queue.push_back(rd);
     inQueue[rd->getVertex()] = true;
     timesInQueue[rd->getVertex()]++;
     if (maxReQueued == 0U) {
@@ -550,8 +550,8 @@ void SimpleESTree::restoreTree(SESVertexData *rd)
 
     while (!queue.empty()) {
         IF_DEBUG(printQueue(queue))
-        auto vd = queue.bot();
-        queue.popBot();
+        auto vd = queue.front();
+        queue.pop_front();
         inQueue.resetToDefault(vd->vertex);
 #ifdef COLLECT_PR_DATA
         prVertexConsidered();
@@ -680,7 +680,7 @@ DiGraph::size_type SimpleESTree::process(SESVertexData *vd, PriorityQueue &queue
 
     if (levelDiff > 0U) {
         PRINT_DEBUG("Updating children...");
-        diGraph->mapOutgoingArcsUntil(vd->vertex, [this,&inQueue,&timesInQueue,&queue,vd,&limitReached](Arc *a) {
+        diGraph->mapOutgoingArcsUntil(vd->vertex, [this,&inQueue,&timesInQueue,&queue,&limitReached](Arc *a) {
 #ifdef COLLECT_PR_DATA
             prArcConsidered();
 #endif
@@ -699,7 +699,7 @@ DiGraph::size_type SimpleESTree::process(SESVertexData *vd, PriorityQueue &queue
                     if (timesInQueue[head] > maxReQueued) {
                         maxReQueued = timesInQueue[head];
                     }
-                    queue.push(hd);
+                    queue.push_back(hd);
                     inQueue[head] = true;
                 } else {
                     timesInQueue[head]++;

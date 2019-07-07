@@ -29,6 +29,7 @@
 #include "datastructure/bucketqueue.h"
 #include "sesvertexdata.h"
 #include <sstream>
+#include <boost/circular_buffer.hpp>
 
 namespace Algora {
 
@@ -115,7 +116,7 @@ private:
     void dumpTree(std::ostream &os);
     bool checkTree();
     void rerun();
-    typedef BucketQueue<SESVertexData*, SES_Priority> PriorityQueue;
+    typedef boost::circular_buffer<SESVertexData*> PriorityQueue;
 		DiGraph::size_type process(SESVertexData *vd, PriorityQueue &queue,
                      FastPropertyMap<bool> &inQueue,
                      FastPropertyMap<unsigned int> &timesInQueue,
