@@ -21,6 +21,8 @@
  */
 
 #include "sesvertexdata.h"
+#include "graph/vertex.h"
+#include "graph/arc.h"
 
 namespace Algora {
 

@@ -44,7 +44,7 @@
 namespace Algora {
 
 #ifdef DEBUG_SIMPLEESTREE
-void printQueue(PriorityQueue q) {
+void printQueue(BucketQueue<SESVertexData*, SES_Priority> q) {
     std::cerr << "PriorityQueue: ";
     while(!q.empty()) {
         std::cerr << q.bot()->vertex << "[" << q.bot()->level << "]" << ", ";
@@ -397,7 +397,7 @@ void SimpleESTree::onArcRemove(Arc *a)
     }
 
 
-    PRINT_DEBUG("Stored data of tail: " << data(tail));
+    PRINT_DEBUG("Stored data of tail: " << data(a->getTail()));
     PRINT_DEBUG("Stored data of head: " << data(head));
 
     auto hd = data(head);
@@ -541,6 +541,9 @@ void SimpleESTree::restoreTree(SESVertexData *rd)
     queue.push(rd);
     inQueue[rd->getVertex()] = true;
     timesInQueue[rd->getVertex()]++;
+    if (maxReQueued == 0U) {
+        maxReQueued = 1U;
+    }
     PRINT_DEBUG("Initialized queue with " << rd << ".")
     bool limitReached = false;
     auto processed = 0ULL;
@@ -670,8 +673,6 @@ unsigned long long SimpleESTree::process(SESVertexData *vd, PriorityQueue &queue
     } else if (parent != oldParent || oldVLevel <= minParentLevel) {
         assert(parent->isReachable());
         assert(minParentLevel != SESVertexData::UNREACHABLE);
-        //vd->level = minParentLevel + 1;
-        //vd->parent = parent;
         vd->setParent(parent, treeArc);
         assert (vd->level >= oldVLevel);
         levelDiff = vd->level - oldVLevel;
@@ -692,7 +693,6 @@ unsigned long long SimpleESTree::process(SESVertexData *vd, PriorityQueue &queue
 #ifdef COLLECT_PR_DATA
             prVertexConsidered();
 #endif
-            //if (hd->isParent(vd) && !inQueue[head]) {
             if (hd->isTreeArc(a) && !inQueue[head]) {
                 if (timesInQueue[head] < requeueLimit) {
                     PRINT_DEBUG("    Adding child " << hd << " to queue...");
