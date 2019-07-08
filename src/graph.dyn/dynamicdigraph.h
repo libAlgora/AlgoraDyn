@@ -24,17 +24,16 @@
 #define DYNAMICDIGRAPH_H
 
 #include <vector>
+#include "graph/digraph.h"
 
 namespace Algora {
-
-class DiGraph;
-class Vertex;
 
 class DynamicDiGraph
 {
 public:
     typedef unsigned long long VertexIdentifier;
     typedef unsigned long long DynamicTime;
+    typedef std::vector<DynamicTime>::size_type size_type;
 
     explicit DynamicDiGraph();
     ~DynamicDiGraph();
@@ -44,9 +43,9 @@ public:
     DynamicTime getTimeOfXthNextDelta(DynamicTime x, bool forward) const;
     DynamicTime getMaxTime() const;
     const std::vector<DynamicTime> &getTimestamps() const;
-    unsigned long long getNumberOfDeltas() const;
-    unsigned long long getCurrentGraphSize() const;
-    unsigned long long getCurrentArcSize() const;
+    size_type getNumberOfDeltas() const;
+		DiGraph::size_type getCurrentGraphSize() const;
+    DiGraph::size_type getCurrentArcSize() const;
 
     VertexIdentifier addVertex(DynamicTime timestamp);
     void addVertex(VertexIdentifier vertexId, DynamicTime timestamp);
@@ -56,7 +55,7 @@ public:
     void noop(DynamicTime timestamp);
     bool hasArc(VertexIdentifier tailId, VertexIdentifier headId);
     void clear();
-    void compact(unsigned long long num);
+    void compact(size_type num);
 
     void resetToBigBang();
     bool applyNextOperation(bool sameTimestamp = false);
@@ -68,15 +67,15 @@ public:
     bool lastOpWasMultiple() const;
     bool lastOpWasNoop() const;
     Vertex *getCurrentVertexForId(VertexIdentifier vertexId) const;
-    VertexIdentifier idOfIthVertex(unsigned long long i);
-    unsigned long long getSizeOfLastDelta() const;
-    unsigned long long getSizeOfFinalDelta() const;
+    VertexIdentifier idOfIthVertex(size_type i);
+    size_type getSizeOfLastDelta() const;
+    size_type getSizeOfFinalDelta() const;
 
-    unsigned long long countVertexAdditions(DynamicTime timeFrom, DynamicTime timeUntil) const;
-    unsigned long long countVertexRemovals(DynamicTime timeFrom, DynamicTime timeUntil) const;
-    unsigned long long countArcAdditions(DynamicTime timeFrom, DynamicTime timeUntil) const;
-    unsigned long long countArcRemovals(DynamicTime timeFrom, DynamicTime timeUntil) const;
-    unsigned long long countNoops(DynamicTime timeFrom, DynamicTime timeUntil) const;
+    size_type countVertexAdditions(DynamicTime timeFrom, DynamicTime timeUntil) const;
+    size_type countVertexRemovals(DynamicTime timeFrom, DynamicTime timeUntil) const;
+    size_type countArcAdditions(DynamicTime timeFrom, DynamicTime timeUntil) const;
+    size_type countArcRemovals(DynamicTime timeFrom, DynamicTime timeUntil) const;
+    size_type countNoops(DynamicTime timeFrom, DynamicTime timeUntil) const;
 
     void squashTimes(DynamicTime timeFrom, DynamicTime timeUntil);
     void secondArcIsRemoval(bool sir);

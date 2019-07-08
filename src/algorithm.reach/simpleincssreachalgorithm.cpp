@@ -66,18 +66,18 @@ struct SimpleIncSSReachAlgorithm::Reachability {
     bool relateToReachable;
     bool radicalReset;
 
-    unsigned long long numReachable;
-    unsigned long long numUnreached;
-    unsigned long long numRereached;
-    unsigned long long numUnknown;
-    unsigned long long numReached;
-    unsigned long long numTracebacks;
-    unsigned long long maxUnreached;
-    unsigned long long maxRereached;
-    unsigned long long maxUnknown;
-    unsigned long long maxReached;
-    unsigned long long maxTracebacks;
-    unsigned long long numReReachFromSource;
+		DiGraph::size_type numReachable;
+    profiling_counter numUnreached;
+    profiling_counter numRereached;
+    profiling_counter numUnknown;
+    profiling_counter numReached;
+    profiling_counter numTracebacks;
+    DiGraph::size_type maxUnreached;
+    DiGraph::size_type maxRereached;
+    DiGraph::size_type maxUnknown;
+    DiGraph::size_type maxReached;
+    profiling_counter maxTracebacks;
+    profiling_counter numReReachFromSource;
 
     Reachability(SimpleIncSSReachAlgorithm *p, bool r, bool sf, double maxUS)
         : parent(p), diGraph(nullptr), source(nullptr), reverse(r), searchForward(sf), maxUnknownStateRatio(maxUS),
@@ -110,7 +110,7 @@ struct SimpleIncSSReachAlgorithm::Reachability {
 #endif
     }
 
-    unsigned long long propagate(const Vertex *from, State s, bool collectVertices, bool setPred,
+		DiGraph::size_type propagate(const Vertex *from, State s, bool collectVertices, bool setPred,
                            bool force) {
         PRINT_DEBUG("Propagating " << printState(s) << " from " << from << ".");
         BreadthFirstSearch<FastPropertyMap,false> bfs(false);

@@ -24,10 +24,12 @@
 #define ESVERTEXDATA_H
 
 #include <vector>
-#include <climits>
+#include <limits>
 #include <iostream>
 #include <property/fastpropertymap.h>
 #include <cassert>
+
+#include "graph/digraph.h"
 
 namespace Algora {
 
@@ -40,23 +42,24 @@ class ESVertexData
     friend std::ostream& operator<<(std::ostream &os, const ESVertexData *vd);
 
 public:
-    static constexpr unsigned long long UNREACHABLE = ULLONG_MAX;
+    typedef DiGraph::size_type level_type;
+    static constexpr level_type UNREACHABLE = std::numeric_limits<level_type>::max();
 
-    ESVertexData(FastPropertyMap<unsigned long long> *inNeighborIndices,
-            Vertex *v, ESVertexData *p = nullptr, Arc *a = nullptr, unsigned long long l = UNREACHABLE);
+    ESVertexData(FastPropertyMap<level_type> *inNeighborIndices,
+            Vertex *v, ESVertexData *p = nullptr, Arc *a = nullptr, level_type l = UNREACHABLE);
 
-    void reset(ESVertexData *p = nullptr, Arc *a = nullptr, unsigned long long l = UNREACHABLE);
+    void reset(ESVertexData *p = nullptr, Arc *a = nullptr, level_type l = UNREACHABLE);
 
     void setUnreachable();
     bool isReachable() const;
-    unsigned long long getLevel() const {
+    level_type getLevel() const {
         return isReachable() ? level : UNREACHABLE;
     }
     Vertex *getVertex() const { return vertex; }
     Arc *getTreeArc() const;
 
     void addInNeighbor(ESVertexData *in, Arc *a);
-    unsigned long long reparent(ESVertexData *in, Arc *a);
+    level_type reparent(ESVertexData *in, Arc *a);
     void findAndRemoveInNeighbor(ESVertexData *in, const Arc *a);
 
     bool isParent(const ESVertexData *p);
@@ -68,18 +71,18 @@ public:
 
     std::vector<ESVertexData*> inNeighbors;
     std::vector<Arc*> inArcs;
-    unsigned long long parentIndex;
-    unsigned long long level;
+    DiGraph::size_type parentIndex;
+    level_type level;
 
 private:
     Vertex *vertex;
-    FastPropertyMap<unsigned long long> *inNeighborIndices;
-    std::vector<unsigned long long> recycledIndices;
+    FastPropertyMap<DiGraph::size_type> *inNeighborIndices;
+    std::vector<DiGraph::size_type> recycledIndices;
 };
 
 std::ostream& operator<<(std::ostream& os, const ESVertexData *vd);
 
-struct ES_Priority { unsigned long long operator()(const ESVertexData *vd) { return vd->getLevel(); }};
+struct ES_Priority { ESVertexData::level_type operator()(const ESVertexData *vd) { return vd->getLevel(); }};
 
 }
 

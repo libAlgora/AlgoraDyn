@@ -23,6 +23,9 @@
 #ifndef DYNAMICDIGRAPHSTATISTICS_H
 #define DYNAMICDIGRAPHSTATISTICS_H
 
+#include "graph/digraph.h"
+#include "graph.dyn/dynamicdigraph.h"
+
 namespace Algora {
 
 class DynamicDiGraph;
@@ -34,69 +37,69 @@ public:
 
     void analyzeDynamicDiGraph(DynamicDiGraph *dyGraph);
 
-    unsigned long long initialGraphSize() const { return iGraphSize; }
-    unsigned long long maximumGraphSize() const { return maxGraphSize; }
-    unsigned long long minimumGraphSize() const { return minGraphSize; }
-    unsigned long long medianGraphSize() const { return medGraphSize; }
-    unsigned long long finalGraphSize() const { return fGraphSize; }
+    DiGraph::size_type initialGraphSize() const { return iGraphSize; }
+    DiGraph::size_type maximumGraphSize() const { return maxGraphSize; }
+    DiGraph::size_type minimumGraphSize() const { return minGraphSize; }
+    DiGraph::size_type medianGraphSize() const { return medGraphSize; }
+    DiGraph::size_type finalGraphSize() const { return fGraphSize; }
     double averageGraphSize() const { return avgGraphSize; }
 
-    unsigned long long initialArcSize() const { return iArcSize; }
-    unsigned long long maximumArcSize() const { return maxArcSize; }
-    unsigned long long minimumArcSize() const { return minArcSize; }
-    unsigned long long medianArcSize() const { return medArcSize; }
-    unsigned long long finalArcSize() const { return fArcSize; }
+    DiGraph::size_type initialArcSize() const { return iArcSize; }
+    DiGraph::size_type maximumArcSize() const { return maxArcSize; }
+    DiGraph::size_type minimumArcSize() const { return minArcSize; }
+    DiGraph::size_type medianArcSize() const { return medArcSize; }
+    DiGraph::size_type finalArcSize() const { return fArcSize; }
     double averageArcSize() const { return avgArcSize; }
 
-    unsigned long long minimumArcAdditions() const { return minArcAdditions; }
-    unsigned long long maximumArcAdditions() const { return maxArcAdditions; }
-    unsigned long long medianArcAdditions() const { return medArcAdditions; }
-    unsigned long long totalArcAdditions() const { return sumArcAdditions; }
+    DynamicDiGraph::size_type minimumArcAdditions() const { return minArcAdditions; }
+    DynamicDiGraph::size_type maximumArcAdditions() const { return maxArcAdditions; }
+    DynamicDiGraph::size_type medianArcAdditions() const { return medArcAdditions; }
+    DynamicDiGraph::size_type totalArcAdditions() const { return sumArcAdditions; }
     double averageArcAdditions() const { return avgArcAdditions; }
 
-    unsigned long long minimumArcRemovals() const { return minArcRemovals; }
-    unsigned long long maximumArcsRemovals() const { return maxArcRemovals; }
-    unsigned long long medianArcRemovals() const { return medArcRemovals; }
-    unsigned long long totalArcRemovals() const { return sumArcRemovals; }
+    DynamicDiGraph::size_type minimumArcRemovals() const { return minArcRemovals; }
+    DynamicDiGraph::size_type maximumArcsRemovals() const { return maxArcRemovals; }
+    DynamicDiGraph::size_type medianArcRemovals() const { return medArcRemovals; }
+    DynamicDiGraph::size_type totalArcRemovals() const { return sumArcRemovals; }
     double averageArcRemovals() const { return avgArcRemovals; }
 
-    unsigned long long minimumTimeDelta() const { return minTimeDelta; }
-    unsigned long long maximumTimeDelta() const { return maxTimeDelta; }
-    unsigned long long medianTimeDelta() const { return medTimeDelta; }
-    unsigned long long totalTimeDelta() const { return sumTimeDelta; }
+    DynamicDiGraph::DynamicTime minimumTimeDelta() const { return minTimeDelta; }
+    DynamicDiGraph::DynamicTime maximumTimeDelta() const { return maxTimeDelta; }
+    DynamicDiGraph::DynamicTime medianTimeDelta() const { return medTimeDelta; }
+    DynamicDiGraph::DynamicTime totalTimeDelta() const { return sumTimeDelta; }
     double averageTimeDelta() const { return avgTimeDelta; }
 
 private:
-    unsigned long long iGraphSize;
-    unsigned long long maxGraphSize;
-    unsigned long long minGraphSize;
-    unsigned long long medGraphSize;
-    unsigned long long fGraphSize;
+    DiGraph::size_type iGraphSize;
+    DiGraph::size_type maxGraphSize;
+    DiGraph::size_type minGraphSize;
+    DiGraph::size_type medGraphSize;
+    DiGraph::size_type fGraphSize;
     double avgGraphSize;
 
-    unsigned long long iArcSize;
-    unsigned long long maxArcSize;
-    unsigned long long minArcSize;
-    unsigned long long medArcSize;
-    unsigned long long fArcSize;
+    DiGraph::size_type iArcSize;
+    DiGraph::size_type maxArcSize;
+    DiGraph::size_type minArcSize;
+    DiGraph::size_type medArcSize;
+    DiGraph::size_type fArcSize;
     double avgArcSize;
 
-    unsigned long long minArcAdditions;
-    unsigned long long maxArcAdditions;
-    unsigned long long medArcAdditions;
-    unsigned long long sumArcAdditions;
+    DynamicDiGraph::size_type minArcAdditions;
+    DynamicDiGraph::size_type maxArcAdditions;
+    DynamicDiGraph::size_type medArcAdditions;
+    DynamicDiGraph::size_type sumArcAdditions;
     double avgArcAdditions;
 
-    unsigned long long minArcRemovals;
-    unsigned long long maxArcRemovals;
-    unsigned long long medArcRemovals;
-    unsigned long long sumArcRemovals;
+    DynamicDiGraph::size_type minArcRemovals;
+    DynamicDiGraph::size_type maxArcRemovals;
+    DynamicDiGraph::size_type medArcRemovals;
+    DynamicDiGraph::size_type sumArcRemovals;
     double avgArcRemovals;
 
-    unsigned long long minTimeDelta;
-    unsigned long long maxTimeDelta;
-    unsigned long long medTimeDelta;
-    unsigned long long sumTimeDelta;
+    DynamicDiGraph::DynamicTime minTimeDelta;
+    DynamicDiGraph::DynamicTime maxTimeDelta;
+    DynamicDiGraph::DynamicTime medTimeDelta;
+    DynamicDiGraph::DynamicTime sumTimeDelta;
     double avgTimeDelta;
 };
 

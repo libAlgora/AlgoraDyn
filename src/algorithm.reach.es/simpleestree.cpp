@@ -55,10 +55,11 @@ void printQueue(BucketQueue<SESVertexData*, SES_Priority> q) {
 #endif
 
 
-SimpleESTree::SimpleESTree(unsigned long long requeueLimit, double maxAffectedRatio)
+SimpleESTree::SimpleESTree(unsigned int requeueLimit, double maxAffectedRatio)
     : DynamicSSReachAlgorithm(), root(nullptr),
       initialized(false), requeueLimit(requeueLimit),
-      maxAffectedRatio(maxAffectedRatio), movesDown(0U), movesUp(0U),
+      maxAffectedRatio(maxAffectedRatio),
+			movesDown(0U), movesUp(0U),
       levelIncrease(0U), levelDecrease(0U),
       maxLevelIncrease(0U), maxLevelDecrease(0U),
       decUnreachableHead(0U), decNonTreeArc(0U),
@@ -76,20 +77,20 @@ SimpleESTree::~SimpleESTree()
     cleanup();
 }
 
-unsigned long long SimpleESTree::getDepthOfBFSTree() const
+DiGraph::size_type SimpleESTree::getDepthOfBFSTree() const
 {
-    auto maxLevel = 0ULL;
+	DiGraph::size_type maxLevel = 0U;
     diGraph->mapVertices([&](Vertex *v) {
         if (reachable(v) && data(v)->level > maxLevel) {
             maxLevel = data(v)->level;
         }
     });
-    return maxLevel + 1U;
+    return maxLevel;
 }
 
-unsigned long long SimpleESTree::getNumReachable() const
+DiGraph::size_type SimpleESTree::getNumReachable() const
 {
-    auto numR = 0ULL;
+	DiGraph::size_type numR = 0U;
     diGraph->mapVertices([&](Vertex *v) {
         if (reachable(v)) {
             numR++;
@@ -329,10 +330,8 @@ void SimpleESTree::onArcAdd(Arc *a)
 #ifdef COLLECT_PR_DATA
             movesUp++;
             auto newLevel = atd->level + 1;
-            unsigned long long dec;
-            if (!ahd->isReachable()) {
-                dec = n - newLevel;
-            } else {
+            auto dec = n - newLevel;
+            if (ahd->isReachable()) {
                 dec = ahd->level - newLevel;
             }
             levelDecrease += dec;
@@ -503,7 +502,7 @@ bool SimpleESTree::checkTree()
    BreadthFirstSearch<FastPropertyMap> bfs;
    bfs.setStartVertex(source);
    bfs.levelAsValues(true);
-   FastPropertyMap<unsigned long long> levels(bfs.INF);
+   FastPropertyMap<DiGraph::size_type> levels(bfs.INF);
    levels.resetAll(diGraph->getSize());
    bfs.useModifiableProperty(&levels);
    runAlgorithm(bfs, diGraph);
@@ -537,7 +536,7 @@ void SimpleESTree::restoreTree(SESVertexData *rd)
     PriorityQueue queue;
     queue.setLimit(diGraph->getSize());
     FastPropertyMap<bool> inQueue(false, "", diGraph->getSize());
-    FastPropertyMap<unsigned long long> timesInQueue(0ULL, "", diGraph->getSize());
+    FastPropertyMap<unsigned int> timesInQueue(0U, "", diGraph->getSize());
     queue.push(rd);
     inQueue[rd->getVertex()] = true;
     timesInQueue[rd->getVertex()]++;
@@ -556,7 +555,7 @@ void SimpleESTree::restoreTree(SESVertexData *rd)
         inQueue.resetToDefault(vd->vertex);
 #ifdef COLLECT_PR_DATA
         prVertexConsidered();
-        unsigned long long levels =
+        auto levels =
 #endif
         process(vd, queue, inQueue, timesInQueue, limitReached);
         processed++;
@@ -604,9 +603,9 @@ void SimpleESTree::cleanup()
     initialized = false;
 }
 
-unsigned long long SimpleESTree::process(SESVertexData *vd, PriorityQueue &queue,
+DiGraph::size_type SimpleESTree::process(SESVertexData *vd, PriorityQueue &queue,
                      FastPropertyMap<bool> &inQueue,
-                     FastPropertyMap<unsigned long long> &timesInQueue,
+                     FastPropertyMap<unsigned int> &timesInQueue,
                      bool &limitReached) {
 
     if (vd->level == 0UL) {
@@ -661,7 +660,7 @@ unsigned long long SimpleESTree::process(SESVertexData *vd, PriorityQueue &queue
         }
     }, [&oldVLevel, &minParentLevel](const Arc *) { return minParentLevel + 1 == oldVLevel; });
 
-    unsigned long long levelDiff = 0ULL;
+		DiGraph::size_type levelDiff = 0U;
     auto n = diGraph->getSize();
 
     if ((parent == nullptr || minParentLevel >= n - 1)
