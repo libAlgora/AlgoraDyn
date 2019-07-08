@@ -55,7 +55,7 @@ void printQueue(PriorityQueue q) {
 }
 #endif
 
-ESTreeQ::ESTreeQ(unsigned long long requeueLimit, double maxAffectedRatio)
+ESTreeQ::ESTreeQ(unsigned int requeueLimit, double maxAffectedRatio)
     : DynamicSSReachAlgorithm(), root(nullptr),
       initialized(false), requeueLimit(requeueLimit),
       maxAffectedRatio(maxAffectedRatio),
@@ -518,7 +518,7 @@ bool ESTreeQ::checkTree()
    BreadthFirstSearch<FastPropertyMap> bfs;
    bfs.setStartVertex(source);
    bfs.levelAsValues(true);
-   FastPropertyMap<unsigned long long> levels(bfs.INF);
+   FastPropertyMap<DiGraph::size_type> levels(bfs.INF);
    levels.resetAll(diGraph->getSize());
    bfs.useModifiableProperty(&levels);
    runAlgorithm(bfs, diGraph);
@@ -554,7 +554,7 @@ void ESTreeQ::rerun()
     run();
 }
 
-unsigned long long ESTreeQ::process(ESVertexData *vd, ESTreeQ::PriorityQueue &queue, FastPropertyMap<bool> &inQueue, FastPropertyMap<unsigned long long> &timesInQueue, bool &limitReached)
+DiGraph::size_type ESTreeQ::process(ESVertexData *vd, ESTreeQ::PriorityQueue &queue, FastPropertyMap<bool> &inQueue, FastPropertyMap<unsigned int> &timesInQueue, bool &limitReached)
 {
     if (vd->getLevel() == 0ULL) {
         PRINT_DEBUG("No need to process source vertex " << vd << ".");
@@ -686,7 +686,7 @@ void ESTreeQ::restoreTree(ESVertexData *vd)
     PriorityQueue queue;
     queue.set_capacity(diGraph->getSize());
     FastPropertyMap<bool> inQueue(false, "", diGraph->getSize());
-    FastPropertyMap<unsigned long long> timesInQueue(0ULL, "", diGraph->getSize());
+    FastPropertyMap<unsigned int> timesInQueue(0U, "", diGraph->getSize());
     queue.push_back(vd);
     inQueue[vd->getVertex()] = true;
     timesInQueue[vd->getVertex()]++;

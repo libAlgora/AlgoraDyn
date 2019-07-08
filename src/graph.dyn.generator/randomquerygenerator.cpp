@@ -73,7 +73,7 @@ void RandomQueryGenerator::init()
     initialized = true;
 }
 
-unsigned long long RandomQueryGenerator::computeNumQueries(const DynamicDiGraph *dyGraph) const
+DynamicDiGraph::size_type RandomQueryGenerator::computeNumQueries(const DynamicDiGraph *dyGraph) const
 {
     auto numQueries = absoluteQueries;
     if (relativeQueries > 0.0) {
@@ -87,7 +87,7 @@ unsigned long long RandomQueryGenerator::computeNumQueries(const DynamicDiGraph 
             numQueries = dyGraph->countArcAdditions(tsCur, tsCur) + dyGraph->countArcRemovals(tsCur, tsCur);
             break;
         }
-        numQueries = static_cast<unsigned long long>(round(numQueries * relativeQueries));
+        numQueries = static_cast<DynamicDiGraph::size_type>(round(numQueries * relativeQueries));
     }
     return numQueries;
 }

@@ -36,23 +36,23 @@ public:
 
     void setSeed(unsigned long long seed = 0U);
     void setRepetitions(unsigned r);
-    void setGraphSize(unsigned long long n);
-    void setInitialArcSize(unsigned long long m);
+    void setGraphSize(DiGraph::size_type n);
+    void setInitialArcSize(DiGraph::size_type m);
     void setInitialArcProbability(double p);
     void allowMultiArcs(bool allow);
-    void setNumOperations(unsigned long long ops);
+    void setNumOperations(DynamicDiGraph::size_type ops);
     void setArcAdditionProportion(unsigned int propAdd);
     void setArcRemovalProportion(unsigned int propRemove);
     void setQueriesProportion(unsigned int propQuery);
     void setMultiplier(unsigned int multiplier);
 
     unsigned long long getSeed() const;
-    unsigned long long getNumOperations() const;
-    unsigned long long getGraphSize() const;
-    unsigned long long getInitialArcSize() const;
-    unsigned long long getArcAdditionProportion() const;
-    unsigned long long getArcRemovalProportion() const;
-    unsigned long long getQueriesProportion() const;
+		DynamicDiGraph::size_type getNumOperations() const;
+		DiGraph::size_type getGraphSize() const;
+    DiGraph::size_type getInitialArcSize() const;
+    unsigned int getArcAdditionProportion() const;
+    unsigned int getArcRemovalProportion() const;
+    unsigned int getQueriesProportion() const;
 
     // InstanceProvider interface
 public:
@@ -60,18 +60,18 @@ public:
     virtual DynamicDiGraph &getGraph() const override;
     virtual QueriesList &getQueries() const override;
 
-    virtual unsigned long long graphSize() const override;
-    virtual unsigned long long initialGraphSize() const override;
-    virtual unsigned long long initialArcSize() const override;
+    virtual DiGraph::size_type graphSize() const override;
+    virtual DiGraph::size_type initialGraphSize() const override;
+    virtual DiGraph::size_type initialArcSize() const override;
     virtual double averageGraphSize() const override;
     virtual double averageArcSize() const override;
-    virtual unsigned long long finalArcSize() const override;
-    virtual unsigned long long numArcAdditions() const override;
-    virtual unsigned long long numArcRemovals() const override;
-    virtual unsigned long long numQueries() const override;
-    virtual unsigned long long numDeltas() const override;
-    virtual std::vector<unsigned long long> numVertices() const override;
-    virtual std::vector<unsigned long long> numArcs() const override;
+    virtual DiGraph::size_type finalArcSize() const override;
+    virtual DynamicDiGraph::size_type numArcAdditions() const override;
+    virtual DynamicDiGraph::size_type numArcRemovals() const override;
+    virtual DynamicDiGraph::size_type numQueries() const override;
+    virtual DynamicDiGraph::size_type numDeltas() const override;
+    virtual std::vector<DiGraph::size_type> numVertices() const override;
+    virtual std::vector<DiGraph::size_type> numArcs() const override;
 
     virtual std::string getConfiguration() const override;
     virtual std::string getConfigurationAsJson(const std::string &indent) const override;

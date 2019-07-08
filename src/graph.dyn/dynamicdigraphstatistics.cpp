@@ -44,42 +44,42 @@ typename C::value_type medianOf(const C &container, const typename C::value_type
 
 void DynamicDiGraphStatistics::analyzeDynamicDiGraph(DynamicDiGraph *dyGraph)
 {
-    iGraphSize = 0ULL;
-    maxGraphSize = 0ULL;
-    minGraphSize = 0ULL;
-    medGraphSize = 0ULL;
+    iGraphSize = 0U;
+    maxGraphSize = 0U;
+    minGraphSize = 0U;
+    medGraphSize = 0U;
     avgGraphSize = 0.0;
-    fGraphSize = 0ULL;
-    std::vector<unsigned long long> graphSizes;
+    fGraphSize = 0U;
+    std::vector<DiGraph::size_type> graphSizes;
 
-    iArcSize = 0ULL;
-    maxArcSize = 0ULL;
-    minArcSize = 0ULL;
-    medArcSize = 0ULL;
+    iArcSize = 0U;
+    maxArcSize = 0U;
+    minArcSize = 0U;
+    medArcSize = 0U;
     avgArcSize = 0.0;
-    fArcSize = 0ULL;
-    std::vector<unsigned long long> arcSizes;
+    fArcSize = 0U;
+    std::vector<DiGraph::size_type> arcSizes;
 
-    minArcAdditions = 0ULL;
-    maxArcAdditions = 0ULL;
-    medArcAdditions = 0ULL;
-    sumArcAdditions = 0ULL;
+    minArcAdditions = 0U;
+    maxArcAdditions = 0U;
+    medArcAdditions = 0U;
+    sumArcAdditions = 0U;
     avgArcAdditions = 0.0;
-    std::vector<unsigned long long> arcAdditions;
+    std::vector<DynamicDiGraph::size_type> arcAdditions;
 
-    minArcRemovals = 0ULL;
-    maxArcRemovals = 0ULL;
-    medArcRemovals = 0ULL;
-    sumArcRemovals = 0ULL;
+    minArcRemovals = 0U;
+    maxArcRemovals = 0U;
+    medArcRemovals = 0U;
+    sumArcRemovals = 0U;
     avgArcRemovals = 0.0;
-    std::vector<unsigned long long> arcRemovals;
+    std::vector<DynamicDiGraph::size_type> arcRemovals;
 
-    minTimeDelta = 0ULL;
-    maxTimeDelta = 0ULL;
-    medTimeDelta = 0ULL;
-    sumTimeDelta = 0ULL;
+    minTimeDelta = 0U;
+    maxTimeDelta = 0U;
+    medTimeDelta = 0U;
+    sumTimeDelta = 0U;
     avgTimeDelta = 0.0;
-    std::vector<unsigned long long> timeDeltas;
+    std::vector<DynamicDiGraph::DynamicTime> timeDeltas;
 
     dyGraph->resetToBigBang();
     auto graph = dyGraph->getDiGraph();
@@ -136,9 +136,9 @@ void DynamicDiGraphStatistics::analyzeDynamicDiGraph(DynamicDiGraph *dyGraph)
     sumArcRemovals = std::accumulate(std::begin(arcRemovals), std::end(arcRemovals), 0ULL);
     avgArcRemovals = (1.0 * sumArcRemovals) / arcRemovals.size();
 
-    p = std::minmax_element(std::begin(timeDeltas), std::end(timeDeltas));
-    minTimeDelta = *(p.first);
-    maxTimeDelta = *(p.second);
+    auto q = std::minmax_element(std::begin(timeDeltas), std::end(timeDeltas));
+    minTimeDelta = *(q.first);
+    maxTimeDelta = *(q.second);
     medTimeDelta = medianOf(timeDeltas);
     sumTimeDelta = std::accumulate(std::begin(timeDeltas), std::end(timeDeltas), 0ULL);
     avgTimeDelta = (1.0 * sumTimeDelta) / timeDeltas.size();

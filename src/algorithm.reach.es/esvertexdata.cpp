@@ -40,8 +40,8 @@
 
 namespace Algora {
 
-ESVertexData::ESVertexData(FastPropertyMap<unsigned long long> *inNeighborIndices, Vertex *v,
-                           ESVertexData *p, Arc *a, unsigned long long l)
+ESVertexData::ESVertexData(FastPropertyMap<DiGraph::size_type> *inNeighborIndices, Vertex *v,
+                           ESVertexData *p, Arc *a, level_type l)
     : parentIndex(0U), level(l), vertex(v), inNeighborIndices(inNeighborIndices)
 {
     if (p != nullptr) {
@@ -52,7 +52,7 @@ ESVertexData::ESVertexData(FastPropertyMap<unsigned long long> *inNeighborIndice
     }
 }
 
-void ESVertexData::reset(ESVertexData *p, Arc *a, unsigned long long l)
+void ESVertexData::reset(ESVertexData *p, Arc *a, level_type l)
 {
     inNeighbors.clear();
     inArcs.clear();
@@ -99,7 +99,7 @@ void ESVertexData::addInNeighbor(ESVertexData *in, Arc *a)
     }
 }
 
-unsigned long long ESVertexData::reparent(ESVertexData *in, Arc *a)
+ESVertexData::level_type ESVertexData::reparent(ESVertexData *in, Arc *a)
 {
     auto inLevel = in->level;
     if (inLevel >= level) {

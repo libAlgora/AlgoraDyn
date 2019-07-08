@@ -26,6 +26,7 @@
 #include <climits>
 #include <iostream>
 #include <cassert>
+#include "graph/digraph.h"
 
 namespace Algora {
 
@@ -37,16 +38,17 @@ class SESVertexData
     friend std::ostream& operator<<(std::ostream &os, const SESVertexData *vd);
 
 public:
-    static constexpr unsigned long long UNREACHABLE = ULLONG_MAX;
+    typedef DiGraph::size_type level_type;
+    static constexpr level_type UNREACHABLE = std::numeric_limits<level_type>::max();
 
-    SESVertexData(Vertex *v, SESVertexData *p = nullptr, Arc *a = nullptr, unsigned long long l = UNREACHABLE)
+    SESVertexData(Vertex *v, SESVertexData *p = nullptr, Arc *a = nullptr, level_type l = UNREACHABLE)
         : vertex(v), parent(p), treeArc(a), level(l) {
         if (p != nullptr) {
             level = p->level + 1;
         }
     }
 
-    void reset(SESVertexData *p = nullptr, Arc *a = nullptr, unsigned long long l = UNREACHABLE) {
+    void reset(SESVertexData *p = nullptr, Arc *a = nullptr, level_type l = UNREACHABLE) {
         parent = p;
         level = l;
         treeArc = a;
@@ -55,7 +57,7 @@ public:
         }
     }
 
-    unsigned long long getLevel() const {
+    level_type getLevel() const {
         return level;
     }
 
@@ -103,12 +105,12 @@ public:
     Vertex *vertex;
     SESVertexData *parent;
     Arc *treeArc;
-    unsigned long long level;
+    level_type level;
 };
 
 std::ostream& operator<<(std::ostream& os, const SESVertexData *vd);
 
-struct SES_Priority { unsigned long long operator()(const SESVertexData *vd) { return vd->getLevel(); }};
+struct SES_Priority { SESVertexData::level_type operator()(const SESVertexData *vd) { return vd->getLevel(); }};
 
 }
 

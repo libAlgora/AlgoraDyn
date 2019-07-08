@@ -35,16 +35,16 @@ namespace Algora {
 class SimpleESTree : public DynamicSSReachAlgorithm
 {
 public:
-    explicit SimpleESTree(unsigned long long requeueLimit = 5, double maxAffectedRatio = .5);
+    explicit SimpleESTree(unsigned int requeueLimit = 5, double maxAffectedRatio = .5);
     virtual ~SimpleESTree();
-    void setRequeueLimit(unsigned long long limit) {
+    void setRequeueLimit(unsigned int limit) {
         requeueLimit = limit;
     }
     void setMaxAffectedRatio(double ratio) {
         maxAffectedRatio = ratio;
     }
-    unsigned long long getDepthOfBFSTree() const;
-    unsigned long long getNumReachable() const;
+		DiGraph::size_type getDepthOfBFSTree() const;
+		DiGraph::size_type getNumReachable() const;
 
     // DiGraphAlgorithm interface
 public:
@@ -90,25 +90,25 @@ private:
     FastPropertyMap<bool> reachable;
     Vertex *root;
     bool initialized;
-    unsigned long long requeueLimit;
+    unsigned int requeueLimit;
     double maxAffectedRatio;
 
-    unsigned long long movesDown;
-    unsigned long long movesUp;
-    unsigned long long levelIncrease;
-    unsigned long long levelDecrease;
-    unsigned long long maxLevelIncrease;
-    unsigned long long maxLevelDecrease;
-    unsigned long long decUnreachableHead;
-    unsigned long long decNonTreeArc;
-    unsigned long long incUnreachableTail;
-    unsigned long long incNonTreeArc;
-    unsigned long long reruns;
-    unsigned long long maxReQueued;
-    unsigned long long maxAffected;
-    unsigned long long totalAffected;
-    unsigned long long rerunRequeued;
-    unsigned long long rerunNumAffected;
+    profiling_counter movesDown;
+    profiling_counter movesUp;
+    profiling_counter levelIncrease;
+    profiling_counter levelDecrease;
+		DiGraph::size_type maxLevelIncrease;
+    DiGraph::size_type maxLevelDecrease;
+    profiling_counter decUnreachableHead;
+    profiling_counter decNonTreeArc;
+    profiling_counter incUnreachableTail;
+    profiling_counter incNonTreeArc;
+    profiling_counter reruns;
+    unsigned int maxReQueued;
+		DiGraph::size_type maxAffected;
+    profiling_counter totalAffected;
+    profiling_counter rerunRequeued;
+    profiling_counter rerunNumAffected;
 
     void restoreTree(SESVertexData *rd);
     void cleanup();
@@ -116,9 +116,9 @@ private:
     bool checkTree();
     void rerun();
     typedef BucketQueue<SESVertexData*, SES_Priority> PriorityQueue;
-    unsigned long long process(SESVertexData *vd, PriorityQueue &queue,
+		DiGraph::size_type process(SESVertexData *vd, PriorityQueue &queue,
                      FastPropertyMap<bool> &inQueue,
-                     FastPropertyMap<unsigned long long> &timesInQueue,
+                     FastPropertyMap<unsigned int> &timesInQueue,
                      bool &limitReached);
 };
 

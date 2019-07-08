@@ -144,12 +144,12 @@ struct DynamicDiGraph::CheshireCat {
 
     std::vector<DynamicTime> timestamps;
     std::vector<Operation*> operations;
-    std::vector<unsigned long long> offset;
+    std::vector<DynamicDiGraph::size_type> offset;
     OperationSet antedated;
 
-    unsigned long long timeIndex;
-    unsigned long long opIndex;
-    //unsigned long long numVertices;
+    DynamicDiGraph::size_type timeIndex;
+    DynamicDiGraph::size_type opIndex;
+    //DiGraph::size_type numVertices;
 
     bool doubleArcIsRemoval;
 
@@ -157,13 +157,13 @@ struct DynamicDiGraph::CheshireCat {
     std::unordered_map<Arc*,AddArcOperation*> constructionArcMap;
 
     std::unordered_map<Vertex*,VertexIdentifier> vertexToIdMap;
-    unsigned long long vertexToIdMapNextOpIndex;
+    DynamicDiGraph::size_type vertexToIdMapNextOpIndex;
 
     unsigned long numResets;
-    unsigned long long curVertexSize;
-    unsigned long long curArcSize;
-    unsigned long long maxVertexSize;
-    unsigned long long maxArcSize;
+    DiGraph::size_type curVertexSize;
+    DiGraph::size_type curArcSize;
+    DiGraph::size_type maxVertexSize;
+    DiGraph::size_type maxArcSize;
 
     bool graphChangedSinceLastReset;
 
@@ -429,7 +429,7 @@ struct DynamicDiGraph::CheshireCat {
         graphChangedSinceLastReset = true;
     }
 
-    void compact(unsigned long long num) {
+    void compact(DynamicDiGraph::size_type num) {
         std::vector<Operation*> ops;
         for (auto i = 0U; i < num; i++) {
             auto *last = operations.back();
@@ -497,8 +497,8 @@ struct DynamicDiGraph::CheshireCat {
         return true;
     }
 
-    unsigned long long findTimeIndex(DynamicTime timestamp) const {
-        unsigned long long tIndex = 0U;
+    DynamicDiGraph::size_type findTimeIndex(DynamicTime timestamp) const {
+        DynamicDiGraph::size_type tIndex = 0U;
         while (tIndex < timestamps.size() && timestamps[tIndex] < timestamp) {
             tIndex++;
         }
@@ -520,7 +520,7 @@ struct DynamicDiGraph::CheshireCat {
         return false;
     }
 
-    unsigned long long countOperations(DynamicTime timeFrom, DynamicTime timeUntil, Operation::Type type) const {
+    DynamicDiGraph::size_type countOperations(DynamicTime timeFrom, DynamicTime timeUntil, Operation::Type type) const {
         auto tIndexFrom = findTimeIndex(timeFrom);
         if (tIndexFrom >= timestamps.size()) {
                 return 0U;
@@ -530,7 +530,7 @@ struct DynamicDiGraph::CheshireCat {
             return 0U;
         }
         auto opIndexMax = tIndexUntil < offset.size() ? offset[tIndexUntil] : operations.size();
-        unsigned long long numOperations = 0U;
+        DynamicDiGraph::size_type numOperations = 0U;
         for (auto opI = offset[tIndexFrom]; opI < opIndexMax; opI++) {
             Operation *op = operations[opI];
             if (op->getType() == type) {
@@ -564,18 +564,18 @@ struct DynamicDiGraph::CheshireCat {
         return vertices.at(vertexId)->vertex;
     }
 
-    unsigned long long getSizeOfLastDelta() {
+    DynamicDiGraph::size_type getSizeOfLastDelta() {
         if (timeIndex + 1U == offset.size()) {
             return operations.size() - offset[timeIndex];
         }
         return offset[timeIndex + 1U] - offset[timeIndex];
     }
 
-    unsigned long long getSizeOfFinalDelta() {
+    DynamicDiGraph::size_type getSizeOfFinalDelta() {
         return operations.size() - offset.back();
     }
 
-    VertexIdentifier idOfIthVertex(unsigned long long i) {
+    VertexIdentifier idOfIthVertex(DynamicDiGraph::size_type i) {
 
         std::function<void(Operation*)> updateMap;
         updateMap = [this,&updateMap](Operation *op) {
@@ -658,17 +658,17 @@ const std::vector<DynamicDiGraph::DynamicTime> &DynamicDiGraph::getTimestamps() 
     return grin->timestamps;
 }
 
-unsigned long long DynamicDiGraph::getNumberOfDeltas() const
+DynamicDiGraph::size_type DynamicDiGraph::getNumberOfDeltas() const
 {
     return grin->timestamps.size();
 }
 
-unsigned long long DynamicDiGraph::getCurrentGraphSize() const
+DiGraph::size_type DynamicDiGraph::getCurrentGraphSize() const
 {
     return grin->constructionGraph.getSize();
 }
 
-unsigned long long DynamicDiGraph::getCurrentArcSize() const
+DiGraph::size_type DynamicDiGraph::getCurrentArcSize() const
 {
     return grin->constructionArcMap.size();
 }
@@ -717,7 +717,7 @@ void DynamicDiGraph::clear()
     grin->clear();
 }
 
-void DynamicDiGraph::compact(unsigned long long num)
+void DynamicDiGraph::compact(DynamicDiGraph::size_type num)
 {
     if (num < 1U) {
         throw std::invalid_argument("Can only compact positive number of operations.");
@@ -777,43 +777,43 @@ Vertex *DynamicDiGraph::getCurrentVertexForId(VertexIdentifier vertexId) const
     return grin->vertexForId(vertexId);
 }
 
-DynamicDiGraph::VertexIdentifier DynamicDiGraph::idOfIthVertex(unsigned long long i)
+DynamicDiGraph::VertexIdentifier DynamicDiGraph::idOfIthVertex(DynamicDiGraph::size_type i)
 {
     //return stoull(grin->dynGraph.vertexAt(i)->getName());
     return grin->idOfIthVertex(i);
 }
 
-unsigned long long DynamicDiGraph::getSizeOfLastDelta() const
+DynamicDiGraph::size_type DynamicDiGraph::getSizeOfLastDelta() const
 {
     return grin->getSizeOfLastDelta();
 }
 
-unsigned long long DynamicDiGraph::getSizeOfFinalDelta() const
+DynamicDiGraph::size_type DynamicDiGraph::getSizeOfFinalDelta() const
 {
     return grin->getSizeOfFinalDelta();
 }
 
-unsigned long long DynamicDiGraph::countVertexAdditions(DynamicTime timeFrom, DynamicTime timeUntil) const
+DynamicDiGraph::size_type DynamicDiGraph::countVertexAdditions(DynamicTime timeFrom, DynamicTime timeUntil) const
 {
     return grin->countOperations(timeFrom, timeUntil, Operation::Type::VERTEX_ADDITION);
 }
 
-unsigned long long DynamicDiGraph::countVertexRemovals(DynamicTime timeFrom, DynamicTime timeUntil) const
+DynamicDiGraph::size_type DynamicDiGraph::countVertexRemovals(DynamicTime timeFrom, DynamicTime timeUntil) const
 {
     return grin->countOperations(timeFrom, timeUntil, Operation::Type::VERTEX_REMOVAL);
 }
 
-unsigned long long DynamicDiGraph::countArcAdditions(DynamicTime timeFrom, DynamicTime timeUntil) const
+DynamicDiGraph::size_type DynamicDiGraph::countArcAdditions(DynamicTime timeFrom, DynamicTime timeUntil) const
 {
     return grin->countOperations(timeFrom, timeUntil, Operation::Type::ARC_ADDITION);
 }
 
-unsigned long long DynamicDiGraph::countArcRemovals(DynamicTime timeFrom, DynamicTime timeUntil) const
+DynamicDiGraph::size_type DynamicDiGraph::countArcRemovals(DynamicTime timeFrom, DynamicTime timeUntil) const
 {
     return grin->countOperations(timeFrom, timeUntil, Operation::Type::ARC_REMOVAL);
 }
 
-unsigned long long DynamicDiGraph::countNoops(DynamicDiGraph::DynamicTime timeFrom, DynamicDiGraph::DynamicTime timeUntil) const
+DynamicDiGraph::size_type DynamicDiGraph::countNoops(DynamicDiGraph::DynamicTime timeFrom, DynamicDiGraph::DynamicTime timeUntil) const
 {
     return grin->countOperations(timeFrom, timeUntil, Operation::Type::NONE);
 }

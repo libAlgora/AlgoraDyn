@@ -9,7 +9,6 @@
 
 namespace Algora {
 
-class DynamicDiGraph;
 class Vertex;
 
 class RandomQueryGenerator : public DynamicDiGraphQueryProvider
@@ -32,7 +31,7 @@ public:
     virtual std::string getName() const noexcept override { return "Random Query Generator"; }
 
 private:
-    unsigned long long absoluteQueries;
+		DynamicDiGraph::size_type absoluteQueries;
     double relativeQueries;
     NUM_QUERY_RELATION relateTo;
 
@@ -41,7 +40,7 @@ private:
     bool initialized;
 
     void init();
-    unsigned long long computeNumQueries(const DynamicDiGraph *dyGraph) const;
+		DynamicDiGraph::size_type computeNumQueries(const DynamicDiGraph *dyGraph) const;
 };
 
 }

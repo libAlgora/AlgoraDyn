@@ -37,10 +37,10 @@ bool RandomDynamicDiGraphGenerator::provideDynamicDiGraph(DynamicDiGraph *dyGrap
 {
     init();
 
-    std::uniform_int_distribution<unsigned long long> distVertex(0, iGraphSize - 1);
-    std::uniform_int_distribution<unsigned long long> distSecVertex(0, iGraphSize - 2);
+    std::uniform_int_distribution<DiGraph::size_type> distVertex(0, iGraphSize - 1);
+    std::uniform_int_distribution<DiGraph::size_type> distSecVertex(0, iGraphSize - 2);
     auto randomVertex = std::bind(distVertex, std::ref(gen));
-    auto randomSecondVertex = [&](unsigned long long first) {
+    auto randomSecondVertex = [&](DiGraph::size_type first) {
         auto r = distSecVertex(gen);
         if (r >= first) {
             r++;
@@ -48,8 +48,8 @@ bool RandomDynamicDiGraphGenerator::provideDynamicDiGraph(DynamicDiGraph *dyGrap
         return r;
     };
 
-    std::vector<std::pair<unsigned long long, unsigned long long>> arcs;
-    unsigned long long timestamp = 0U;
+    std::vector<std::pair<DiGraph::size_type, DiGraph::size_type>> arcs;
+		DynamicDiGraph::DynamicTime timestamp = 0U;
     dyGraph->clear();
     numAdditions = 0U;
     numDeletions = 0U;
@@ -57,7 +57,7 @@ bool RandomDynamicDiGraphGenerator::provideDynamicDiGraph(DynamicDiGraph *dyGrap
 
     auto addRandomArc = [&](unsigned int mult) {
         for (auto i = 0U; i < mult; i++) {
-            unsigned long long r1, r2;
+					DiGraph::size_type r1, r2;
             if (multiArcs) {
                 r1 = randomVertex();
                 r2 = randomSecondVertex(r1);
@@ -82,7 +82,7 @@ bool RandomDynamicDiGraphGenerator::provideDynamicDiGraph(DynamicDiGraph *dyGrap
             if (arcs.empty()) {
                 throw std::logic_error("List of arcs is empty.");
             }
-            std::uniform_int_distribution<unsigned long long> dist(0, arcs.size() - 1);
+            std::uniform_int_distribution<DiGraph::size_type> dist(0, arcs.size() - 1);
             auto r = dist(gen);
             auto p = arcs[r];
             dyGraph->removeArc(p.first, p.second, timestamp);
@@ -97,7 +97,7 @@ bool RandomDynamicDiGraphGenerator::provideDynamicDiGraph(DynamicDiGraph *dyGrap
     };
 
     // add vertices
-    for (auto i = 0ULL; i < iGraphSize; i++) {
+    for (DiGraph::size_type i = 0U; i < iGraphSize; i++) {
         dyGraph->addVertex(timestamp);
     }
 
@@ -105,8 +105,8 @@ bool RandomDynamicDiGraphGenerator::provideDynamicDiGraph(DynamicDiGraph *dyGrap
     if (iArcProbability > 0.0) {
         iArcSize = 0U;
         std::uniform_real_distribution<> dis(0.0, 1.0);
-        for (auto i = 0ULL; i < iGraphSize; i++) {
-            for (auto j = 0ULL; j < iGraphSize; j++) {
+        for (DiGraph::size_type i = 0U; i < iGraphSize; i++) {
+            for (DiGraph::size_type j = 0U; j < iGraphSize; j++) {
                 if (i == j) {
                     continue;
                 }
@@ -118,21 +118,21 @@ bool RandomDynamicDiGraphGenerator::provideDynamicDiGraph(DynamicDiGraph *dyGrap
             }
         }
     } else  {
-        for (auto i = 0ULL; i < iArcSize; i++) {
+        for (DiGraph::size_type i = 0U; i < iArcSize; i++) {
             addRandomArc(1U);
         }
     }
 
     // count only additions that are operations -> reset counter
-    numAdditions = 0ULL;
+    numAdditions = 0U;
 
     auto propSum = propAddition + propDeletion + propAdvance;
     auto thresholdRemoval = propAddition;
     auto thresholdAdvance = thresholdRemoval + propDeletion;
-    std::uniform_int_distribution<unsigned long long> distOps(0, propSum - 1);
+    std::uniform_int_distribution<unsigned int> distOps(0, propSum - 1);
 
     timestamp++;
-    for (auto o = 0ULL; o < numOperations; o++) {
+    for (DynamicDiGraph::size_type o = 0U; o < numOperations; o++) {
         auto r = distOps(gen);
         if (r < thresholdRemoval) {
             addRandomArc(multiplier);

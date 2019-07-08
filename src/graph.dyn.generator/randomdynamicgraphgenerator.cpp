@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2013 - 2018 : Kathrin Hanauer
+ * Copyright (C) 2013 - 2019 : Kathrin Hanauer
  *
  * This file is part of Algora.
  *
@@ -39,11 +39,11 @@ struct RandomInstanceProvider::CheshireCat {
     unsigned int curInstance;
     unsigned long long seed;
 
-    unsigned long long iGraphSize;
-    unsigned long long iArcSize;
+		DiGraph::size_type iGraphSize;
+    DiGraph::size_type iArcSize;
     double iArcProbability;
     bool multiArcs;
-    unsigned long long numOperations;
+		DynamicDiGraph::size_type numOperations;
     unsigned int propAddition;
     unsigned int propRemoval;
     unsigned int propQuery;
@@ -51,13 +51,13 @@ struct RandomInstanceProvider::CheshireCat {
 
     DynamicDiGraph dynamicGraph;
     QueriesList queries;
-    unsigned long long numArcAdditions;
-    unsigned long long numArcRemovals;
-    unsigned long long numQueries;
+		DynamicDiGraph::size_type numArcAdditions;
+    DynamicDiGraph::size_type numArcRemovals;
+    DynamicDiGraph::size_type numQueries;
     double averageArcSize;
-    unsigned long long finalArcSize;
-    std::vector<unsigned long long> numVertices;
-    std::vector<unsigned long long> numArcs;
+		DiGraph::size_type finalArcSize;
+    std::vector<DiGraph::size_type> numVertices;
+    std::vector<DiGraph::size_type> numArcs;
 
     std::mt19937_64 gen;
 
@@ -119,12 +119,12 @@ void RandomInstanceProvider::setRepetitions(unsigned int r)
     grin->numInstances = r;
 }
 
-void RandomInstanceProvider::setGraphSize(unsigned long long n)
+void RandomInstanceProvider::setGraphSize(DiGraph::size_type n)
 {
     grin->iGraphSize = n;
 }
 
-void RandomInstanceProvider::setInitialArcSize(unsigned long long m)
+void RandomInstanceProvider::setInitialArcSize(DiGraph::size_type m)
 {
     grin->iArcSize = m;
 }
@@ -139,7 +139,7 @@ void RandomInstanceProvider::allowMultiArcs(bool allow)
     grin->multiArcs = allow;
 }
 
-void RandomInstanceProvider::setNumOperations(unsigned long long ops)
+void RandomInstanceProvider::setNumOperations(DynamicDiGraph::size_type ops)
 {
     grin->numOperations = ops;
 }
@@ -164,32 +164,32 @@ void RandomInstanceProvider::setMultiplier(unsigned int multiplier)
     grin->multiplier = multiplier;
 }
 
-unsigned long long RandomInstanceProvider::getGraphSize() const
+DiGraph::size_type RandomInstanceProvider::getGraphSize() const
 {
     return grin->iGraphSize;
 }
 
-unsigned long long RandomInstanceProvider::getInitialArcSize() const
+DiGraph::size_type RandomInstanceProvider::getInitialArcSize() const
 {
     return grin->iArcSize;
 }
 
-unsigned long long RandomInstanceProvider::numArcAdditions() const
+DynamicDiGraph::size_type RandomInstanceProvider::numArcAdditions() const
 {
     return grin->numArcAdditions;
 }
 
-unsigned long long RandomInstanceProvider::numArcRemovals() const
+DynamicDiGraph::size_type RandomInstanceProvider::numArcRemovals() const
 {
     return grin->numArcRemovals;
 }
 
-unsigned long long RandomInstanceProvider::numQueries() const
+DynamicDiGraph::size_type RandomInstanceProvider::numQueries() const
 {
     return grin->numQueries;
 }
 
-unsigned long long RandomInstanceProvider::numDeltas() const
+DynamicDiGraph::size_type RandomInstanceProvider::numDeltas() const
 {
     return grin->queries.size() - 1;
 }
@@ -246,17 +246,17 @@ QueriesList &RandomInstanceProvider::getQueries() const
     return grin->queries;
 }
 
-unsigned long long RandomInstanceProvider::graphSize() const
+DiGraph::size_type RandomInstanceProvider::graphSize() const
 {
     return grin->iGraphSize;
 }
 
-unsigned long long RandomInstanceProvider::initialGraphSize() const
+DiGraph::size_type RandomInstanceProvider::initialGraphSize() const
 {
     return grin->iGraphSize;
 }
 
-unsigned long long RandomInstanceProvider::initialArcSize() const
+DiGraph::size_type RandomInstanceProvider::initialArcSize() const
 {
     return grin->iArcSize;
 }
@@ -271,35 +271,35 @@ double RandomInstanceProvider::averageArcSize() const
     return grin->averageArcSize;
 }
 
-unsigned long long RandomInstanceProvider::finalArcSize() const
+DiGraph::size_type RandomInstanceProvider::finalArcSize() const
 {
     return grin->finalArcSize;
 }
 
-std::vector<unsigned long long> RandomInstanceProvider::numVertices() const
+std::vector<DiGraph::size_type> RandomInstanceProvider::numVertices() const
 {
 	return grin->numVertices;
 }
 
-std::vector<unsigned long long> RandomInstanceProvider::numArcs() const
+std::vector<DiGraph::size_type> RandomInstanceProvider::numArcs() const
 {
 	return grin->numArcs;
 }
 
 void RandomInstanceProvider::CheshireCat::buildInstance()
 {
-    std::uniform_int_distribution<unsigned long long> distVertex(0, iGraphSize - 1);
-    std::uniform_int_distribution<unsigned long long> distSecVertex(0, iGraphSize - 2);
+    std::uniform_int_distribution<DiGraph::size_type> distVertex(0, iGraphSize - 1);
+    std::uniform_int_distribution<DiGraph::size_type> distSecVertex(0, iGraphSize - 2);
     auto randomVertex = std::bind(distVertex, std::ref(gen));
-    auto randomSecondVertex = [&](unsigned long long first) {
+    auto randomSecondVertex = [&](DiGraph::size_type first) {
         auto r = distSecVertex(gen);
         if (r >= first) {
             r++;
         }
         return r;
     };
-    std::vector<std::pair<unsigned long long, unsigned long long>> arcs;
-    unsigned long long timestamp = 0U;
+    std::vector<std::pair<DiGraph::size_type, DiGraph::size_type>> arcs;
+		DynamicDiGraph::DynamicTime timestamp = 0U;
     dynamicGraph.clear();
     queries.clear();
     numArcAdditions = 0U;
@@ -311,7 +311,7 @@ void RandomInstanceProvider::CheshireCat::buildInstance()
 
     auto addRandomArc = [&](unsigned int mult) {
         for (auto i = 0U; i < mult; i++) {
-            unsigned long long r1, r2;
+					DiGraph::size_type r1, r2;
             if (multiArcs) {
                 r1 = randomVertex();
                 r2 = randomSecondVertex(r1);
@@ -338,7 +338,7 @@ void RandomInstanceProvider::CheshireCat::buildInstance()
             if (arcs.empty()) {
                 throw std::logic_error("List of arcs is empty.");
             }
-            std::uniform_int_distribution<unsigned long long> dist(0, arcs.size() - 1);
+            std::uniform_int_distribution<DiGraph::size_type> dist(0, arcs.size() - 1);
             auto r = dist(gen);
             auto p = arcs[r];
             dynamicGraph.removeArc(p.first, p.second, timestamp);
@@ -400,12 +400,12 @@ void RandomInstanceProvider::CheshireCat::buildInstance()
     auto propSum = propAddition + propRemoval + propQuery;
     auto thresholdRemoval = propAddition;
     auto thresholdQuery = thresholdRemoval + propRemoval;
-    std::uniform_int_distribution<unsigned long long> distOps(0, propSum - 1);
+    std::uniform_int_distribution<unsigned int> distOps(0, propSum - 1);
 
     bool lastWasModification = true;
     bool first = true;
     queries.emplace_back();
-    for (auto o = 0ULL; o < numOperations; o++) {
+    for (DynamicDiGraph::size_type o = 0U; o < numOperations; o++) {
         auto r = distOps(gen);
         if (r < thresholdRemoval) {
             if (!lastWasModification || first) {
