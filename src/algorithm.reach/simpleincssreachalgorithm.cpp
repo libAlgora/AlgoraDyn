@@ -66,7 +66,7 @@ struct SimpleIncSSReachAlgorithm::Reachability {
     bool relateToReachable;
     bool radicalReset;
 
-		DiGraph::size_type numReachable;
+    DiGraph::size_type numReachable;
     profiling_counter numUnreached;
     profiling_counter numRereached;
     profiling_counter numUnknown;
@@ -110,8 +110,8 @@ struct SimpleIncSSReachAlgorithm::Reachability {
 #endif
     }
 
-		DiGraph::size_type propagate(const Vertex *from, State s, bool collectVertices, bool setPred,
-                           bool force) {
+    template<bool collectVertices, bool setPred, bool force>
+        DiGraph::size_type propagate(const Vertex *from, State s) {
         PRINT_DEBUG("Propagating " << printState(s) << " from " << from << ".");
         BreadthFirstSearch<FastPropertyMap,false> bfs(false);
         bfs.setGraph(diGraph);
@@ -129,7 +129,7 @@ struct SimpleIncSSReachAlgorithm::Reachability {
             }
         }
 
-        bfs.onArcDiscover([this,from,s,collectVertices,setPred,force](const Arc *ca) {
+        bfs.onArcDiscover([this,from,s](const Arc *ca) {
             auto *a = const_cast<Arc*>(ca);
             PRINT_DEBUG("Discovering arc (" << a->getTail() << ", " << a->getHead() << ")" );
 #ifdef COLLECT_PR_DATA
@@ -270,9 +270,10 @@ struct SimpleIncSSReachAlgorithm::Reachability {
         return false;
     }
 
-    void reachFrom(const Vertex *from, bool force = false) {
+    template<bool force = false>
+    void reachFrom(const Vertex *from) {
 #ifdef COLLECT_PR_DATA
-        auto reached = propagate(from, State::REACHABLE, false, true, force);
+        auto reached = propagate<false,true,force>(from, State::REACHABLE);
         if (reached > maxReached) {
             maxReached = reached;
         }
@@ -296,12 +297,12 @@ struct SimpleIncSSReachAlgorithm::Reachability {
             numReReachFromSource++;
             parent->prReset();
 #endif
-            reachFrom(source, false);
+            reachFrom<false>(source);
             return;
         }
 
         changedStateVertices.clear();
-        propagate(from, State::UNKNOWN, true, false, false);
+        propagate<true, false, false>(from, State::UNKNOWN);
 
         auto unknown = changedStateVertices.size();
 #ifdef COLLECT_PR_DATA
@@ -324,9 +325,9 @@ struct SimpleIncSSReachAlgorithm::Reachability {
                 reachability.resetAll();
                 pred.resetAll();
                 numReachable = 0U;
-                reachFrom(source, false);
+                reachFrom<false>(source);
             } else {
-                reachFrom(source, true);
+                reachFrom<true>(source);
                 for (auto v : changedStateVertices) {
 #ifdef COLLECT_PR_DATA
                     parent->prVertexConsidered();
