@@ -110,9 +110,10 @@ struct SimpleIncSSReachAlgorithm::Reachability {
 #endif
     }
 
-    template<bool collectVertices, bool setPred, bool force>
-        DiGraph::size_type propagate(const Vertex *from, State s) {
+    template<bool collectVertices, bool setPred, bool force, bool limit = false>
+    DiGraph::size_type propagate(const Vertex *from, State s, DiGraph::size_type maxSteps = 0U) {
         PRINT_DEBUG("Propagating " << printState(s) << " from " << from << ".");
+        DiGraph::size_type steps = 1U;
         BreadthFirstSearch<FastPropertyMap,false> bfs(false);
         bfs.setGraph(diGraph);
         bfs.setStartVertex(from);
@@ -129,7 +130,7 @@ struct SimpleIncSSReachAlgorithm::Reachability {
             }
         }
 
-        bfs.onArcDiscover([this,from,s](const Arc *ca) {
+        bfs.onArcDiscover([this,from,s,&steps](const Arc *ca) {
             auto *a = const_cast<Arc*>(ca);
             PRINT_DEBUG("Discovering arc (" << a->getTail() << ", " << a->getHead() << ")" );
 #ifdef COLLECT_PR_DATA
@@ -179,8 +180,19 @@ struct SimpleIncSSReachAlgorithm::Reachability {
                     changedStateVertices.push_back(v);
                 }
             }
+            if (limit > 0) {
+                steps++;
+            }
             return true;
         });
+        if (limit) {
+            bfs.setArcStopCondition([&steps,maxSteps](const Arc*) {
+                return steps > maxSteps;
+            });
+            bfs.setVertexStopCondition([&steps,maxSteps](const Vertex*) {
+                return steps > maxSteps;
+            });
+        }
 
 #ifdef COLLECT_PR_DATA
         bfs.onVertexDiscover([this](const Vertex *) {
@@ -279,7 +291,7 @@ struct SimpleIncSSReachAlgorithm::Reachability {
         }
         numReached += reached;
 #else
-        propagate(from, State::REACHABLE, false, true, force);
+        propagate<false,true,force>(from, State::REACHABLE);
 #endif
     }
 
@@ -301,21 +313,26 @@ struct SimpleIncSSReachAlgorithm::Reachability {
             return;
         }
 
-        changedStateVertices.clear();
-        propagate<true, false, false>(from, State::UNKNOWN);
-
-        auto unknown = changedStateVertices.size();
-#ifdef COLLECT_PR_DATA
-        numReachable -= unknown;
-        PRINT_DEBUG( unknown << " vertices have unknown state.");
-#endif
-
         auto relateTo = relateToReachable ? numReachable : diGraph->getSize();
         auto compareTo = maxUSSqrt ? floor(sqrt(relateTo))
                                    : (maxUSLog ?
                                           floor(log2(relateTo)) : floor(maxUnknownStateRatio * relateTo));
+
+        changedStateVertices.clear();
+        auto maxSteps = static_cast<DiGraph::size_type>(compareTo);
+        auto visited = radicalReset ? propagate<true, false, false, true>(from, State::UNKNOWN, maxSteps)
+            : propagate<true, false, false, false>(from, State::UNKNOWN);
+
+        auto unknown = changedStateVertices.size();
+#ifdef COLLECT_PR_DATA
+        numReachable -= unknown;
+        PRINT_DEBUG( unknown << " vertices have unknown state, " << visited << " were visited by BFS.");
+#endif
+        assert (unknown == visited || unknown == visited + 1U);
+
         if (unknown > compareTo) {
-            PRINT_DEBUG("Maximum allowed unknown state ratio exceeded, " << unknown << " > " << compareTo << ", recomputing.");
+            PRINT_DEBUG("Maximum allowed unknown state ratio exceeded, "
+                        << unknown << " > " << compareTo << ", recomputing.");
 #ifdef COLLECT_PR_DATA
             numReReachFromSource++;
             parent->prReset();
