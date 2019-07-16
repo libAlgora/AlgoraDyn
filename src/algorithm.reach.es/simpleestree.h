@@ -110,7 +110,6 @@ private:
     profiling_counter rerunRequeued;
     profiling_counter rerunNumAffected;
 
-    FastPropertyMap<bool> inQueue;
     FastPropertyMap<unsigned int> timesInQueue;
 
     void restoreTree(SESVertexData *rd);

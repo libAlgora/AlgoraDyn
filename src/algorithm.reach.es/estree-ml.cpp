@@ -71,7 +71,6 @@ ESTreeML::ESTreeML(unsigned int requeueLimit, double maxAffectedRatio)
     inNeighborIndices.setDefaultValue(0U);
     reachable.setDefaultValue(false);
 
-    inQueue.setDefaultValue(false);
     timesInQueue.setDefaultValue(0U);
 }
 
@@ -593,7 +592,6 @@ DiGraph::size_type ESTreeML::process(ESVertexData *vd, ESTreeML::PriorityQueue &
                 maxReQueued = timesInQueue[vertex];
             }
             queue.push_back(vd);
-            inQueue[vertex] = true;
         } else {
             timesInQueue[vertex]++;
             limitReached = true;
@@ -677,8 +675,7 @@ DiGraph::size_type ESTreeML::process(ESVertexData *vd, ESTreeML::PriorityQueue &
             prVertexConsidered();
 #endif
             auto *hd = data(head);
-            assert (!hd->isTreeArc(a) || !inQueue[head]);
-            if (hd->isTreeArc(a) && !inQueue[head]) {
+            if (hd->isTreeArc(a)) {
                 PRINT_DEBUG("  Adding child " << hd << " to queue.");
                 enqueue(hd);
             } else {
@@ -716,10 +713,8 @@ void ESTreeML::restoreTree(ESVertexData *rd)
 {
     PriorityQueue queue;
     queue.set_capacity(diGraph->getSize());
-    inQueue.resetAll(diGraph->getSize());
     timesInQueue.resetAll(diGraph->getSize());
     queue.push_back(rd);
-    inQueue[rd->getVertex()] = true;
     timesInQueue[rd->getVertex()]++;
     if (maxReQueued == 0U) {
         maxReQueued = 1U;
@@ -733,7 +728,6 @@ void ESTreeML::restoreTree(ESVertexData *rd)
         IF_DEBUG(printQueue(queue))
         auto vd = queue.front();
         queue.pop_front();
-        inQueue.resetToDefault(vd->getVertex());
 #ifdef COLLECT_PR_DATA
         prVertexConsidered();
         auto levels = 

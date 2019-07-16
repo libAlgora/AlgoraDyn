@@ -109,7 +109,6 @@ private:
     profiling_counter rerunRequeued;
     profiling_counter rerunNumAffected;
 
-    FastPropertyMap<bool> inQueue;
     FastPropertyMap<unsigned int> timesInQueue;
 
     void restoreTree(ESVertexData *rd);
@@ -118,7 +117,7 @@ private:
     bool checkTree();
     void rerun();
     typedef boost::circular_buffer<ESVertexData*> PriorityQueue;
-		DiGraph::size_type process(ESVertexData *vd, PriorityQueue &queue,
+    DiGraph::size_type process(ESVertexData *vd, PriorityQueue &queue,
                      bool &limitReached);
 };
 

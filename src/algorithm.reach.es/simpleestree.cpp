@@ -71,7 +71,6 @@ SimpleESTree::SimpleESTree(unsigned int requeueLimit, double maxAffectedRatio)
     data.setDefaultValue(nullptr);
     reachable.setDefaultValue(false);
 
-    inQueue.setDefaultValue(false);
     timesInQueue.setDefaultValue(0U);
 }
 
@@ -616,8 +615,7 @@ DiGraph::size_type SimpleESTree::process(SESVertexData *vd, PriorityQueue &queue
 #ifdef COLLECT_PR_DATA
             prVertexConsidered();
 #endif
-            assert (!hd->isTreeArc(a) || !inQueue[head]);
-            if (hd->isTreeArc(a) && !inQueue[head]) {
+            if (hd->isTreeArc(a)) {
                 if (timesInQueue[head] < requeueLimit) {
                     PRINT_DEBUG("    Adding child " << hd << " to queue...");
                     timesInQueue[head]++;
@@ -625,7 +623,6 @@ DiGraph::size_type SimpleESTree::process(SESVertexData *vd, PriorityQueue &queue
                         maxReQueued = timesInQueue[head];
                     }
                     queue.push_back(hd);
-                    inQueue[head] = true;
                 } else {
                     timesInQueue[head]++;
                     limitReached = true;
@@ -647,10 +644,8 @@ void SimpleESTree::restoreTree(SESVertexData *rd)
 {
     PriorityQueue queue;
     queue.set_capacity(diGraph->getSize());
-    inQueue.resetAll(diGraph->getSize());
     timesInQueue.resetAll(diGraph->getSize());
     queue.push_back(rd);
-    inQueue[rd->getVertex()] = true;
     timesInQueue[rd->getVertex()]++;
     if (maxReQueued == 0U) {
         maxReQueued = 1U;
@@ -664,7 +659,6 @@ void SimpleESTree::restoreTree(SESVertexData *rd)
         IF_DEBUG(printQueue(queue))
         auto vd = queue.front();
         queue.pop_front();
-        inQueue.resetToDefault(vd->vertex);
 #ifdef COLLECT_PR_DATA
         prVertexConsidered();
         auto levels =
