@@ -26,7 +26,6 @@
 #include "algorithm.reach/dynamicssreachalgorithm.h"
 #include "property/propertymap.h"
 #include "property/fastpropertymap.h"
-#include "datastructure/bucketqueue.h"
 #include "sesvertexdata.h"
 #include <sstream>
 #include <boost/circular_buffer.hpp>
