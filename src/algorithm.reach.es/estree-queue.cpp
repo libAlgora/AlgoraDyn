@@ -546,7 +546,9 @@ bool ESTreeQ::checkTree()
 
 void ESTreeQ::rerun()
 {
+#ifdef COLLECT_PR_DATA
     reruns++;
+#endif
     diGraph->mapVertices([&](Vertex *v) {
         data[v]->reset();
     });
