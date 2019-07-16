@@ -30,6 +30,7 @@
 #include "algorithm.basic.traversal/breadthfirstsearch.h"
 #include "algorithm/digraphalgorithmexception.h"
 #include "property/fastpropertymap.h"
+#include <cassert>
 
 //#define DEBUG_ESTREE
 
@@ -45,11 +46,11 @@
 namespace Algora {
 
 #ifdef DEBUG_ESTREE
-void printQueue(PriorityQueue q) {
+void printQueue(boost::circular_buffer<ESVertexData*> q) {
     std::cerr << "PriorityQueue: ";
     while(!q.empty()) {
-        std::cerr << q.bot()->vertex << "[" << q.bot()->level << "]" << ", ";
-        q.popBot();
+        std::cerr << q.front()->getVertex() << "[" << q.front()->level << "]" << ", ";
+        q.pop_front();
     }
     std::cerr << std::endl;
 }
@@ -71,6 +72,9 @@ ESTreeQ::ESTreeQ(unsigned int requeueLimit, double maxAffectedRatio)
     data.setDefaultValue(nullptr);
     inNeighborIndices.setDefaultValue(0U);
     reachable.setDefaultValue(false);
+
+    inQueue.setDefaultValue(false);
+    timesInQueue.setDefaultValue(0U);
 }
 
 ESTreeQ::~ESTreeQ()
@@ -127,7 +131,7 @@ void ESTreeQ::run()
         Vertex *h = a->getHead();
         ESVertexData *td = data(t);
         ESVertexData *hd = data(h);
-        PRINT_DEBUG( "(" << td->vertex << ", " << hd->vertex << ")" << " is a non-tree arc.")
+        PRINT_DEBUG( "(" << td->getVertex() << ", " << hd->getVertex() << ")" << " is a non-tree arc.")
         hd->addInNeighbor(td, a);
    });
    runAlgorithm(bfs, diGraph);
@@ -153,7 +157,7 @@ void ESTreeQ::run()
            data[h] = hd;
        }
        if (!td->isReachable()) {
-            PRINT_DEBUG( "(" << td->vertex << ", " << hd->vertex << ")" << " is an unvisited non-tree arc.")
+            PRINT_DEBUG( "(" << td->getVertex() << ", " << hd->getVertex() << ")" << " is an unvisited non-tree arc.")
             hd->addInNeighbor(td, a);
        }
    });
@@ -418,7 +422,6 @@ void ESTreeQ::onArcRemove(Arc *a)
     if (hd == nullptr) {
         PRINT_DEBUG("Head of arc is unreachable (and never was). Nothing to do.")
         throw std::logic_error("Should not happen");
-        return;
     }
 
     ESVertexData *td = data(tail);
@@ -556,7 +559,7 @@ void ESTreeQ::rerun()
     run();
 }
 
-DiGraph::size_type ESTreeQ::process(ESVertexData *vd, ESTreeQ::PriorityQueue &queue, FastPropertyMap<bool> &inQueue, FastPropertyMap<unsigned int> &timesInQueue, bool &limitReached)
+DiGraph::size_type ESTreeQ::process(ESVertexData *vd, ESTreeQ::PriorityQueue &queue, bool &limitReached)
 {
     if (vd->getLevel() == 0ULL) {
         PRINT_DEBUG("No need to process source vertex " << vd << ".");
@@ -582,7 +585,7 @@ DiGraph::size_type ESTreeQ::process(ESVertexData *vd, ESTreeQ::PriorityQueue &qu
     auto oldVLevel = vd->getLevel();
     auto levelDiff = 0ULL;
 
-    auto enqueue = [this,vd,&queue,&inQueue,&timesInQueue,&limitReached](ESVertexData *vd) {
+    auto enqueue = [this,&queue,&limitReached](ESVertexData *vd) {
         auto vertex = vd->getVertex();
         if (timesInQueue[vertex] < requeueLimit) {
             PRINT_DEBUG("    Adding " << vd << " to queue...");
@@ -647,7 +650,8 @@ DiGraph::size_type ESTreeQ::process(ESVertexData *vd, ESTreeQ::PriorityQueue &qu
         }
     }
     if (levelChanged) {
-        diGraph->mapOutgoingArcsUntil(vd->getVertex(), [this,&enqueue,&inQueue,vd](Arc *a) {
+        diGraph->mapOutgoingArcsUntil(vd->getVertex(), [this,&enqueue,vd](Arc *a) {
+              PRINT_DEBUG("    Considering arc " << a << "...");
 #ifdef COLLECT_PR_DATA
             prArcConsidered();
 #endif
@@ -660,12 +664,14 @@ DiGraph::size_type ESTreeQ::process(ESVertexData *vd, ESTreeQ::PriorityQueue &qu
             prVertexConsidered();
 #endif
             auto *hd = data(head);
+            PRINT_DEBUG("    Head is " << hd << ", in queue: " << (inQueue[head] ? "yes" : "no"));
             if (hd->isTreeArc(a) && !inQueue[head]) {
                 enqueue(hd);
             } else {
               PRINT_DEBUG("    NOT adding " << hd << " to queue: not a child of " << vd)
             }
         }, [&limitReached](const Arc *) { return limitReached; });
+
         if (reachV || !limitReached) {
             enqueue(vd);
         }
@@ -683,16 +689,16 @@ DiGraph::size_type ESTreeQ::process(ESVertexData *vd, ESTreeQ::PriorityQueue &qu
 
 }
 
-void ESTreeQ::restoreTree(ESVertexData *vd)
+void ESTreeQ::restoreTree(ESVertexData *rd)
 {
     PriorityQueue queue;
     queue.set_capacity(diGraph->getSize());
-    FastPropertyMap<bool> inQueue(false, "", diGraph->getSize());
-    FastPropertyMap<unsigned int> timesInQueue(0U, "", diGraph->getSize());
-    queue.push_back(vd);
-    inQueue[vd->getVertex()] = true;
-    timesInQueue[vd->getVertex()]++;
-    PRINT_DEBUG("Initialized queue with " << vds.size() << " vertices.");
+    inQueue.resetAll(diGraph->getSize());
+    timesInQueue.resetAll(diGraph->getSize());
+    queue.push_back(rd);
+    inQueue[rd->getVertex()] = true;
+    timesInQueue[rd->getVertex()]++;
+    PRINT_DEBUG("Initialized queue with " << rd << ".")
     bool limitReached = false;
     auto processed = 0U;
     auto affectedLimit = maxAffectedRatio * diGraph->getSize();
@@ -706,8 +712,9 @@ void ESTreeQ::restoreTree(ESVertexData *vd)
         prVertexConsidered();
         auto levels =
 #endif
-                process(vd, queue, inQueue, timesInQueue, limitReached);
+                process(vd, queue, limitReached);
         processed++;
+        assert(timesInQueue[rd->getVertex()] >= timesInQueue[vd->getVertex()]);
 
         if (limitReached || ((processed + queue.size() > affectedLimit) && !queue.empty())) {
 #ifdef COLLECT_PR_DATA

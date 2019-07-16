@@ -70,6 +70,9 @@ ESTreeML::ESTreeML(unsigned int requeueLimit, double maxAffectedRatio)
     data.setDefaultValue(nullptr);
     inNeighborIndices.setDefaultValue(0U);
     reachable.setDefaultValue(false);
+
+    inQueue.setDefaultValue(false);
+    timesInQueue.setDefaultValue(0U);
 }
 
 ESTreeML::~ESTreeML()
@@ -554,7 +557,8 @@ void ESTreeML::rerun()
     run();
 }
 
-DiGraph::size_type ESTreeML::process(ESVertexData *vd, ESTreeML::PriorityQueue &queue, FastPropertyMap<bool> &inQueue, FastPropertyMap<unsigned int> &timesInQueue, bool &limitReached)
+DiGraph::size_type ESTreeML::process(ESVertexData *vd, ESTreeML::PriorityQueue &queue,
+                                     bool &limitReached)
 {
     if (vd->getLevel() == 0ULL) {
         PRINT_DEBUG("No need to process source vertex " << vd << ".");
@@ -580,7 +584,7 @@ DiGraph::size_type ESTreeML::process(ESVertexData *vd, ESTreeML::PriorityQueue &
     auto oldVLevel = vd->getLevel();
     auto levelDiff = 0ULL;
 
-    auto enqueue = [this,&queue,&inQueue,&timesInQueue,&limitReached](ESVertexData *vd) {
+    auto enqueue = [this,&queue,&limitReached](ESVertexData *vd) {
         auto vertex = vd->getVertex();
         if (timesInQueue[vertex] < requeueLimit) {
             PRINT_DEBUG("    Adding " << vd << " to queue...");
@@ -660,7 +664,7 @@ DiGraph::size_type ESTreeML::process(ESVertexData *vd, ESTreeML::PriorityQueue &
     PRINT_DEBUG("Finished search for new parent.")
     if (levelChanged) {
         PRINT_DEBUG("Level has changed, checking children in BFS tree.")
-        diGraph->mapOutgoingArcsUntil(vd->getVertex(), [this,&enqueue,&inQueue,vd](Arc *a) {
+        diGraph->mapOutgoingArcsUntil(vd->getVertex(), [this,&enqueue](Arc *a) {
 #ifdef COLLECT_PR_DATA
             prArcConsidered();
 #endif
@@ -673,6 +677,7 @@ DiGraph::size_type ESTreeML::process(ESVertexData *vd, ESTreeML::PriorityQueue &
             prVertexConsidered();
 #endif
             auto *hd = data(head);
+            assert (!hd->isTreeArc(a) || !inQueue[head]);
             if (hd->isTreeArc(a) && !inQueue[head]) {
                 PRINT_DEBUG("  Adding child " << hd << " to queue.");
                 enqueue(hd);
@@ -711,8 +716,8 @@ void ESTreeML::restoreTree(ESVertexData *rd)
 {
     PriorityQueue queue;
     queue.set_capacity(diGraph->getSize());
-    FastPropertyMap<bool> inQueue(false, "", diGraph->getSize());
-    FastPropertyMap<unsigned int> timesInQueue(0U, "", diGraph->getSize());
+    inQueue.resetAll(diGraph->getSize());
+    timesInQueue.resetAll(diGraph->getSize());
     queue.push_back(rd);
     inQueue[rd->getVertex()] = true;
     timesInQueue[rd->getVertex()]++;
@@ -733,7 +738,7 @@ void ESTreeML::restoreTree(ESVertexData *rd)
         prVertexConsidered();
         auto levels = 
 #endif
-					process(vd, queue, inQueue, timesInQueue, limitReached);
+                    process(vd, queue, limitReached);
         processed++;
 
         if (limitReached || ((processed + queue.size() > affectedLimit) && !queue.empty())) {

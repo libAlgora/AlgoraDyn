@@ -70,6 +70,9 @@ SimpleESTree::SimpleESTree(unsigned int requeueLimit, double maxAffectedRatio)
 {
     data.setDefaultValue(nullptr);
     reachable.setDefaultValue(false);
+
+    inQueue.setDefaultValue(false);
+    timesInQueue.setDefaultValue(0U);
 }
 
 SimpleESTree::~SimpleESTree()
@@ -301,8 +304,6 @@ void SimpleESTree::onArcAdd(Arc *a)
             levelDecrease += (hd->level - (td->level + 1));
         }
 #endif
-        //hd->level = td->level + 1;
-        //hd->parent = td;
         hd->setParent(td, a);
         reachable[head] = true;
     }
@@ -401,7 +402,6 @@ void SimpleESTree::onArcRemove(Arc *a)
     if (hd == nullptr) {
         PRINT_DEBUG("Head of arc is unreachable (and never was). Nothing to do.")
         throw std::logic_error("Should not happen");
-        return;
     }
 
     if (!hd->isReachable()) {
@@ -530,8 +530,6 @@ void SimpleESTree::rerun()
 }
 
 DiGraph::size_type SimpleESTree::process(SESVertexData *vd, PriorityQueue &queue,
-                     FastPropertyMap<bool> &inQueue,
-                     FastPropertyMap<unsigned int> &timesInQueue,
                      bool &limitReached) {
 
     if (vd->level == 0UL) {
@@ -606,7 +604,7 @@ DiGraph::size_type SimpleESTree::process(SESVertexData *vd, PriorityQueue &queue
 
     if (levelDiff > 0U) {
         PRINT_DEBUG("Updating children...");
-        diGraph->mapOutgoingArcsUntil(vd->vertex, [this,&inQueue,&timesInQueue,&queue,&limitReached](Arc *a) {
+        diGraph->mapOutgoingArcsUntil(vd->vertex, [this,&queue,&limitReached](Arc *a) {
 #ifdef COLLECT_PR_DATA
             prArcConsidered();
 #endif
@@ -618,6 +616,7 @@ DiGraph::size_type SimpleESTree::process(SESVertexData *vd, PriorityQueue &queue
 #ifdef COLLECT_PR_DATA
             prVertexConsidered();
 #endif
+            assert (!hd->isTreeArc(a) || !inQueue[head]);
             if (hd->isTreeArc(a) && !inQueue[head]) {
                 if (timesInQueue[head] < requeueLimit) {
                     PRINT_DEBUG("    Adding child " << hd << " to queue...");
@@ -648,8 +647,8 @@ void SimpleESTree::restoreTree(SESVertexData *rd)
 {
     PriorityQueue queue;
     queue.set_capacity(diGraph->getSize());
-    FastPropertyMap<bool> inQueue(false, "", diGraph->getSize());
-    FastPropertyMap<unsigned int> timesInQueue(0U, "", diGraph->getSize());
+    inQueue.resetAll(diGraph->getSize());
+    timesInQueue.resetAll(diGraph->getSize());
     queue.push_back(rd);
     inQueue[rd->getVertex()] = true;
     timesInQueue[rd->getVertex()]++;
@@ -670,7 +669,7 @@ void SimpleESTree::restoreTree(SESVertexData *rd)
         prVertexConsidered();
         auto levels =
 #endif
-        process(vd, queue, inQueue, timesInQueue, limitReached);
+        process(vd, queue, limitReached);
         processed++;
 
         if (limitReached || ((processed + queue.size() > affectedLimit) && !queue.empty())) {

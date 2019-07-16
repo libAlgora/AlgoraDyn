@@ -105,10 +105,13 @@ private:
     profiling_counter incNonTreeArc;
     profiling_counter reruns;
     unsigned int maxReQueued;
-		DiGraph::size_type maxAffected;
+    DiGraph::size_type maxAffected;
     profiling_counter totalAffected;
     profiling_counter rerunRequeued;
     profiling_counter rerunNumAffected;
+
+    FastPropertyMap<bool> inQueue;
+    FastPropertyMap<unsigned int> timesInQueue;
 
     void restoreTree(SESVertexData *rd);
     void cleanup();
@@ -116,9 +119,7 @@ private:
     bool checkTree();
     void rerun();
     typedef boost::circular_buffer<SESVertexData*> PriorityQueue;
-		DiGraph::size_type process(SESVertexData *vd, PriorityQueue &queue,
-                     FastPropertyMap<bool> &inQueue,
-                     FastPropertyMap<unsigned int> &timesInQueue,
+    DiGraph::size_type process(SESVertexData *vd, PriorityQueue &queue,
                      bool &limitReached);
 };
 
