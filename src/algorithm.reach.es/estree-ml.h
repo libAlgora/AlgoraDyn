@@ -28,7 +28,7 @@
 #include "property/propertymap.h"
 #include "property/fastpropertymap.h"
 #include <sstream>
-#include "datastructure/bucketqueue.h"
+#include <boost/circular_buffer.hpp>
 
 namespace Algora {
 
@@ -109,12 +109,12 @@ private:
     profiling_counter rerunRequeued;
     profiling_counter rerunNumAffected;
 
-    void restoreTree(ESVertexData *vd);
+    void restoreTree(ESVertexData *rd);
     void cleanup();
     void dumpTree(std::ostream &os);
     bool checkTree();
     void rerun();
-    typedef BucketQueue<ESVertexData*, ES_Priority> PriorityQueue;
+    typedef boost::circular_buffer<ESVertexData*> PriorityQueue;
 		DiGraph::size_type process(ESVertexData *vd, PriorityQueue &queue,
                      FastPropertyMap<bool> &inQueue,
                      FastPropertyMap<unsigned int> &timesInQueue,
