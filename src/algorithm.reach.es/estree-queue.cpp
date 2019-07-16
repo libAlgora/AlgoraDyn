@@ -74,7 +74,6 @@ ESTreeQ::ESTreeQ(unsigned int requeueLimit, double maxAffectedRatio)
     reachable.setDefaultValue(false);
 
     inQueue.setDefaultValue(false);
-    timesInQueue.setDefaultValue(0U);
 }
 
 ESTreeQ::~ESTreeQ()
@@ -559,7 +558,7 @@ void ESTreeQ::rerun()
     run();
 }
 
-DiGraph::size_type ESTreeQ::process(ESVertexData *vd, ESTreeQ::PriorityQueue &queue, bool &limitReached)
+DiGraph::size_type ESTreeQ::process(ESVertexData *vd, ESTreeQ::PriorityQueue &queue, bool &requeued)
 {
     if (vd->getLevel() == 0ULL) {
         PRINT_DEBUG("No need to process source vertex " << vd << ".");
@@ -585,22 +584,11 @@ DiGraph::size_type ESTreeQ::process(ESVertexData *vd, ESTreeQ::PriorityQueue &qu
     auto oldVLevel = vd->getLevel();
     auto levelDiff = 0ULL;
 
-    auto enqueue = [this,&queue,&limitReached](ESVertexData *vd) {
+    auto enqueue = [this,&queue](ESVertexData *vd) {
         auto vertex = vd->getVertex();
-        if (timesInQueue[vertex] < requeueLimit) {
-            PRINT_DEBUG("    Adding " << vd << " to queue...");
-            timesInQueue[vertex]++;
-            if (timesInQueue[vertex] > maxReQueued) {
-                maxReQueued = timesInQueue[vertex];
-            }
-            //queue.push(vd);
-            queue.push_back(vd);
-            inQueue[vertex] = true;
-        } else {
-            timesInQueue[vertex]++;
-            limitReached = true;
-            PRINT_DEBUG("Limit reached for vertex " << vertex << ".");
-        }
+        PRINT_DEBUG("    Adding " << vd << " to queue...");
+        queue.push_back(vd);
+        inQueue[vertex] = true;
     };
 
     if (vd->inNeighbors.empty()) {
@@ -649,8 +637,9 @@ DiGraph::size_type ESTreeQ::process(ESVertexData *vd, ESTreeQ::PriorityQueue &qu
             }
         }
     }
+    requeued = false;
     if (levelChanged) {
-        diGraph->mapOutgoingArcsUntil(vd->getVertex(), [this,&enqueue,vd](Arc *a) {
+        diGraph->mapOutgoingArcs(vd->getVertex(), [this,&enqueue,vd](Arc *a) {
               PRINT_DEBUG("    Considering arc " << a << "...");
 #ifdef COLLECT_PR_DATA
             prArcConsidered();
@@ -670,10 +659,11 @@ DiGraph::size_type ESTreeQ::process(ESVertexData *vd, ESTreeQ::PriorityQueue &qu
             } else {
               PRINT_DEBUG("    NOT adding " << hd << " to queue: not a child of " << vd)
             }
-        }, [&limitReached](const Arc *) { return limitReached; });
+        });
 
-        if (reachV || !limitReached) {
+        if (reachV) {
             enqueue(vd);
+            requeued = true;
         }
     }
 
@@ -694,15 +684,15 @@ void ESTreeQ::restoreTree(ESVertexData *rd)
     PriorityQueue queue;
     queue.set_capacity(diGraph->getSize());
     inQueue.resetAll(diGraph->getSize());
-    timesInQueue.resetAll(diGraph->getSize());
     queue.push_back(rd);
     inQueue[rd->getVertex()] = true;
-    timesInQueue[rd->getVertex()]++;
     PRINT_DEBUG("Initialized queue with " << rd << ".")
     bool limitReached = false;
     auto processed = 0U;
     auto affectedLimit = maxAffectedRatio * diGraph->getSize();
 
+    bool requeued = false;
+    auto rdTimesInQueue = 1U;
     while (!queue.empty()) {
         IF_DEBUG(printQueue(queue))
         auto vd = queue.front();
@@ -712,9 +702,19 @@ void ESTreeQ::restoreTree(ESVertexData *rd)
         prVertexConsidered();
         auto levels =
 #endif
-                process(vd, queue, limitReached);
+                process(vd, queue, requeued);
         processed++;
-        assert(timesInQueue[rd->getVertex()] >= timesInQueue[vd->getVertex()]);
+        if (vd == rd && requeued) {
+            rdTimesInQueue++;
+            if (rdTimesInQueue > requeueLimit) {
+                limitReached = true;
+            }
+#ifdef COLLECT_PR_DATA
+            if (rdTimesInQueue > maxReQueued) {
+                maxReQueued = rdTimesInQueue;
+            }
+#endif
+        }
 
         if (limitReached || ((processed + queue.size() > affectedLimit) && !queue.empty())) {
 #ifdef COLLECT_PR_DATA
