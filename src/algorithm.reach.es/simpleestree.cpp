@@ -44,11 +44,11 @@
 namespace Algora {
 
 #ifdef DEBUG_SIMPLEESTREE
-void printQueue(BucketQueue<SESVertexData*, SES_Priority> q) {
+void printQueue(boost::circular_buffer<SESVertexData*> q) {
     std::cerr << "PriorityQueue: ";
     while(!q.empty()) {
-        std::cerr << q.bot()->vertex << "[" << q.bot()->level << "]" << ", ";
-        q.popBot();
+        std::cerr << q.front()->vertex << "[" << q.bot()->level << "]" << ", ";
+        q.pop_front();
     }
     std::cerr << std::endl;
 }
@@ -70,6 +70,8 @@ SimpleESTree::SimpleESTree(unsigned int requeueLimit, double maxAffectedRatio)
 {
     data.setDefaultValue(nullptr);
     reachable.setDefaultValue(false);
+
+    timesInQueue.setDefaultValue(0U);
 }
 
 SimpleESTree::~SimpleESTree()
@@ -301,8 +303,6 @@ void SimpleESTree::onArcAdd(Arc *a)
             levelDecrease += (hd->level - (td->level + 1));
         }
 #endif
-        //hd->level = td->level + 1;
-        //hd->parent = td;
         hd->setParent(td, a);
         reachable[head] = true;
     }
@@ -340,8 +340,6 @@ void SimpleESTree::onArcAdd(Arc *a)
             }
 #endif
             ahd->setParent(atd, const_cast<Arc*>(a));
-            //ahd->level = atd->level + 1;
-            //ahd->parent = atd;
             reachable[ah] = true;
             PRINT_DEBUG( "(" << at << ", " << ah << ")" << " is a new tree arc.");
             return true;
@@ -388,7 +386,7 @@ void SimpleESTree::onArcRemove(Arc *a)
         return;
     }
 
-    Vertex *head = a->getHead();
+    auto head = a->getHead();
 
     if (head == source) {
         PRINT_DEBUG("Head is source.")
@@ -403,7 +401,6 @@ void SimpleESTree::onArcRemove(Arc *a)
     if (hd == nullptr) {
         PRINT_DEBUG("Head of arc is unreachable (and never was). Nothing to do.")
         throw std::logic_error("Should not happen");
-        return;
     }
 
     if (!hd->isReachable()) {
@@ -531,81 +528,7 @@ void SimpleESTree::rerun()
     run();
 }
 
-void SimpleESTree::restoreTree(SESVertexData *rd)
-{
-    PriorityQueue queue;
-    queue.setLimit(diGraph->getSize());
-    FastPropertyMap<bool> inQueue(false, "", diGraph->getSize());
-    FastPropertyMap<unsigned int> timesInQueue(0U, "", diGraph->getSize());
-    queue.push(rd);
-    inQueue[rd->getVertex()] = true;
-    timesInQueue[rd->getVertex()]++;
-    if (maxReQueued == 0U) {
-        maxReQueued = 1U;
-    }
-    PRINT_DEBUG("Initialized queue with " << rd << ".")
-    bool limitReached = false;
-    auto processed = 0ULL;
-    auto affectedLimit = maxAffectedRatio * diGraph->getSize();
-
-    while (!queue.empty()) {
-        IF_DEBUG(printQueue(queue))
-        auto vd = queue.bot();
-        queue.popBot();
-        inQueue.resetToDefault(vd->vertex);
-#ifdef COLLECT_PR_DATA
-        prVertexConsidered();
-        auto levels =
-#endif
-        process(vd, queue, inQueue, timesInQueue, limitReached);
-        processed++;
-
-        if (limitReached || ((processed + queue.size() > affectedLimit) && !queue.empty())) {
-#ifdef COLLECT_PR_DATA
-            if (limitReached) {
-                rerunRequeued++;
-            }
-            if ((processed + queue.size() > affectedLimit) && !queue.empty()) {
-                rerunNumAffected++;
-            }
-#endif
-            rerun();
-            break;
-#ifdef COLLECT_PR_DATA
-        } else if (levels > 0U) {
-            movesDown++;
-            levelIncrease += levels;
-            if (levels > maxLevelIncrease) {
-                maxLevelIncrease = levels;
-            }
-#endif
-        }
-    }
-#ifdef COLLECT_PR_DATA
-    totalAffected += processed;
-    if (processed > maxAffected) {
-        maxAffected = processed;
-    }
-#endif
-}
-
-void SimpleESTree::cleanup()
-{
-    for (auto i = data.cbegin(); i != data.cend(); i++) {
-        if ((*i)) {
-            delete (*i);
-        }
-    }
-
-    data.resetAll();
-    reachable.resetAll();
-
-    initialized = false;
-}
-
 DiGraph::size_type SimpleESTree::process(SESVertexData *vd, PriorityQueue &queue,
-                     FastPropertyMap<bool> &inQueue,
-                     FastPropertyMap<unsigned int> &timesInQueue,
                      bool &limitReached) {
 
     if (vd->level == 0UL) {
@@ -680,7 +603,7 @@ DiGraph::size_type SimpleESTree::process(SESVertexData *vd, PriorityQueue &queue
 
     if (levelDiff > 0U) {
         PRINT_DEBUG("Updating children...");
-        diGraph->mapOutgoingArcsUntil(vd->vertex, [this,&inQueue,&timesInQueue,&queue,vd,&limitReached](Arc *a) {
+        diGraph->mapOutgoingArcsUntil(vd->vertex, [this,&queue,&limitReached](Arc *a) {
 #ifdef COLLECT_PR_DATA
             prArcConsidered();
 #endif
@@ -692,15 +615,14 @@ DiGraph::size_type SimpleESTree::process(SESVertexData *vd, PriorityQueue &queue
 #ifdef COLLECT_PR_DATA
             prVertexConsidered();
 #endif
-            if (hd->isTreeArc(a) && !inQueue[head]) {
+            if (hd->isTreeArc(a)) {
                 if (timesInQueue[head] < requeueLimit) {
                     PRINT_DEBUG("    Adding child " << hd << " to queue...");
                     timesInQueue[head]++;
                     if (timesInQueue[head] > maxReQueued) {
                         maxReQueued = timesInQueue[head];
                     }
-                    queue.push(hd);
-                    inQueue[head] = true;
+                    queue.push_back(hd);
                 } else {
                     timesInQueue[head]++;
                     limitReached = true;
@@ -716,6 +638,75 @@ DiGraph::size_type SimpleESTree::process(SESVertexData *vd, PriorityQueue &queue
 #endif
 
     return levelDiff;
+}
+
+void SimpleESTree::restoreTree(SESVertexData *rd)
+{
+    PriorityQueue queue;
+    queue.set_capacity(diGraph->getSize());
+    timesInQueue.resetAll(diGraph->getSize());
+    queue.push_back(rd);
+    timesInQueue[rd->getVertex()]++;
+    if (maxReQueued == 0U) {
+        maxReQueued = 1U;
+    }
+    PRINT_DEBUG("Initialized queue with " << rd << ".")
+    bool limitReached = false;
+    auto processed = 0ULL;
+    auto affectedLimit = maxAffectedRatio * diGraph->getSize();
+
+    while (!queue.empty()) {
+        IF_DEBUG(printQueue(queue))
+        auto vd = queue.front();
+        queue.pop_front();
+#ifdef COLLECT_PR_DATA
+        prVertexConsidered();
+        auto levels =
+#endif
+        process(vd, queue, limitReached);
+        processed++;
+
+        if (limitReached || ((processed + queue.size() > affectedLimit) && !queue.empty())) {
+#ifdef COLLECT_PR_DATA
+            if (limitReached) {
+                rerunRequeued++;
+            }
+            if ((processed + queue.size() > affectedLimit) && !queue.empty()) {
+                rerunNumAffected++;
+            }
+#endif
+            rerun();
+            break;
+#ifdef COLLECT_PR_DATA
+        } else if (levels > 0U) {
+            movesDown++;
+            levelIncrease += levels;
+            if (levels > maxLevelIncrease) {
+                maxLevelIncrease = levels;
+            }
+#endif
+        }
+    }
+#ifdef COLLECT_PR_DATA
+    totalAffected += processed;
+    if (processed > maxAffected) {
+        maxAffected = processed;
+    }
+#endif
+}
+
+void SimpleESTree::cleanup()
+{
+    for (auto i = data.cbegin(); i != data.cend(); i++) {
+        if ((*i)) {
+            delete (*i);
+        }
+    }
+
+    data.resetAll();
+    reachable.resetAll();
+
+    initialized = false;
 }
 
 }

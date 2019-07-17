@@ -44,11 +44,11 @@
 namespace Algora {
 
 #ifdef DEBUG_ESTREEML
-void printQueue(BucketQueue<ESVertexData*, ES_Priority> q) {
+void printQueue(boost::circular_buffer<ESVertexData*> q) {
     std::cerr << "PriorityQueue: ";
     while(!q.empty()) {
-        std::cerr << q.bot()->getVertex() << "[" << q.bot()->level << "]" << ", ";
-        q.popBot();
+        std::cerr << q.front()->vertex << "[" << q.bot()->level << "]" << ", ";
+        q.pop_front();
     }
     std::cerr << std::endl;
 }
@@ -70,6 +70,8 @@ ESTreeML::ESTreeML(unsigned int requeueLimit, double maxAffectedRatio)
     data.setDefaultValue(nullptr);
     inNeighborIndices.setDefaultValue(0U);
     reachable.setDefaultValue(false);
+
+    timesInQueue.setDefaultValue(0U);
 }
 
 ESTreeML::~ESTreeML()
@@ -332,10 +334,10 @@ void ESTreeML::onArcAdd(Arc *a)
         if (a->isLoop()) {
             return false;
         }
-        Vertex *at = a->getTail();
-        Vertex *ah = a->getHead();
-        ESVertexData *atd = data(at);
-        ESVertexData *ahd = data(ah);
+        auto at = a->getTail();
+        auto ah = a->getHead();
+        auto atd = data(at);
+        auto ahd = data(ah);
 
         auto diff = ahd->reparent(atd, a);
 #ifdef COLLECT_PR_DATA
@@ -395,8 +397,8 @@ void ESTreeML::onArcRemove(Arc *a)
         return;
     }
 
-    Vertex *tail= a->getTail();
-    Vertex *head = a->getHead();
+    auto tail= a->getTail();
+    auto head = a->getHead();
 
     if (head == source) {
         PRINT_DEBUG("Head is source.")
@@ -544,7 +546,9 @@ bool ESTreeML::checkTree()
 
 void ESTreeML::rerun()
 {
+#ifdef COLLECT_PR_DATA
     reruns++;
+#endif
     diGraph->mapVertices([&](Vertex *v) {
         data[v]->reset();
     });
@@ -552,7 +556,8 @@ void ESTreeML::rerun()
     run();
 }
 
-DiGraph::size_type ESTreeML::process(ESVertexData *vd, ESTreeML::PriorityQueue &queue, FastPropertyMap<bool> &inQueue, FastPropertyMap<unsigned int> &timesInQueue, bool &limitReached)
+DiGraph::size_type ESTreeML::process(ESVertexData *vd, ESTreeML::PriorityQueue &queue,
+                                     bool &limitReached)
 {
     if (vd->getLevel() == 0ULL) {
         PRINT_DEBUG("No need to process source vertex " << vd << ".");
@@ -578,7 +583,7 @@ DiGraph::size_type ESTreeML::process(ESVertexData *vd, ESTreeML::PriorityQueue &
     auto oldVLevel = vd->getLevel();
     auto levelDiff = 0ULL;
 
-    auto enqueue = [this,vd,&queue,&inQueue,&timesInQueue,&limitReached](ESVertexData *vd) {
+    auto enqueue = [this,&queue,&limitReached](ESVertexData *vd) {
         auto vertex = vd->getVertex();
         if (timesInQueue[vertex] < requeueLimit) {
             PRINT_DEBUG("    Adding " << vd << " to queue...");
@@ -586,8 +591,7 @@ DiGraph::size_type ESTreeML::process(ESVertexData *vd, ESTreeML::PriorityQueue &
             if (timesInQueue[vertex] > maxReQueued) {
                 maxReQueued = timesInQueue[vertex];
             }
-            queue.push(vd);
-            inQueue[vertex] = true;
+            queue.push_back(vd);
         } else {
             timesInQueue[vertex]++;
             limitReached = true;
@@ -658,7 +662,7 @@ DiGraph::size_type ESTreeML::process(ESVertexData *vd, ESTreeML::PriorityQueue &
     PRINT_DEBUG("Finished search for new parent.")
     if (levelChanged) {
         PRINT_DEBUG("Level has changed, checking children in BFS tree.")
-        diGraph->mapOutgoingArcsUntil(vd->getVertex(), [this,&enqueue,&inQueue,vd](Arc *a) {
+        diGraph->mapOutgoingArcsUntil(vd->getVertex(), [this,&enqueue](Arc *a) {
 #ifdef COLLECT_PR_DATA
             prArcConsidered();
 #endif
@@ -671,7 +675,7 @@ DiGraph::size_type ESTreeML::process(ESVertexData *vd, ESTreeML::PriorityQueue &
             prVertexConsidered();
 #endif
             auto *hd = data(head);
-            if (hd->isTreeArc(a) && !inQueue[head]) {
+            if (hd->isTreeArc(a)) {
                 PRINT_DEBUG("  Adding child " << hd << " to queue.");
                 enqueue(hd);
             } else {
@@ -705,29 +709,30 @@ DiGraph::size_type ESTreeML::process(ESVertexData *vd, ESTreeML::PriorityQueue &
 
 }
 
-void ESTreeML::restoreTree(ESVertexData *vd)
+void ESTreeML::restoreTree(ESVertexData *rd)
 {
     PriorityQueue queue;
-    queue.setLimit(diGraph->getSize());
-    FastPropertyMap<bool> inQueue(false, "", diGraph->getSize());
-    FastPropertyMap<unsigned int> timesInQueue(0U, "", diGraph->getSize());
-    queue.push(vd);
-    inQueue[vd->getVertex()] = true;
-    timesInQueue[vd->getVertex()]++;
-    PRINT_DEBUG("Initialized queue with " << queue.size() << " vertices.");
+    queue.set_capacity(diGraph->getSize());
+    timesInQueue.resetAll(diGraph->getSize());
+    queue.push_back(rd);
+    timesInQueue[rd->getVertex()]++;
+    if (maxReQueued == 0U) {
+        maxReQueued = 1U;
+    }
+    PRINT_DEBUG("Initialized queue with " << rd << ".")
     bool limitReached = false;
     auto processed = 0U;
     auto affectedLimit = maxAffectedRatio * diGraph->getSize();
 
     while (!queue.empty()) {
         IF_DEBUG(printQueue(queue))
-        auto vd = queue.bot();
-        queue.popBot();
-        inQueue[vd->getVertex()] = false;
+        auto vd = queue.front();
+        queue.pop_front();
 #ifdef COLLECT_PR_DATA
         prVertexConsidered();
+        auto levels = 
 #endif
-        auto levels = process(vd, queue, inQueue, timesInQueue, limitReached);
+                    process(vd, queue, limitReached);
         processed++;
 
         if (limitReached || ((processed + queue.size() > affectedLimit) && !queue.empty())) {
@@ -741,8 +746,8 @@ void ESTreeML::restoreTree(ESVertexData *vd)
 #endif
             rerun();
             break;
-        } else if (levels > 0U) {
 #ifdef COLLECT_PR_DATA
+        } else if (levels > 0U) {
             movesDown++;
             levelIncrease += levels;
             PRINT_DEBUG("total level increase " << levelIncrease);

@@ -33,7 +33,8 @@ namespace Algora {
 class SimpleIncSSReachAlgorithm : public DynamicSSReachAlgorithm
 {
 public:
-    explicit SimpleIncSSReachAlgorithm(bool reverse = false, bool searchForward = true, double maxUS = 0.25, bool radicalReset = false);
+    explicit SimpleIncSSReachAlgorithm(bool reverse = false, bool searchForward = true, double maxUS = 0.25,
+                                       bool radicalReset = false);
     virtual ~SimpleIncSSReachAlgorithm() override;
     void setMaxUnknownStateSqrt();
     void setMaxUnknownStateLog();

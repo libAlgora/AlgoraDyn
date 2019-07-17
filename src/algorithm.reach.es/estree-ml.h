@@ -28,7 +28,7 @@
 #include "property/propertymap.h"
 #include "property/fastpropertymap.h"
 #include <sstream>
-#include "datastructure/bucketqueue.h"
+#include <boost/circular_buffer.hpp>
 
 namespace Algora {
 
@@ -96,7 +96,7 @@ private:
     profiling_counter movesUp;
     profiling_counter levelIncrease;
     profiling_counter levelDecrease;
-		DiGraph::size_type maxLevelIncrease;
+    DiGraph::size_type maxLevelIncrease;
     DiGraph::size_type maxLevelDecrease;
     profiling_counter decUnreachableHead;
     profiling_counter decNonTreeArc;
@@ -104,20 +104,20 @@ private:
     profiling_counter incNonTreeArc;
     profiling_counter reruns;
     unsigned int maxReQueued;
-		DiGraph::size_type maxAffected;
+    DiGraph::size_type maxAffected;
     profiling_counter totalAffected;
     profiling_counter rerunRequeued;
     profiling_counter rerunNumAffected;
 
-    void restoreTree(ESVertexData *vd);
+    FastPropertyMap<unsigned int> timesInQueue;
+
+    void restoreTree(ESVertexData *rd);
     void cleanup();
     void dumpTree(std::ostream &os);
     bool checkTree();
     void rerun();
-    typedef BucketQueue<ESVertexData*, ES_Priority> PriorityQueue;
-		DiGraph::size_type process(ESVertexData *vd, PriorityQueue &queue,
-                     FastPropertyMap<bool> &inQueue,
-                     FastPropertyMap<unsigned int> &timesInQueue,
+    typedef boost::circular_buffer<ESVertexData*> PriorityQueue;
+    DiGraph::size_type process(ESVertexData *vd, PriorityQueue &queue,
                      bool &limitReached);
 };
 
