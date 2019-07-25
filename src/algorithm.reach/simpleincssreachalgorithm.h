@@ -44,38 +44,8 @@ public:
     // DiGraphAlgorithm interface
 public:
     virtual void run() override;
-    virtual std::string getName() const noexcept override {
-        std::stringstream ss;
-        ss << "Simple Incremental Single-Source Reachability Algorithm ("
-            << (reverse ? "reverse" : "non-reverse") << "/"
-            << (searchForward ? "forward search" : "no forward search") << "/";
-        if (maxUSSqrt) {
-            ss << "SQRT";
-        } else if (maxUSLog) {
-            ss << "LOG";
-        } else {
-            ss << maxUnknownStateRatio;
-        }
-        ss << "*" << (relateToReachable ? "#R" : "#V") << "/";
-        ss  << (radicalReset? "radical reset" : "soft reset") << ")";
-        return ss.str();
-    }
-    virtual std::string getShortName() const noexcept override {
-        std::stringstream ss;
-        ss << "Simple-ISSR("
-            << (reverse ? "R" : "NR") << "/"
-            << (searchForward ? "SF" : "NSF") << "/";
-        if (maxUSSqrt) {
-            ss << "SQRT";
-        } else if (maxUSLog) {
-            ss << "LOG";
-        } else {
-            ss << maxUnknownStateRatio;
-        }
-        ss << "~" << (relateToReachable ? "R" : "G") << "/";
-        ss << (radicalReset ? "C" : "NC") << ")";
-        return ss.str();
-    }
+    virtual std::string getName() const noexcept override;
+    virtual std::string getShortName() const noexcept override;
     virtual std::string getProfilingInfo() const override;
     virtual Profile getProfile() const override;
 
