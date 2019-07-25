@@ -32,7 +32,7 @@ namespace Algora {
 StaticBFSSSReachAlgorithm::StaticBFSSSReachAlgorithm()
     : DynamicSSReachAlgorithm()
 {
-
+    registerEvents(false, false, false, false);
 }
 
 StaticBFSSSReachAlgorithm::~StaticBFSSSReachAlgorithm()

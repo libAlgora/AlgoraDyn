@@ -107,7 +107,8 @@ CachingBFSSSReachAlgorithm::CachingBFSSSReachAlgorithm()
     : DynamicSSReachAlgorithm(),
 		grin(new CheshireCat)
 {
-		grin->parent = this;
+    grin->parent = this;
+    registerEvents(false, false, true, true);
 }
 
 CachingBFSSSReachAlgorithm::~CachingBFSSSReachAlgorithm()
