@@ -437,7 +437,6 @@ struct SimpleIncSSReachAlgorithm::Reachability {
         // arcs must have already been removed
         assert(!reachable(v));
         reachability.resetToDefault(v);
-        numReachable--;
     }
 
     char printState(const State &s) const {
