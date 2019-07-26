@@ -34,7 +34,9 @@ class DynamicDiGraphAlgorithm
         : public DiGraphAlgorithm
 {
 public:
-    explicit DynamicDiGraphAlgorithm() : DiGraphAlgorithm(), autoUpdate(true), registered(false) {}
+    explicit DynamicDiGraphAlgorithm() : DiGraphAlgorithm(), autoUpdate(true), registered(false),
+        registerOnVertexAdd(true), registerOnVertexRemove(true), registerOnArcAdd(true), registerOnArcRemove(true)
+    {}
     virtual ~DynamicDiGraphAlgorithm() override { deregister(); }
 
     void setAutoUpdate(bool au) {
@@ -54,11 +56,23 @@ protected:
     virtual void onDiGraphSet() override;
     virtual void onDiGraphUnset() override;
 
+    void registerEvents(bool vertexAdd, bool vertexRemove, bool arcAdd, bool arcRemove) {
+        registerOnVertexAdd = vertexAdd;
+        registerOnVertexRemove = vertexRemove;
+        registerOnArcAdd = arcAdd;
+        registerOnArcRemove = arcRemove;
+    }
+
 private:
     bool autoUpdate;
     bool registered;
 
     void deregister();
+
+    bool registerOnVertexAdd;
+    bool registerOnVertexRemove;
+    bool registerOnArcAdd;
+    bool registerOnArcRemove;
 };
 
 }

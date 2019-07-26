@@ -33,7 +33,7 @@ namespace Algora {
 StaticDFSSSReachAlgorithm::StaticDFSSSReachAlgorithm()
     : DynamicSSReachAlgorithm()
 {
-
+    registerEvents(false, false, false, false);
 }
 
 StaticDFSSSReachAlgorithm::~StaticDFSSSReachAlgorithm()

@@ -108,6 +108,7 @@ CachingDFSSSReachAlgorithm::CachingDFSSSReachAlgorithm()
     : DynamicSSReachAlgorithm(), grin(new CheshireCat)
 {
     grin->parent = this;
+    registerEvents(false, false, true, true);
 }
 
 CachingDFSSSReachAlgorithm::~CachingDFSSSReachAlgorithm()
