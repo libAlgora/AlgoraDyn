@@ -497,12 +497,9 @@ struct DynamicDiGraph::CheshireCat {
         return true;
     }
 
-    DynamicDiGraph::size_type findTimeIndex(DynamicTime timestamp) const {
-        DynamicDiGraph::size_type tIndex = 0U;
-        while (tIndex < timestamps.size() && timestamps[tIndex] < timestamp) {
-            tIndex++;
-        }
-        return tIndex;
+    auto findTimeIndex(DynamicTime timestamp, long long offset = 0) const {
+        auto lower = std::lower_bound(timestamps.begin() + offset, timestamps.end(), timestamp);
+        return std::distance(timestamps.cbegin(), lower);
     }
 
     bool lastOpHadType(Operation::Type type) const {
@@ -521,17 +518,21 @@ struct DynamicDiGraph::CheshireCat {
     }
 
     DynamicDiGraph::size_type countOperations(DynamicTime timeFrom, DynamicTime timeUntil, Operation::Type type) const {
-        auto tIndexFrom = findTimeIndex(timeFrom);
-        if (tIndexFrom >= timestamps.size()) {
-                return 0U;
-        }
-        auto tIndexUntil = findTimeIndex(timeUntil) + 1;
-        if (tIndexUntil <= tIndexFrom) {
+        if (timeUntil < timeFrom) {
             return 0U;
         }
-        auto opIndexMax = tIndexUntil < offset.size() ? offset[tIndexUntil] : operations.size();
+        auto tIndexFrom = findTimeIndex(timeFrom);
+        assert(tIndexFrom >= 0);
+        auto from = static_cast<DynamicDiGraph::size_type>(tIndexFrom);
+        if (from >= timestamps.size()) {
+                return 0U;
+        }
+        auto tIndexUntil = findTimeIndex(timeUntil, tIndexFrom);
+        assert(tIndexUntil >= 0);
+        auto until = static_cast<DynamicDiGraph::size_type>(tIndexUntil) + 1;
+        auto opIndexMax = until < offset.size() ? offset[until] : operations.size();
         DynamicDiGraph::size_type numOperations = 0U;
-        for (auto opI = offset[tIndexFrom]; opI < opIndexMax; opI++) {
+        for (auto opI = offset[from]; opI < opIndexMax; opI++) {
             Operation *op = operations[opI];
             if (op->getType() == type) {
                 numOperations++;
