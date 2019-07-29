@@ -33,31 +33,25 @@ adinfotarget.depends = FORCE
 PRE_TARGETDEPS += $$ADINFOHDR
 QMAKE_EXTRA_TARGETS += adinfotarget
 
-QMAKE_CXXFLAGS_DEBUG += -std=c++17 -O0 -DCOLLECT_PR_DATA
+QMAKE_CXXFLAGS_DEBUG += -std=c++17 -O0
 
 QMAKE_CXXFLAGS_STATIC_LIB = # remove -fPIC
 QMAKE_CXXFLAGS_RELEASE -= -O3 -O2 -O1
-QMAKE_CXXFLAGS_RELEASE += -std=c++17 -O3 -DNDEBUG #-fno-omit-frame-pointer -g -DCOLLECT_PR_DATA
+QMAKE_CXXFLAGS_RELEASE += -std=c++17 -O3 -DNDEBUG
 
-zmiy {
-  QMAKE_CXXFLAGS_RELEASE += -march=haswell -mmmx -msse -msse2 -msse3 -mssse3 \
-                            -mcx16 -msahf -mmovbe -maes -mpclmul -mpopcnt -mabm \
-                            -mfma -mbmi -mbmi2 -mavx -mavx2 -msse4.2 -msse4.1 \
-                            -mlzcnt -mrdrnd -mf16c -mfsgsbase -mfxsr -mxsave \
-                            -mxsaveopt \
-                            --param l1-cache-size=32 --param l1-cache-line-size=64 \
-                            --param l2-cache-size=6144 -mtune=haswell \
-                            -fstack-protector-strong -Wformat -Wformat-security
-} else:zeus {
-  QMAKE_CXXFLAGS_RELEASE += -march=ivybridge -mmmx -msse -msse2 -msse3 -mssse3 \
-                            -mcx16 -msahf -maes -mpclmul -mpopcnt -mavx -msse4.2 \
-                            -msse4.1 -mrdrnd -mf16c -mfsgsbase -mfxsr -mxsave \
-                            -mxsaveopt \
-                            --param l1-cache-size=32 --param l1-cache-line-size=64 \
-                            --param l2-cache-size=20480 -mtune=ivybridge \
-                            -fstack-protector-strong -Wformat -Wformat-security
+general {
+  QMAKE_CXXFLAGS_RELEASE += -O2 -march=x86-64
 } else {
-  QMAKE_CXXFLAGS_RELEASE += -march=native -mtune=native
+  QMAKE_CXXFLAGS_RELEASE += -O3 -march=native -mtune=native
+}
+
+debugsymbols {
+	QMAKE_CXXFLAGS_RELEASE += -fno-omit-frame-pointer -g
+}
+
+profiling {
+	QMAKE_CXXFLAGS_DEBUG   += -DCOLLECT_PR_DATA
+	QMAKE_CXXFLAGS_RELEASE += -DCOLLECT_PR_DATA
 }
 
 unix {
