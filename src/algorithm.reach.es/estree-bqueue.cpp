@@ -260,6 +260,9 @@ void OldESTree::onDiGraphUnset()
 
 void OldESTree::onVertexAdd(Vertex *v)
 {
+    if (!initialized) {
+        return;
+    }
     data[v] = new ESVertexData(&inNeighborIndices, v);
 }
 

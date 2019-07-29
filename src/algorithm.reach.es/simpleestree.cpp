@@ -245,6 +245,10 @@ void SimpleESTree::onDiGraphUnset()
 
 void SimpleESTree::onVertexAdd(Vertex *v)
 {
+    if (!initialized) {
+        return;
+    }
+
     data[v] = new SESVertexData(v);
 }
 

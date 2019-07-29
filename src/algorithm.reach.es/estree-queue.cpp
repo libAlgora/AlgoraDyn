@@ -263,6 +263,9 @@ void ESTreeQ::onDiGraphUnset()
 
 void ESTreeQ::onVertexAdd(Vertex *v)
 {
+    if (!initialized) {
+        return;
+    }
     data[v] = new ESVertexData(&inNeighborIndices, v);
 }
 
