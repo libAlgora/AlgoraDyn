@@ -11,14 +11,16 @@ RandomQueryGenerator::RandomQueryGenerator()
 
 }
 
-RandomQueryGenerator::VertexQueryList RandomQueryGenerator::generateVertexQueries(const DynamicDiGraph *dyGraph)
+RandomQueryGenerator::VertexQueryList RandomQueryGenerator::generateVertexQueries(
+        const DynamicDiGraph *dyGraph)
 {
     init();
 
     auto numQueries = computeNumQueries(dyGraph);
     VertexQueryList queries;
     // assuming that vertex ids are consecutive
-    std::uniform_int_distribution<DynamicDiGraph::VertexIdentifier> distVertex(0, dyGraph->getCurrentGraphSize() - 1);
+    std::uniform_int_distribution<DynamicDiGraph::VertexIdentifier> distVertex(
+                0, dyGraph->getDiGraph()->getSize() - 1);
     auto randomVertex = std::bind(distVertex, std::ref(gen));
 
     for (auto i = numQueries; i > 0; i--) {
@@ -28,18 +30,20 @@ RandomQueryGenerator::VertexQueryList RandomQueryGenerator::generateVertexQuerie
     return queries;
 }
 
-std::vector<RandomQueryGenerator::VertexQueryList> RandomQueryGenerator::provideVertexQueries(DynamicDiGraph *dyGraph)
+std::vector<RandomQueryGenerator::VertexQueryList> RandomQueryGenerator::provideVertexQueries(
+        DynamicDiGraph *dyGraph)
 {
     init();
     std::vector<VertexQueryList> queriesSet;
-
-    std::uniform_int_distribution<DynamicDiGraph::VertexIdentifier> distVertex(0, dyGraph->getCurrentGraphSize() - 1);
-    auto randomVertex = std::bind(distVertex, std::ref(gen));
 
     dyGraph->resetToBigBang();
     auto sumQueries = 0Ull;
 
     while (dyGraph->applyNextDelta()) {
+        std::uniform_int_distribution<DynamicDiGraph::VertexIdentifier> distVertex(
+                    0, dyGraph->getDiGraph()->getSize() - 1);
+        auto randomVertex = std::bind(distVertex, std::ref(gen));
+
         queriesSet.emplace_back();
         auto &queries = queriesSet.back();
         auto numQueries = computeNumQueries(dyGraph);

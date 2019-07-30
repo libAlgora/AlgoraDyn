@@ -232,13 +232,15 @@ struct DynamicDiGraph::CheshireCat {
 
     void extendTime(DynamicTime timestamp) {
         if (timestamps.empty() || timestamps.back() < timestamp) {
-            PRINT_DEBUG( "Extending time from " << (timestamps.empty() ? 0U : timestamps.back()) << " to " << timestamp )
+            //PRINT_DEBUG( "Extending time from "
+            //            << (timestamps.empty() ? 0U : timestamps.back()) << " to " << timestamp )
             timestamps.push_back(timestamp);
             offset.push_back(operations.size());
         }
     }
 
-    VertexIdentifier addVertex(DynamicTime timestamp, bool atEnd, VertexIdentifier vertexId = 0U, bool okIfExists = false) {
+    VertexIdentifier addVertex(DynamicTime timestamp, bool atEnd, VertexIdentifier vertexId = 0U,
+                               bool okIfExists = false) {
         checkTimestamp(timestamp);
 
         if (atEnd) {
@@ -578,6 +580,8 @@ struct DynamicDiGraph::CheshireCat {
 
     VertexIdentifier idOfIthVertex(DynamicDiGraph::size_type i) {
 
+        PRINT_DEBUG("Id of " << i <<  "th vertex requested.");
+        PRINT_DEBUG("Size of dynamic graph is " << dynGraph.getSize() << ".");
         std::function<void(Operation*)> updateMap;
         updateMap = [this,&updateMap](Operation *op) {
             if (op->getType() == Operation::Type::VERTEX_ADDITION) {
@@ -664,12 +668,12 @@ DynamicDiGraph::size_type DynamicDiGraph::getNumberOfDeltas() const
     return grin->timestamps.size();
 }
 
-DiGraph::size_type DynamicDiGraph::getCurrentGraphSize() const
+DiGraph::size_type DynamicDiGraph::getConstructedGraphSize() const
 {
     return grin->constructionGraph.getSize();
 }
 
-DiGraph::size_type DynamicDiGraph::getCurrentArcSize() const
+DiGraph::size_type DynamicDiGraph::getConstructedArcSize() const
 {
     return grin->constructionArcMap.size();
 }

@@ -44,8 +44,8 @@ public:
     DynamicTime getMaxTime() const;
     const std::vector<DynamicTime> &getTimestamps() const;
     size_type getNumberOfDeltas() const;
-		DiGraph::size_type getCurrentGraphSize() const;
-    DiGraph::size_type getCurrentArcSize() const;
+        DiGraph::size_type getConstructedGraphSize() const;
+    DiGraph::size_type getConstructedArcSize() const;
 
     VertexIdentifier addVertex(DynamicTime timestamp);
     void addVertex(VertexIdentifier vertexId, DynamicTime timestamp);
