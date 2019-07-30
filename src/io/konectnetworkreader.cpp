@@ -58,8 +58,10 @@ bool operator<(const Entry &lhs, const Entry &rhs) {
     return lhs.timestamp < rhs.timestamp;
 }
 
-KonectNetworkReader::KonectNetworkReader(bool antedateVertexAdditions, bool removeIsolatedEndVertices)
-    : antedateVertexAdditions(antedateVertexAdditions), removeIsolatedEndVertices(removeIsolatedEndVertices)
+KonectNetworkReader::KonectNetworkReader(bool antedateVertexAdditions,
+                                         bool removeIsolatedEndVertices)
+    : antedateVertexAdditions(antedateVertexAdditions),
+      removeIsolatedEndVertices(removeIsolatedEndVertices)
 {
 
 }

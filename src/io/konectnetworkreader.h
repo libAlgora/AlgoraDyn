@@ -33,7 +33,8 @@ class DynamicDiGraph;
 class KonectNetworkReader : public StreamDiGraphReader
 {
 public:
-    explicit KonectNetworkReader(bool antedateVertexAdditions = false, bool removeIsolatedEndVertices = false);
+    explicit KonectNetworkReader(bool antedateVertexAdditions = false,
+                                 bool removeIsolatedEndVertices = false);
     virtual ~KonectNetworkReader() override;
 
     std::string getErrors() const { return lastError; }
