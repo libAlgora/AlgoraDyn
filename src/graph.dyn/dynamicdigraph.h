@@ -24,7 +24,7 @@
 #define DYNAMICDIGRAPH_H
 
 #include <vector>
-#include "graph/digraph.h"
+#include "graph.incidencelist/incidencelistgraph.h"
 
 namespace Algora {
 
@@ -38,7 +38,7 @@ public:
     explicit DynamicDiGraph();
     ~DynamicDiGraph();
 
-    DiGraph *getDiGraph() const;
+    IncidenceListGraph *getDiGraph() const;
     DynamicTime getCurrentTime() const;
     DynamicTime getTimeOfXthNextDelta(DynamicTime x, bool forward) const;
     DynamicTime getMaxTime() const;

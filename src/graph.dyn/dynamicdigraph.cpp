@@ -622,7 +622,7 @@ DynamicDiGraph::~DynamicDiGraph()
     delete grin;
 }
 
-DiGraph *DynamicDiGraph::getDiGraph() const
+IncidenceListGraph *DynamicDiGraph::getDiGraph() const
 {
     return &(grin->dynGraph);
 }
