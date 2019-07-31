@@ -24,7 +24,7 @@ QT       -= core gui
 
 TARGET = AlgoraDyn
 TEMPLATE = lib
-CONFIG += staticlib
+CONFIG += staticlib c++17
 
 ADINFOHDR = $$PWD/algoradyn_info.h
 adinfotarget.target =  $$ADINFOHDR
