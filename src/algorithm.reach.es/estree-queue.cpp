@@ -90,7 +90,7 @@ void ESTreeQ::run()
    PRINT_DEBUG("Initializing ESTree...")
 
    reachable.resetAll(diGraph->getSize());
-   inNeighborIndices.resetAll(diGraph->getNumArcs());
+   inNeighborIndices.resetAll(diGraph->getNumArcs(true));
 
    BreadthFirstSearch<FastPropertyMap,false> bfs(false);
    root = source;

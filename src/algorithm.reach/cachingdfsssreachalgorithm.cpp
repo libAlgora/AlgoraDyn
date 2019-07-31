@@ -60,7 +60,7 @@ struct CachingDFSSSReachAlgorithm::CheshireCat {
 #ifdef COLLECT_PR_DATA
         parent->prReset();
         parent->prVerticesConsidered(diGraph->getSize());
-        parent->prArcsConsidered(diGraph->getNumArcs());
+        parent->prArcsConsidered(diGraph->getNumArcs(true));
 #endif
     }
 

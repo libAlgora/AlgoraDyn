@@ -86,13 +86,13 @@ void DynamicDiGraphStatistics::analyzeDynamicDiGraph(DynamicDiGraph *dyGraph)
 
     bool next = dyGraph->applyNextDelta();
     iGraphSize = graph->getSize();
-    iArcSize = graph->getNumArcs(false);
+    iArcSize = graph->getNumArcs(true);
     auto tsOld = dyGraph->getCurrentTime();
     auto tsNew = tsOld;
 
     while (next) {
         graphSizes.push_back(graph->getSize());
-        arcSizes.push_back(graph->getNumArcs(false));
+        arcSizes.push_back(graph->getNumArcs(true));
         next = dyGraph->applyNextDelta();
         if (next) {
             tsOld = tsNew;

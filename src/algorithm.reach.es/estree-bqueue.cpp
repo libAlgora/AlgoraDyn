@@ -87,7 +87,7 @@ void OldESTree::run()
    PRINT_DEBUG("Initializing OldESTree...")
 
    reachable.resetAll(diGraph->getSize());
-   inNeighborIndices.resetAll(diGraph->getNumArcs());
+   inNeighborIndices.resetAll(diGraph->getNumArcs(true));
 
    BreadthFirstSearch<FastPropertyMap,false> bfs(false);
    root = source;
@@ -421,7 +421,6 @@ void OldESTree::onArcRemove(Arc *a)
     if (hd == nullptr) {
         PRINT_DEBUG("Head of arc is unreachable (and never was). Nothing to do.")
         throw std::logic_error("Should not happen");
-        return;
     }
 
     ESVertexData *td = data(tail);
