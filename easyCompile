@@ -67,6 +67,10 @@ case $1 in
     usage
     exit 0
     ;;
+    --)
+    shift
+    break
+    ;;
     *)
     echo "Unknown option $1."
     usage
@@ -80,7 +84,7 @@ done
 [ -n "${QMAKE}" ] || eval 'echo "Binary \"qmake\" or \"qmake-qt5\" not found. Please specify its location explicitly via --qmake <path/to/qmake>." 1>&2; exit 1'
 [ -x "${QMAKE}" ] || eval 'echo "\"${QMAKE}\" is not an executable. Please specify the location of the qmake binary explicitly via --qmake <path/to/qmake>." 1>&2; exit 1'
 
-QMAKE_ARGS="-r -spec ${SPEC} ${EXTRA_ARGS}"
+QMAKE_ARGS="-r -spec ${SPEC} ${EXTRA_ARGS} $@"
 QMAKE_ARGS_DEBUG="CONFIG+=debug"
 
 
