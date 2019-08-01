@@ -78,7 +78,7 @@ ESTreeQ::ESTreeQ(unsigned int requeueLimit, double maxAffectedRatio)
 
 ESTreeQ::~ESTreeQ()
 {
-    cleanup();
+    cleanup(false);
 }
 
 void ESTreeQ::run()
@@ -235,7 +235,7 @@ DynamicSSReachAlgorithm::Profile ESTreeQ::getProfile() const
 void ESTreeQ::onDiGraphSet()
 {
     DynamicSSReachAlgorithm::onDiGraphSet();
-    cleanup();
+    cleanup(false);
 
     movesDown = 0U;
     movesUp = 0U;
@@ -257,8 +257,8 @@ void ESTreeQ::onDiGraphSet()
 
 void ESTreeQ::onDiGraphUnset()
 {
-    cleanup();
     DynamicSSReachAlgorithm::onDiGraphUnset();
+    cleanup(true);
 }
 
 void ESTreeQ::onVertexAdd(Vertex *v)
@@ -460,7 +460,7 @@ void ESTreeQ::onArcRemove(Arc *a)
 
 void ESTreeQ::onSourceSet()
 {
-    cleanup();
+    cleanup(false);
 }
 
 bool ESTreeQ::query(const Vertex *t)
@@ -561,7 +561,7 @@ void ESTreeQ::rerun()
     run();
 }
 
-DiGraph::size_type ESTreeQ::process(ESVertexData *vd, ESTreeQ::PriorityQueue &queue, bool &requeued)
+DiGraph::size_type ESTreeQ::process(ESVertexData *vd, bool &requeued)
 {
     if (vd->getLevel() == 0ULL) {
         PRINT_DEBUG("No need to process source vertex " << vd << ".");
@@ -587,7 +587,7 @@ DiGraph::size_type ESTreeQ::process(ESVertexData *vd, ESTreeQ::PriorityQueue &qu
     auto oldVLevel = vd->getLevel();
     auto levelDiff = 0ULL;
 
-    auto enqueue = [this,&queue](ESVertexData *vd) {
+    auto enqueue = [this](ESVertexData *vd) {
         auto vertex = vd->getVertex();
         PRINT_DEBUG("    Adding " << vd << " to queue...");
         queue.push_back(vd);
@@ -684,15 +684,16 @@ DiGraph::size_type ESTreeQ::process(ESVertexData *vd, ESTreeQ::PriorityQueue &qu
 
 void ESTreeQ::restoreTree(ESVertexData *rd)
 {
-    PriorityQueue queue;
-    queue.set_capacity(diGraph->getSize());
-    inQueue.resetAll(diGraph->getSize());
-    queue.push_back(rd);
+    auto n = diGraph->getSize();
+    DiGraph::size_type affectedLimit = maxAffectedRatio < 1.0 ? floor(maxAffectedRatio * n) : n;
+    queue.set_capacity(affectedLimit);
+    inQueue.resetAll(n);
     inQueue[rd->getVertex()] = true;
+    queue.clear();
+    queue.push_back(rd);
     PRINT_DEBUG("Initialized queue with " << rd << ".")
     bool limitReached = false;
     auto processed = 0U;
-    auto affectedLimit = maxAffectedRatio * diGraph->getSize();
 
     bool requeued = false;
     auto rdTimesInQueue = 1U;
@@ -705,7 +706,7 @@ void ESTreeQ::restoreTree(ESVertexData *rd)
         prVertexConsidered();
         auto levels =
 #endif
-                process(vd, queue, requeued);
+        process(vd, requeued);
         processed++;
         if (vd == rd && requeued) {
             rdTimesInQueue++;
@@ -750,7 +751,7 @@ void ESTreeQ::restoreTree(ESVertexData *rd)
 #endif
 }
 
-void ESTreeQ::cleanup()
+void ESTreeQ::cleanup(bool freeSpace)
 {
     for (auto i = data.cbegin(); i != data.cend(); i++) {
         if ((*i)) {
@@ -758,8 +759,19 @@ void ESTreeQ::cleanup()
         }
     }
 
-    data.resetAll();
-    reachable.resetAll();
+    queue.clear();
+    if (freeSpace || !diGraph) {
+        data.resetAll(0);
+        reachable.resetAll(0);
+        inNeighborIndices.resetAll(0);
+        inQueue.resetAll(0);
+        queue.set_capacity(0);
+    } else {
+        data.resetAll(diGraph->getSize());
+        reachable.resetAll(diGraph->getSize());
+        inNeighborIndices.resetAll(diGraph->getNumArcs(true));
+        inQueue.resetAll(diGraph->getSize());
+    }
 
     initialized = false ;
 }

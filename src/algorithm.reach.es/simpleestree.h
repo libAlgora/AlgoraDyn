@@ -86,8 +86,13 @@ public:
     virtual void dumpData(std::ostream &os) override;
 
 private:
+    typedef boost::circular_buffer<SESVertexData*> PriorityQueue;
+
     FastPropertyMap<SESVertexData*> data;
     FastPropertyMap<bool> reachable;
+    FastPropertyMap<unsigned int> timesInQueue;
+		PriorityQueue queue;
+
     Vertex *root;
     bool initialized;
     unsigned int requeueLimit;
@@ -110,16 +115,12 @@ private:
     profiling_counter rerunRequeued;
     profiling_counter rerunNumAffected;
 
-    FastPropertyMap<unsigned int> timesInQueue;
-
     void restoreTree(SESVertexData *rd);
-    void cleanup();
+    void cleanup(bool freeSpace);
     void dumpTree(std::ostream &os);
     bool checkTree();
     void rerun();
-    typedef boost::circular_buffer<SESVertexData*> PriorityQueue;
-    DiGraph::size_type process(SESVertexData *vd, PriorityQueue &queue,
-                     bool &limitReached);
+    DiGraph::size_type process(SESVertexData *vd, bool &limitReached);
 };
 
 }

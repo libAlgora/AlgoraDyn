@@ -76,7 +76,7 @@ ESTreeML::ESTreeML(unsigned int requeueLimit, double maxAffectedRatio)
 
 ESTreeML::~ESTreeML()
 {
-    cleanup();
+    cleanup(false); // space will be freed anyway
 }
 
 void ESTreeML::run()
@@ -233,7 +233,7 @@ DynamicSSReachAlgorithm::Profile ESTreeML::getProfile() const
 void ESTreeML::onDiGraphSet()
 {
     DynamicSSReachAlgorithm::onDiGraphSet();
-    cleanup();
+    cleanup(false);
 
     movesDown = 0U;
     movesUp = 0U;
@@ -249,14 +249,12 @@ void ESTreeML::onDiGraphSet()
     totalAffected = 0U;
     rerunRequeued = 0U;
     rerunNumAffected = 0U;
-    data.resetAll(diGraph->getSize());
-    reachable.resetAll(diGraph->getSize());
 }
 
 void ESTreeML::onDiGraphUnset()
 {
-    cleanup();
     DynamicSSReachAlgorithm::onDiGraphUnset();
+    cleanup(true);
 }
 
 void ESTreeML::onVertexAdd(Vertex *v)
@@ -458,7 +456,7 @@ void ESTreeML::onArcRemove(Arc *a)
 
 void ESTreeML::onSourceSet()
 {
-    cleanup();
+    cleanup(false);
 }
 
 bool ESTreeML::query(const Vertex *t)
@@ -559,8 +557,7 @@ void ESTreeML::rerun()
     run();
 }
 
-DiGraph::size_type ESTreeML::process(ESVertexData *vd, ESTreeML::PriorityQueue &queue,
-                                     bool &limitReached)
+DiGraph::size_type ESTreeML::process(ESVertexData *vd, bool &limitReached)
 {
     if (vd->getLevel() == 0ULL) {
         PRINT_DEBUG("No need to process source vertex " << vd << ".");
@@ -586,7 +583,7 @@ DiGraph::size_type ESTreeML::process(ESVertexData *vd, ESTreeML::PriorityQueue &
     auto oldVLevel = vd->getLevel();
     auto levelDiff = 0ULL;
 
-    auto enqueue = [this,&queue,&limitReached](ESVertexData *vd) {
+    auto enqueue = [this,&limitReached](ESVertexData *vd) {
         auto vertex = vd->getVertex();
         if (timesInQueue[vertex] < requeueLimit) {
             PRINT_DEBUG("    Adding " << vd << " to queue...");
@@ -714,18 +711,19 @@ DiGraph::size_type ESTreeML::process(ESVertexData *vd, ESTreeML::PriorityQueue &
 
 void ESTreeML::restoreTree(ESVertexData *rd)
 {
-    PriorityQueue queue;
-    queue.set_capacity(diGraph->getSize());
-    timesInQueue.resetAll(diGraph->getSize());
-    queue.push_back(rd);
+		auto n = diGraph->getSize();
+		DiGraph::size_type affectedLimit = maxAffectedRatio < 1.0 ? floor(maxAffectedRatio * n) : n;
+    queue.set_capacity(affectedLimit);
+    timesInQueue.resetAll(n);
     timesInQueue[rd->getVertex()]++;
+		queue.clear();
+    queue.push_back(rd);
     if (maxReQueued == 0U) {
         maxReQueued = 1U;
     }
     PRINT_DEBUG("Initialized queue with " << rd << ".")
     bool limitReached = false;
     auto processed = 0U;
-    auto affectedLimit = maxAffectedRatio * diGraph->getSize();
 
     while (!queue.empty()) {
         IF_DEBUG(printQueue(queue))
@@ -735,7 +733,7 @@ void ESTreeML::restoreTree(ESVertexData *rd)
         prVertexConsidered();
         auto levels = 
 #endif
-                    process(vd, queue, limitReached);
+        process(vd, limitReached);
         processed++;
 
         if (limitReached || ((processed + queue.size() > affectedLimit) && !queue.empty())) {
@@ -747,6 +745,7 @@ void ESTreeML::restoreTree(ESVertexData *rd)
                 rerunNumAffected++;
             }
 #endif
+						queue.clear();
             rerun();
             break;
 #ifdef COLLECT_PR_DATA
@@ -769,16 +768,29 @@ void ESTreeML::restoreTree(ESVertexData *rd)
 #endif
 }
 
-void ESTreeML::cleanup()
+void ESTreeML::cleanup(bool freeSpace)
 {
-    for (auto i = data.cbegin(); i != data.cend(); i++) {
-        if ((*i)) {
-            delete (*i);
+    if (initialized) {
+        for (auto i = data.cbegin(); i != data.cend(); i++) {
+            if ((*i)) {
+                delete (*i);
+            }
         }
     }
 
-    data.resetAll();
-    reachable.resetAll();
+		queue.clear();
+    if (freeSpace || !diGraph) {
+        data.resetAll(0);
+        reachable.resetAll(0);
+        inNeighborIndices.resetAll(0);
+        timesInQueue.resetAll(0);
+				queue.set_capacity(0);
+    } else {
+        data.resetAll(diGraph->getSize());
+        reachable.resetAll(diGraph->getSize());
+        inNeighborIndices.resetAll(diGraph->getNumArcs(true));
+        timesInQueue.resetAll(diGraph->getSize());
+    }
 
     initialized = false ;
 }
