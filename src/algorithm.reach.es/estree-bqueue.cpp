@@ -697,8 +697,8 @@ void OldESTree::restoreTree(ESVertexData *vd)
 
     while (!queue.empty()) {
         IF_DEBUG(printQueue(queue))
-        auto vd = queue.bot();
-        queue.popBot();
+        auto vd = queue.front();
+        queue.pop_front();
         inQueue[vd->getVertex()] = false;
 #ifdef COLLECT_PR_DATA
         prVertexConsidered();
