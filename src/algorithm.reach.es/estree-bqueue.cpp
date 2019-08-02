@@ -582,7 +582,7 @@ DiGraph::size_type OldESTree::process(ESVertexData *vd, PriorityQueue &queue, Fa
     auto oldVLevel = vd->getLevel();
     auto levelDiff = 0ULL;
 
-    auto enqueue = [this,vd,&queue,&inQueue,&timesInQueue,&limitReached](ESVertexData *vd) {
+    auto enqueue = [this,&queue,&inQueue,&timesInQueue,&limitReached](ESVertexData *vd) {
         auto vertex = vd->getVertex();
         if (timesInQueue[vertex] < requeueLimit) {
             PRINT_DEBUG("    Adding " << vd << " to queue...");
