@@ -20,7 +20,11 @@ public:
 
     void setSeed(unsigned long long s) { seed = s; initialized = false; }
     void setAbsoluteNumberOfQueries(unsigned int n) { absoluteQueries = n; relativeQueries = 0.0; }
-    void setRelativeNumberOfQueries(double n, const NUM_QUERY_RELATION &r) { relativeQueries = n; relateTo = r; absoluteQueries = 0.0; }
+    void setRelativeNumberOfQueries(double n, const NUM_QUERY_RELATION &r) {
+        relativeQueries = n;
+        relateTo = r;
+        absoluteQueries = 0.0;
+    }
     unsigned long long getSeed() const { return seed; }
 
     VertexQueryList generateVertexQueries(const DynamicDiGraph *dyGraph);
@@ -31,7 +35,7 @@ public:
     virtual std::string getName() const noexcept override { return "Random Query Generator"; }
 
 private:
-		DynamicDiGraph::size_type absoluteQueries;
+    DynamicDiGraph::size_type absoluteQueries;
     double relativeQueries;
     NUM_QUERY_RELATION relateTo;
 
