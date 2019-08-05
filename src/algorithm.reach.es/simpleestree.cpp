@@ -76,7 +76,7 @@ SimpleESTree::SimpleESTree(unsigned int requeueLimit, double maxAffectedRatio)
 
 SimpleESTree::~SimpleESTree()
 {
-    cleanup(false);
+    cleanup(true);
 }
 
 DiGraph::size_type SimpleESTree::getDepthOfBFSTree() const
@@ -679,7 +679,7 @@ void SimpleESTree::restoreTree(SESVertexData *rd)
                 rerunNumAffected++;
             }
 #endif
-						queue.clear();
+            queue.clear();
             rerun();
             break;
 #ifdef COLLECT_PR_DATA
@@ -716,7 +716,7 @@ void SimpleESTree::cleanup(bool freeSpace)
         data.resetAll(0);
         reachable.resetAll(0);
         timesInQueue.resetAll(0);
-				queue.set_capacity(0);
+        queue.set_capacity(0);
     } else {
         data.resetAll(diGraph->getSize());
         reachable.resetAll(diGraph->getSize());

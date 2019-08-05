@@ -78,7 +78,7 @@ ESTreeQ::ESTreeQ(unsigned int requeueLimit, double maxAffectedRatio)
 
 ESTreeQ::~ESTreeQ()
 {
-    cleanup(false);
+    cleanup(true);
 }
 
 void ESTreeQ::run()

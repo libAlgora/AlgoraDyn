@@ -76,7 +76,7 @@ ESTreeML::ESTreeML(unsigned int requeueLimit, double maxAffectedRatio)
 
 ESTreeML::~ESTreeML()
 {
-    cleanup(false); // space will be freed anyway
+    cleanup(true);
 }
 
 void ESTreeML::run()
