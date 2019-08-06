@@ -26,7 +26,7 @@
 #include "graph.incidencelist/incidencelistvertex.h"
 
 #include <vector>
-#include <unordered_map>
+#include "property/fastpropertymap.h"
 
 #include <cassert>
 
@@ -154,9 +154,9 @@ struct DynamicDiGraph::CheshireCat {
     bool doubleArcIsRemoval;
 
     std::vector<AddVertexOperation*> vertices;
-    std::unordered_map<Arc*,AddArcOperation*> constructionArcMap;
+    FastPropertyMap<AddArcOperation*> constructionArcMap;
 
-    std::unordered_map<Vertex*,VertexIdentifier> vertexToIdMap;
+    FastPropertyMap<VertexIdentifier> vertexToIdMap;
     DynamicDiGraph::size_type vertexToIdMapNextOpIndex;
 
     unsigned long numResets;
@@ -170,8 +170,11 @@ struct DynamicDiGraph::CheshireCat {
     CheshireCat() : timeIndex(0U), opIndex(0U), doubleArcIsRemoval(false),
         vertexToIdMapNextOpIndex(0ULL), numResets(0U),
         curVertexSize(0ULL), curArcSize(0ULL), maxVertexSize(0ULL), maxArcSize(0ULL),
-        graphChangedSinceLastReset(false)
-        { clear(); }
+        graphChangedSinceLastReset(false) {
+        constructionArcMap.setDefaultValue(nullptr);
+        vertexToIdMap.setDefaultValue(0U);
+        clear();
+    }
     ~CheshireCat() {
         clear();
     }
@@ -186,7 +189,8 @@ struct DynamicDiGraph::CheshireCat {
         } else {
             dynGraph.clear();
         }
-        vertexToIdMap.clear();
+        //vertexToIdMap.clear();
+        vertexToIdMap.resetAll(maxVertexSize);
         vertexToIdMapNextOpIndex = 0ULL;
 
         antedated.reset();
@@ -207,7 +211,7 @@ struct DynamicDiGraph::CheshireCat {
     void clear() {
         reset();
         vertices.clear();
-        constructionArcMap.clear();
+        constructionArcMap.resetAll(0);
         constructionGraph.clear();
         timestamps.clear();
         curVertexSize = 0ULL;
@@ -277,7 +281,7 @@ struct DynamicDiGraph::CheshireCat {
         AddVertexOperation *avo = vertices[vertexId];
 
         auto removeIncidentArcs = [&](Arc *a) {
-            constructionArcMap.erase(a);
+            constructionArcMap.resetToDefault(a);
         };
 
         constructionGraph.mapOutgoingArcs(avo->constructionVertex, removeIncidentArcs);
@@ -395,7 +399,7 @@ struct DynamicDiGraph::CheshireCat {
         assert(ca == aao->constructionArc);
         RemoveArcOperation *rao = new RemoveArcOperation(aao);
         constructionGraph.removeArc(ca);
-        constructionArcMap.erase(ca);
+        constructionArcMap.resetToDefault(ca);
 
         if (removeIsolatedEnds) {
             AddVertexOperation *avoTail = vertices[tailId];
@@ -590,7 +594,7 @@ struct DynamicDiGraph::CheshireCat {
                 PRINT_DEBUG("Mapped " << avo->vertex <<  " to id " << avo->vertexId << ".");
             } else if (op->getType() == Operation::Type::VERTEX_REMOVAL) {
                 RemoveVertexOperation *rvo = dynamic_cast<RemoveVertexOperation*>(op);
-                vertexToIdMap.erase(rvo->addOp->vertex);
+                vertexToIdMap.resetToDefault(rvo->addOp->vertex);
                 PRINT_DEBUG("Removed mapping of " << rvo->addOp->vertex << ".");
             } else if (op->getType() == Operation::Type::MULTIPLE) {
                 OperationSet *os = dynamic_cast<OperationSet*>(op);
@@ -607,7 +611,7 @@ struct DynamicDiGraph::CheshireCat {
             Operation *op = operations[vertexToIdMapNextOpIndex];
             updateMap(op);
         }
-        return vertexToIdMap.at(dynGraph.vertexAt(i));
+        return vertexToIdMap(dynGraph.vertexAt(i));
     }
 };
 
@@ -675,7 +679,7 @@ DiGraph::size_type DynamicDiGraph::getConstructedGraphSize() const
 
 DiGraph::size_type DynamicDiGraph::getConstructedArcSize() const
 {
-    return grin->constructionArcMap.size();
+    return grin->constructionGraph.getNumArcs(true);
 }
 
 DynamicDiGraph::VertexIdentifier DynamicDiGraph::addVertex(DynamicTime timestamp)
