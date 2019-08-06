@@ -84,6 +84,9 @@ bool KonectNetworkReader::provideDynamicDiGraph(DynamicDiGraph *dynGraph)
 
     std::vector<Entry> entries;
 
+    if (progressStream) {
+        *progressStream << "Reading graph from file..." << std::flush;
+    }
     for (string line; getline(inputStream, line); ) {
         istringstream iss(line);
         vector<string> tokens { istream_iterator<string>{iss},
@@ -123,9 +126,15 @@ bool KonectNetworkReader::provideDynamicDiGraph(DynamicDiGraph *dynGraph)
             continue;
         }
     }
+    if (progressStream) {
+        *progressStream << " done." << std::endl;
+        *progressStream << "Sorting operations by timestamp..." << std::flush;
+    }
     std::stable_sort(entries.begin(), entries.end());
+		std::cout << " done." << std::endl;
     auto rErrors = 0ULL;
     std::string lastRError;
+		std::cout << "Creating dynamic digraph..." << std::flush;
     for (const Entry &e : entries) {
         if (e.add) {
             PRINT_DEBUG("Adding arc " << e.tail << ", " << e.head << " at time " << e.timestamp);
@@ -144,6 +153,9 @@ bool KonectNetworkReader::provideDynamicDiGraph(DynamicDiGraph *dynGraph)
                 //std::cerr << "Error at arc " << e.tail << " -> " << e.head << " at time " << e.timestamp << ": " << ia.what() << std::endl;
             }
         }
+    }
+    if (progressStream) {
+        *progressStream << " done." << std::endl;
     }
     if (rErrors > 0) {
         //std::cerr << errors << " errors occurred. Last was: " << lastError << std::endl;
