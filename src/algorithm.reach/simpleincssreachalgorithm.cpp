@@ -320,7 +320,10 @@ struct SimpleIncSSReachAlgorithm::Reachability {
 
         changedStateVertices.clear();
         auto maxSteps = static_cast<DiGraph::size_type>(compareTo);
-        auto visited = radicalReset ? propagate<true, false, false, true>(from, State::UNKNOWN, maxSteps)
+#ifndef NDEBUG
+        auto visited =
+#endif
+					radicalReset ? propagate<true, false, false, true>(from, State::UNKNOWN, maxSteps)
             : propagate<true, false, false, false>(from, State::UNKNOWN);
 
         auto unknown = changedStateVertices.size();
@@ -571,6 +574,7 @@ std::string SimpleIncSSReachAlgorithm::getShortName() const noexcept {
 std::string SimpleIncSSReachAlgorithm::getProfilingInfo() const
 {
     std::stringstream ss;
+#ifdef COLLECT_PR_DATA
     ss << DynamicSSReachAlgorithm::getProfilingInfo();
     ss << "total reached vertices: " << data->numReached << std::endl;
     ss << "total unknown state vertices: " << data->numUnknown << std::endl;
@@ -584,6 +588,7 @@ std::string SimpleIncSSReachAlgorithm::getProfilingInfo() const
     ss << "maximum tracebacks: " << data->maxTracebacks << std::endl;
     ss << "unknown state limit: " << data->maxUnknownStateRatio << std::endl;
     ss << "#rereach from source: " << data->numReReachFromSource << std::endl;
+#endif
     return ss.str();
 }
 

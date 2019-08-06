@@ -168,6 +168,7 @@ void SimpleESTree::run()
 std::string SimpleESTree::getProfilingInfo() const
 {
     std::stringstream ss;
+#ifdef COLLECT_PR_DATA
     ss << DynamicSSReachAlgorithm::getProfilingInfo();
     ss << "#moves down (level increase): " << movesDown << std::endl;
     ss << "#moves up (level decrease): " << movesUp << std::endl;
@@ -187,6 +188,7 @@ std::string SimpleESTree::getProfilingInfo() const
     ss << "#reruns: " << reruns << std::endl;
     ss << "#reruns because requeue limit reached: " << rerunRequeued << std::endl;
     ss << "#reruns because max. number of affected vertices reached: " << rerunNumAffected << std::endl;
+#endif
     return ss.str();
 }
 
