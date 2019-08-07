@@ -60,6 +60,14 @@ void DynamicDiGraphStatistics::analyzeDynamicDiGraph(DynamicDiGraph *dyGraph)
     fArcSize = 0U;
     std::vector<DiGraph::size_type> arcSizes;
 
+    iDensity = 0.0;
+    maxDensity = 0.0;
+    minDensity = 0.0;
+    medDensity = 0.0;
+    avgDensity = 0.0;
+    fDensity = 0.0;
+    std::vector<double> densities;
+
     minArcAdditions = 0U;
     maxArcAdditions = 0U;
     medArcAdditions = 0U;
@@ -87,12 +95,16 @@ void DynamicDiGraphStatistics::analyzeDynamicDiGraph(DynamicDiGraph *dyGraph)
     bool next = dyGraph->applyNextDelta();
     iGraphSize = graph->getSize();
     iArcSize = graph->getNumArcs(true);
+    iDensity = 1.0 * iArcSize / iGraphSize;
     auto tsOld = dyGraph->getCurrentTime();
     auto tsNew = tsOld;
 
     while (next) {
-        graphSizes.push_back(graph->getSize());
-        arcSizes.push_back(graph->getNumArcs(true));
+        auto n = graph->getSize();
+        auto m = graph->getNumArcs(true);
+        graphSizes.push_back(n);
+        arcSizes.push_back(m);
+        densities.push_back(1.0 * m / n);
         next = dyGraph->applyNextDelta();
         if (next) {
             tsOld = tsNew;
@@ -104,6 +116,7 @@ void DynamicDiGraphStatistics::analyzeDynamicDiGraph(DynamicDiGraph *dyGraph)
     }
 
     assert(graphSizes.size() == arcSizes.size());
+    assert(graphSizes.size() == densities.size());
     assert(arcSizes.size() == arcAdditions.size() + 1);
     assert(arcAdditions.size() == arcRemovals.size());
     assert(arcRemovals.size() == timeDeltas.size());
@@ -121,6 +134,13 @@ void DynamicDiGraphStatistics::analyzeDynamicDiGraph(DynamicDiGraph *dyGraph)
     medArcSize = medianOf(arcSizes);
     avgArcSize = (1.0 * std::accumulate(std::begin(arcSizes), std::end(arcSizes), 0ULL)) / arcSizes.size();
     fArcSize = arcSizes.back();
+
+    auto d = std::minmax_element(std::begin(densities), std::end(densities));
+    minDensity = *(d.first);
+    maxDensity = *(d.second);
+    medDensity = medianOf(densities);
+    avgDensity = (1.0 * std::accumulate(std::begin(densities), std::end(densities), 0ULL)) / densities.size();
+    fDensity = densities.back();
 
     p = std::minmax_element(std::begin(arcAdditions), std::end(arcAdditions));
     minArcAdditions = *(p.first);

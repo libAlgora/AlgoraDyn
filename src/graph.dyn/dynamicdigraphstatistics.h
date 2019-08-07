@@ -51,6 +51,13 @@ public:
     DiGraph::size_type finalArcSize() const { return fArcSize; }
     double averageArcSize() const { return avgArcSize; }
 
+    double initialDensity() const { return iDensity; }
+    double maximumDensity() const { return maxDensity; }
+    double minimumDensity() const { return minDensity; }
+    double medianDensity() const { return medDensity; }
+    double finalDensity() const { return fDensity; }
+    double averageDensity() const { return avgDensity; }
+
     DynamicDiGraph::size_type minimumArcAdditions() const { return minArcAdditions; }
     DynamicDiGraph::size_type maximumArcAdditions() const { return maxArcAdditions; }
     DynamicDiGraph::size_type medianArcAdditions() const { return medArcAdditions; }
@@ -83,6 +90,13 @@ private:
     DiGraph::size_type medArcSize;
     DiGraph::size_type fArcSize;
     double avgArcSize;
+
+    double iDensity;
+    double maxDensity;
+    double minDensity;
+    double medDensity;
+    double fDensity;
+    double avgDensity;
 
     DynamicDiGraph::size_type minArcAdditions;
     DynamicDiGraph::size_type maxArcAdditions;
