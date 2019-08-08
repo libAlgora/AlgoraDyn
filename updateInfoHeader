@@ -65,9 +65,7 @@ GIT_REVISION_IN_HEADER="  static constexpr char GIT_REVISION[] = \"${GIT_REVISIO
 GIT_DATE_IN_HEADER="  static constexpr char GIT_DATE[] = \"${GIT_DATE}\";"
 GIT_TS_IN_HEADER="  static constexpr char GIT_TIMESTAMP[] = \"${GIT_TIMESTAMP}\";"
 
-sed -i \
-	-e "s/^.*GIT_REVISION.*$/${GIT_REVISION_IN_HEADER}/" \
-	-e "s/^.*GIT_DATE.*$/${GIT_DATE_IN_HEADER}/" \
-	-e "s/^.*GIT_TIMESTAMP.*$/${GIT_TS_IN_HEADER}/" \
-	$VERSION_HEADER
 
+sed -i -e "s/^.*GIT_REVISION.*$/${GIT_REVISION_IN_HEADER}/" $VERSION_HEADER
+sed -i -e "s/^.*GIT_DATE.*$/${GIT_DATE_IN_HEADER}/" $VERSION_HEADER
+sed -i -e "s/^.*GIT_TIMESTAMP.*$/${GIT_TS_IN_HEADER}/" $VERSION_HEADER
