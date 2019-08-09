@@ -1,5 +1,5 @@
 ########################################################################
-# Copyright (C) 2013 - 2018 : Kathrin Hanauer                          #
+# Copyright (C) 2013 - 2019 : Kathrin Hanauer                          #
 #                                                                      #
 # This file is part of Algora.                                         #
 #                                                                      #
@@ -36,9 +36,14 @@ QMAKE_EXTRA_TARGETS += adinfotarget
 QMAKE_CXXFLAGS_DEBUG += -std=c++17 -O0
 
 QMAKE_CXXFLAGS_STATIC_LIB = # remove -fPIC
-QMAKE_CXXFLAGS_RELEASE -= -O3 -O2 -O1
+QMAKE_CXXFLAGS_RELEASE -= -O1 -O2 -O3
 QMAKE_CXXFLAGS_RELEASE += -std=c++17 -DNDEBUG -flto
-QMAKE_AR = gcc-ar rcs
+
+custom-ar {
+  QMAKE_AR += rcs
+} else {
+  QMAKE_AR = gcc-ar rcs
+}
 
 general {
   QMAKE_CXXFLAGS_RELEASE += -O2 -march=x86-64
