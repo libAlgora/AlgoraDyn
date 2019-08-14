@@ -316,7 +316,11 @@ void SimpleESTree::onArcAdd(Arc *a)
 
     BreadthFirstSearch<FastPropertyMap,false> bfs(false);
     bfs.setStartVertex(head);
+#ifdef COLLECT_PR_DATA
+    bfs.onArcDiscover([this,n](const Arc *a) {
+#else
     bfs.onArcDiscover([this](const Arc *a) {
+#endif
         PRINT_DEBUG( "Discovering arc (" << a->getTail() << ", " << a->getHead() << ")...");
 #ifdef COLLECT_PR_DATA
         prArcConsidered();
