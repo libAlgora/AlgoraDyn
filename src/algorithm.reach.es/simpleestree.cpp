@@ -288,7 +288,9 @@ void SimpleESTree::onArcAdd(Arc *a)
         return;
     }
 
-    //auto n = diGraph->getSize();
+#ifdef COLLECT_PR_DATA
+    auto n = diGraph->getSize();
+#endif
 
     //update...
     if (hd->level <= td->level + 1) {
