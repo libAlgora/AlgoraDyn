@@ -102,7 +102,7 @@ private:
     profiling_counter movesUp;
     profiling_counter levelIncrease;
     profiling_counter levelDecrease;
-		DiGraph::size_type maxLevelIncrease;
+    DiGraph::size_type maxLevelIncrease;
     DiGraph::size_type maxLevelDecrease;
     profiling_counter decUnreachableHead;
     profiling_counter decNonTreeArc;

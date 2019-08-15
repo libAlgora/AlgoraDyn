@@ -78,13 +78,18 @@ struct SimpleIncSSReachAlgorithm::Reachability {
     DiGraph::size_type maxReached;
     profiling_counter maxTracebacks;
     profiling_counter numReReachFromSource;
+    profiling_counter incNonTreeArc;
+    profiling_counter incUnReachableTail;
+    profiling_counter decNonTreeArc;
+    profiling_counter decUnReachableHead;
 
     Reachability(SimpleIncSSReachAlgorithm *p, bool r, bool sf, double maxUS)
         : parent(p), diGraph(nullptr), source(nullptr), reverse(r), searchForward(sf), maxUnknownStateRatio(maxUS),
           maxUSSqrt(false), maxUSLog(false), relateToReachable(false), numReachable(0U),
           numUnreached(0UL), numRereached(0UL), numUnknown(0UL), numReached(0UL), numTracebacks(0UL),
           maxUnreached(0UL), maxRereached(0UL), maxUnknown(0UL), maxReached(0UL), maxTracebacks(0UL),
-          numReReachFromSource(0U) {
+          numReReachFromSource(0U),
+          incNonTreeArc(0U), incUnReachableTail(0U), decNonTreeArc(0U), decUnReachableHead(0U) {
         reachability.setDefaultValue(State::UNREACHABLE);
         pred.setDefaultValue(nullptr);
         radicalReset = parent->radicalReset;
@@ -107,6 +112,10 @@ struct SimpleIncSSReachAlgorithm::Reachability {
         maxReached = 0UL;
         maxTracebacks = 0UL;
         numReReachFromSource = 0UL;
+        incNonTreeArc = 0U;
+        incUnReachableTail = 0U;
+        decNonTreeArc = 0U;
+        decUnReachableHead = 0U;
 #endif
     }
 
@@ -588,6 +597,10 @@ std::string SimpleIncSSReachAlgorithm::getProfilingInfo() const
     ss << "maximum tracebacks: " << data->maxTracebacks << std::endl;
     ss << "unknown state limit: " << data->maxUnknownStateRatio << std::endl;
     ss << "#rereach from source: " << data->numReReachFromSource << std::endl;
+    ss << "#unreachable head (dec): " << data->decUnReachableHead << std::endl;
+    ss << "#non-tree arcs (dec): " << data->decNonTreeArc << std::endl;
+    ss << "#unreachable tail (inc): " << data->incUnReachableTail << std::endl;
+    ss << "#non-tree arcs (inc): " << data->incNonTreeArc << std::endl;
 #endif
     return ss.str();
 }
@@ -607,6 +620,10 @@ DynamicSSReachAlgorithm::Profile SimpleIncSSReachAlgorithm::getProfile() const
     profile.push_back(std::make_pair(std::string("max_tracebacks"), data->maxTracebacks));
     profile.push_back(std::make_pair(std::string("unknown_limit_percent"), data->maxUnknownStateRatio * 100));
     profile.push_back(std::make_pair(std::string("rereach_from_source"), data->numReReachFromSource));
+    profile.push_back(std::make_pair(std::string("dec_head_unreachable"), data->decUnReachableHead));
+    profile.push_back(std::make_pair(std::string("dec_nontree"), data->decNonTreeArc));
+    profile.push_back(std::make_pair(std::string("inc_tail_unreachable"), data->incUnReachableTail));
+    profile.push_back(std::make_pair(std::string("inc_nontree"), data->incNonTreeArc));
 
     return profile;
 }
@@ -656,7 +673,17 @@ void SimpleIncSSReachAlgorithm::onArcAdd(Arc *a)
         return;
     }
 
-    if (data->reachable(head) || !data->reachable(tail)) {
+    if (!data->reachable(tail)) {
+#ifdef COLLECT_PR_DATA
+        data->incUnReachableTail++;
+#endif
+        return;
+    }
+
+    if (data->reachable(head)) {
+#ifdef COLLECT_PR_DATA
+        data->incNonTreeArc++;
+#endif
         return;
     }
 
@@ -687,11 +714,17 @@ void SimpleIncSSReachAlgorithm::onArcRemove(Arc *a)
     if (!data->reachable(head)) {
         // head is already unreachable, nothing to update
         PRINT_DEBUG("Head is unreachable. Stop.");
+#ifdef COLLECT_PR_DATA
+        data->decUnReachableHead++;
+#endif
         return;
     }
 
     if (data->pred(head) != a) {
         PRINT_DEBUG("Not a tree arc.");
+#ifdef COLLECT_PR_DATA
+        data->decNonTreeArc++;
+#endif
         return;
     }
 
