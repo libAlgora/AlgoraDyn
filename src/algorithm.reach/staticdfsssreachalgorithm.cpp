@@ -50,7 +50,10 @@ bool StaticDFSSSReachAlgorithm::query(const Vertex *t)
 {
     if (t == source) {
         return true;
+    } else if (diGraph->isSink(source) || diGraph->isSource(t)) {
+        return false;
     }
+
     DepthFirstSearch<FastPropertyMap> dfs(false);
     dfs.setStartVertex(source);
     bool reachable = false;
@@ -77,7 +80,7 @@ bool StaticDFSSSReachAlgorithm::query(const Vertex *t)
 std::vector<Arc *> StaticDFSSSReachAlgorithm::queryPath(const Vertex *t)
 {
     std::vector<Arc*> path;
-    if (t == source) {
+    if (t == source || diGraph->isSink(source) || diGraph->isSource(t)) {
         return path;
     }
 

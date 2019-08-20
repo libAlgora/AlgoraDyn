@@ -147,7 +147,7 @@ struct SimpleIncSSReachAlgorithm::Reachability {
 #endif
             auto v = a->getHead();
 
-            PRINT_DEBUG("Reaching " << v << " via " << p << " with state " << printState(reachability(v))
+            PRINT_DEBUG("Reaching " << v << " via " << a->getTail() << " with state " << printState(reachability(v))
                         << " and tree arc " << pred(v));
 
             if (pred(v) != nullptr && pred(v) != a) {
@@ -246,7 +246,7 @@ struct SimpleIncSSReachAlgorithm::Reachability {
 #endif
 
             PRINT_DEBUG("Exploring " << v->getName() << " with state " << printState(reachability(v))
-                        << " via " << head);
+                        << " via " << a->getTail());
             switch (reachability(v)) {
             case State::REACHABLE:
                 reachableAncestor = v;
@@ -675,6 +675,7 @@ void SimpleIncSSReachAlgorithm::onArcAdd(Arc *a)
 
     if (!data->reachable(tail)) {
 #ifdef COLLECT_PR_DATA
+        PRINT_DEBUG("Tail is unreachable.");
         data->incUnReachableTail++;
 #endif
         return;
@@ -682,6 +683,7 @@ void SimpleIncSSReachAlgorithm::onArcAdd(Arc *a)
 
     if (data->reachable(head)) {
 #ifdef COLLECT_PR_DATA
+        PRINT_DEBUG("Not a tree arc.");
         data->incNonTreeArc++;
 #endif
         return;

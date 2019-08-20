@@ -94,7 +94,11 @@ struct LazyDFSSSReachAlgorithm::CheshireCat {
     }
 
     bool query(const Vertex *t) {
-        if (t == source || (initialized && !arcRemoved && discovered(t))) {
+        if (t == source) {
+            return true;
+        } else if (graph->isSink(source) || graph->isSource(t)) {
+            return false;
+        } else if (initialized && !arcRemoved && discovered(t)) {
             return true;
         } else if (exhausted && !arcAdded && !discovered(t)) {
             return false;
@@ -117,7 +121,8 @@ struct LazyDFSSSReachAlgorithm::CheshireCat {
     }
 
     void queryPath(const Vertex *t, std::vector<Arc *> &path) {
-        if (t == source || (exhausted && !arcAdded && !discovered(t))) {
+        if (t == source || graph->isSink(source) || graph->isSource(t)
+                || (exhausted && !arcAdded && !discovered(t))) {
             return;
         } else if (initialized && !arcRemoved && discovered(t)) {
             constructPath(t, path);

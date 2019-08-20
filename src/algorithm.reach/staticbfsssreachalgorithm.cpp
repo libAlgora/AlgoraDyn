@@ -49,7 +49,10 @@ bool StaticBFSSSReachAlgorithm::query(const Vertex *t)
 {
     if (t == source) {
         return true;
+    } else if (diGraph->isSink(source) || diGraph->isSource(t)) {
+        return false;
     }
+
     BreadthFirstSearch<FastPropertyMap,false> bfs(false, false);
     bfs.setStartVertex(source);
     bool reachable = false;
@@ -76,7 +79,7 @@ bool StaticBFSSSReachAlgorithm::query(const Vertex *t)
 std::vector<Arc *> StaticBFSSSReachAlgorithm::queryPath(const Vertex *t)
 {
     std::vector<Arc*> path;
-    if (t == source) {
+    if (t == source || diGraph->isSink(source) || diGraph->isSource(t)) {
         return path;
     }
 

@@ -65,7 +65,11 @@ struct CachingBFSSSReachAlgorithm::CheshireCat {
 
     bool query(const Vertex *t)
     {
-        if (t == source || (initialized && !arcRemoved && bfs.vertexDiscovered(t))) {
+        if (t == source) {
+            return true;
+        } else if (diGraph->isSink(source) || diGraph->isSource(t)) {
+            return false;
+        } else if (initialized && !arcRemoved && bfs.vertexDiscovered(t)) {
             return true;
         } else if (initialized && !arcAdded && !bfs.vertexDiscovered(t)) {
             return false;
@@ -88,7 +92,8 @@ struct CachingBFSSSReachAlgorithm::CheshireCat {
     }
 
     void queryPath(const Vertex *t, std::vector<Arc *> &path) {
-        if (t == source || (initialized && !arcAdded && !bfs.vertexDiscovered(t))) {
+        if (t == source || diGraph->isSink(source) || diGraph->isSource(t)
+             || (initialized && !arcAdded && !bfs.vertexDiscovered(t))) {
             return;
         } else if (initialized && !arcRemoved && bfs.vertexDiscovered(t)) {
             constructPath(t, path);
