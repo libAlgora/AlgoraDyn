@@ -30,19 +30,38 @@ namespace Algora {
 class StaticBFSSSReachAlgorithm : public DynamicSSReachAlgorithm
 {
 public:
-    explicit StaticBFSSSReachAlgorithm();
-    virtual ~StaticBFSSSReachAlgorithm();
+    explicit StaticBFSSSReachAlgorithm(bool twoWayBFS = false);
+    virtual ~StaticBFSSSReachAlgorithm() override;
 
     // DiGraphAlgorithm interface
 public:
     virtual void run() override;
-    virtual std::string getName() const noexcept override { return "Static BFS Single-Source Reachability Algorithm"; }
-    virtual std::string getShortName() const noexcept override { return "Static-BFS-SSReach"; }
+    virtual std::string getName() const noexcept override {
+        if (twoWayBFS) {
+            return "Static BFS Single-Source Reachability Algorithm (forward-backward)";
+        }
+        return "Static BFS Single-Source Reachability Algorithm (forward-only)";
+    }
+    virtual std::string getShortName() const noexcept override {
+        if (twoWayBFS) {
+            return "FB-Static-BFS-SSReach";
+        }
+        return "Static-BFS-SSReach";
+    }
+protected:
+    virtual void onDiGraphSet() override;
 
     // DynamicSSReachAlgorithm interface
 public:
     virtual bool query(const Vertex *t) override;
     virtual std::vector<Arc*> queryPath(const Vertex *t) override;
+
+private:
+    bool twoWayBFS;
+    DiGraph::size_type bfsStepSize;
+
+    bool twoWayQuery(const Vertex *t);
+    std::vector<Arc*> twoWayQueryPath(const Vertex *t);
 };
 
 }
