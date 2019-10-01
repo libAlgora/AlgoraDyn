@@ -59,9 +59,11 @@ bool operator<(const Entry &lhs, const Entry &rhs) {
 }
 
 KonectNetworkReader::KonectNetworkReader(bool antedateVertexAdditions,
-                                         bool removeIsolatedEndVertices)
+                                         bool removeIsolatedEndVertices,
+                                         GraphArtifact::size_type limitDeltas)
     : antedateVertexAdditions(antedateVertexAdditions),
-      removeIsolatedEndVertices(removeIsolatedEndVertices)
+      removeIsolatedEndVertices(removeIsolatedEndVertices),
+      limitDeltas(limitDeltas)
 {
 
 }
@@ -126,25 +128,52 @@ bool KonectNetworkReader::provideDynamicDiGraph(DynamicDiGraph *dynGraph)
             continue;
         }
     }
+
+    if (entries.empty()) {
+        if (progressStream) {
+            *progressStream << " done. Dynamic digraph is empty!" << std::endl;
+        }
+        return !errorsOccurred;
+    }
+
     if (progressStream) {
         *progressStream << " done." << std::endl;
         *progressStream << "Sorting operations by timestamp..." << std::flush;
     }
+
     std::stable_sort(entries.begin(), entries.end());
-		std::cout << " done." << std::endl;
     auto rErrors = 0ULL;
     std::string lastRError;
-		std::cout << "Creating dynamic digraph..." << std::flush;
+
+    if (progressStream) {
+        *progressStream << " done." << std::endl;
+        *progressStream << "Creating dynamic digraph..." << std::flush;
+    }
+
+    DiGraph::size_type deltas = 0;
+    unsigned long long lastTimestamp = entries.front().timestamp;
+
     for (const Entry &e : entries) {
+
+        if (lastTimestamp != e.timestamp) {
+            lastTimestamp = e.timestamp;
+            deltas++;
+
+            if (limitDeltas > 0 && deltas > limitDeltas) {
+                PRINT_DEBUG("Maximum #deltas reached at time " << e.timestamp)
+                break;
+            }
+        }
+
         if (e.add) {
-            PRINT_DEBUG("Adding arc " << e.tail << ", " << e.head << " at time " << e.timestamp);
+            PRINT_DEBUG("Adding arc " << e.tail << ", " << e.head << " at time " << e.timestamp)
             try {
                 dynGraph->addArc(e.tail, e.head, e.timestamp, antedateVertexAdditions);
             } catch (const std::invalid_argument &e) {
                 lastError.append(e.what());
             }
         } else {
-            PRINT_DEBUG("Removing arc " << e.tail << ", " << e.head << " at time " << e.timestamp);
+            PRINT_DEBUG("Removing arc " << e.tail << ", " << e.head << " at time " << e.timestamp)
             try {
                 dynGraph->removeArc(e.tail, e.head, e.timestamp, removeIsolatedEndVertices);
             } catch (const std::invalid_argument &ia) {
@@ -154,6 +183,7 @@ bool KonectNetworkReader::provideDynamicDiGraph(DynamicDiGraph *dynGraph)
             }
         }
     }
+
     if (progressStream) {
         *progressStream << " done." << std::endl;
     }
