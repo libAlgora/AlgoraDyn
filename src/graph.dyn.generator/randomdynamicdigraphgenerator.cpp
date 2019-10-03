@@ -123,7 +123,7 @@ bool RandomDynamicDiGraphGenerator::provideDynamicDiGraph(DynamicDiGraph *dyGrap
         }
     }
 
-    // count only additions that are operations -> reset counter
+    // count only additions that are  updates -> reset counter
     numAdditions = 0U;
 
     auto propSum = propAddition + propDeletion + propAdvance;

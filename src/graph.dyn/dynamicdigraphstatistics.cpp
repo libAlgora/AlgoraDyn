@@ -32,13 +32,16 @@
 namespace Algora {
 
 template<typename C>
-typename C::value_type medianOf(const C &container, const typename C::value_type &emptyValue = typename C::value_type()) {
+typename C::value_type medianOf(const C &container,
+                             const typename C::value_type &emptyValue = typename C::value_type()) {
     auto v(container);
     if (v.empty()) {
         return emptyValue;
     }
     auto half = v.size() / 2;
-    std::nth_element(v.begin(), v.begin() + static_cast<typename C::difference_type>(half), v.end());
+    std::nth_element(v.begin(),
+                     v.begin() + static_cast<typename C::difference_type>(half),
+                     v.end());
     return v[half];
 }
 
@@ -142,16 +145,16 @@ void DynamicDiGraphStatistics::analyzeDynamicDiGraph(DynamicDiGraph *dyGraph)
     avgDensity = (1.0 * std::accumulate(std::begin(densities), std::end(densities), 0ULL)) / densities.size();
     fDensity = densities.back();
 
-    p = std::minmax_element(std::begin(arcAdditions), std::end(arcAdditions));
-    minArcAdditions = *(p.first);
-    maxArcAdditions = *(p.second);
+    auto pd = std::minmax_element(std::begin(arcAdditions), std::end(arcAdditions));
+    minArcAdditions = *(pd.first);
+    maxArcAdditions = *(pd.second);
     medArcAdditions = medianOf(arcAdditions);
     sumArcAdditions = std::accumulate(std::begin(arcAdditions), std::end(arcAdditions), 0ULL);
     avgArcAdditions = (1.0 * sumArcAdditions) / arcAdditions.size();
 
-    p = std::minmax_element(std::begin(arcRemovals), std::end(arcRemovals));
-    minArcRemovals = *(p.first);
-    maxArcRemovals = *(p.second);
+    pd = std::minmax_element(std::begin(arcRemovals), std::end(arcRemovals));
+    minArcRemovals = *(pd.first);
+    maxArcRemovals = *(pd.second);
     medArcRemovals = medianOf(arcRemovals);
     sumArcRemovals = std::accumulate(std::begin(arcRemovals), std::end(arcRemovals), 0ULL);
     avgArcRemovals = (1.0 * sumArcRemovals) / arcRemovals.size();
