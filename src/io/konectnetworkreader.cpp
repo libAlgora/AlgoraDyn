@@ -60,10 +60,10 @@ bool operator<(const Entry &lhs, const Entry &rhs) {
 
 KonectNetworkReader::KonectNetworkReader(bool antedateVertexAdditions,
                                          bool removeIsolatedEndVertices,
-                                         GraphArtifact::size_type limitDeltas)
+                                         GraphArtifact::size_type limitNumTimestamps)
     : antedateVertexAdditions(antedateVertexAdditions),
       removeIsolatedEndVertices(removeIsolatedEndVertices),
-      limitDeltas(limitDeltas)
+      limitNumTimestamps(limitNumTimestamps)
 {
 
 }
@@ -104,7 +104,8 @@ bool KonectNetworkReader::provideDynamicDiGraph(DynamicDiGraph *dynGraph)
             continue;
         }
         try {
-            //PRINT_DEBUG("Trying to parse tokens: " << tokens[0] << "; " << tokens[1] << "; " << tokens[2] << "; " << tokens[3])
+            //PRINT_DEBUG("Trying to parse tokens: " << tokens[0] << "; " << tokens[1] << "; "
+            // << tokens[2] << "; " << tokens[3])
             auto tail = std::stoull(tokens[0]);
             auto head = std::stoull(tokens[1]);
             int plusMinus = std::stoi(tokens[2]);
@@ -115,7 +116,8 @@ bool KonectNetworkReader::provideDynamicDiGraph(DynamicDiGraph *dynGraph)
                 entries.emplace_back(tail, head, false, timestamp);
             } else {
                 lastError.append(line);
-                lastError.append(": Don't know how to interpret a value of '0' in the third column.\n");
+                lastError.append(
+                            ": Don't know how to interpret a value of '0' in the third column.\n");
                 errorsOccurred = true;
                 continue;
             }
@@ -150,19 +152,25 @@ bool KonectNetworkReader::provideDynamicDiGraph(DynamicDiGraph *dynGraph)
         *progressStream << "Creating dynamic digraph..." << std::flush;
     }
 
-    DiGraph::size_type deltas = 0;
+    DiGraph::size_type numTs = 1;
     unsigned long long lastTimestamp = entries.front().timestamp;
 
     for (const Entry &e : entries) {
 
         if (lastTimestamp != e.timestamp) {
-            lastTimestamp = e.timestamp;
-            deltas++;
 
-            if (limitDeltas > 0 && deltas > limitDeltas) {
-                PRINT_DEBUG("Maximum #deltas reached at time " << e.timestamp)
+            if (limitNumTimestamps > 0 && numTs >= limitNumTimestamps) {
+                if (progressStream) {
+                    *progressStream << " stopping after " << numTs
+                                    << " timestamps at time " << lastTimestamp
+                                    << "..." << std::flush;
+                }
+                PRINT_DEBUG("Maximum #timestamps reached at time " << e.timestamp)
                 break;
             }
+
+            numTs++;
+            lastTimestamp = e.timestamp;
         }
 
         if (e.add) {
@@ -179,7 +187,8 @@ bool KonectNetworkReader::provideDynamicDiGraph(DynamicDiGraph *dynGraph)
             } catch (const std::invalid_argument &ia) {
                 rErrors++;
                 lastRError = ia.what();
-                //std::cerr << "Error at arc " << e.tail << " -> " << e.head << " at time " << e.timestamp << ": " << ia.what() << std::endl;
+                //std::cerr << "Error at arc " << e.tail << " -> " << e.head
+                // << " at time " << e.timestamp << ": " << ia.what() << std::endl;
             }
         }
     }

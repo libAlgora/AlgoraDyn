@@ -36,7 +36,7 @@ class KonectNetworkReader : public StreamDiGraphReader
 public:
     explicit KonectNetworkReader(bool antedateVertexAdditions = false,
                                  bool removeIsolatedEndVertices = false,
-                                 DiGraph::size_type limitDeltas = 0);
+                                 DiGraph::size_type limitNumTimestamps = 0);
     virtual ~KonectNetworkReader() override;
 
     std::string getErrors() const { return lastError; }
@@ -51,7 +51,7 @@ private:
     std::string lastError;
     bool antedateVertexAdditions;
     bool removeIsolatedEndVertices;
-    DiGraph::size_type limitDeltas;
+    DiGraph::size_type limitNumTimestamps;
 };
 
 }
