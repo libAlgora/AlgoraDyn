@@ -501,6 +501,16 @@ void ESTreeML::dumpData(std::ostream &os) const
         for (auto i = data.cbegin(); i != data.cend(); i++) {
             os << (*i) << std::endl;
         }
+
+        os << "Tree in dot format:\ndigraph MESTree {\n";
+        for (const auto vd : data) {
+            auto treeArc = vd->getTreeArc();
+            if (treeArc) {
+                os << treeArc->getTail()->getName() << " -> "
+                   << treeArc->getHead()->getName() << ";\n";
+            }
+        }
+        os << "}" << std::endl;
     }
 }
 

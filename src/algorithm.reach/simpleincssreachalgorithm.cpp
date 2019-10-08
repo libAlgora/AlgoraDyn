@@ -771,10 +771,15 @@ void SimpleIncSSReachAlgorithm::dumpData(std::ostream &os) const
         os << "uninitialized" << std::endl;
     } else {
         os << "Source: " << source << std::endl;
-        for (auto i = data->reachability.cbegin(); i != data->reachability.cend(); i++) {
-            //os << (Vertex*) i->first << ": " << data->printState(i-> second) << std::endl;
-            os << data->printState(*i) << std::endl;
+
+        os << "Tree in dot format:\ndigraph SITree {\n";
+        for (const auto treeArc : data->pred) {
+            if (treeArc) {
+                os << treeArc->getTail()->getName() << " -> "
+                   << treeArc->getHead()->getName() << ";\n";
+            }
         }
+        os << "}" << std::endl;
     }
 }
 
