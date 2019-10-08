@@ -43,6 +43,7 @@ public:
     DiGraph::size_type medianGraphSize() const { return medGraphSize; }
     DiGraph::size_type finalGraphSize() const { return fGraphSize; }
     double averageGraphSize() const { return avgGraphSize; }
+    const std::vector<DiGraph::size_type> &getGraphSizes() const { return graphSizes; }
 
     DiGraph::size_type initialArcSize() const { return iArcSize; }
     DiGraph::size_type maximumArcSize() const { return maxArcSize; }
@@ -50,6 +51,7 @@ public:
     DiGraph::size_type medianArcSize() const { return medArcSize; }
     DiGraph::size_type finalArcSize() const { return fArcSize; }
     double averageArcSize() const { return avgArcSize; }
+    const std::vector<DiGraph::size_type> &getArcSizes() const { return arcSizes; }
 
     double initialDensity() const { return iDensity; }
     double maximumDensity() const { return maxDensity; }
@@ -57,26 +59,33 @@ public:
     double medianDensity() const { return medDensity; }
     double finalDensity() const { return fDensity; }
     double averageDensity() const { return avgDensity; }
+    const std::vector<double> &getDensities() const { return densities; }
 
     DynamicDiGraph::size_type minimumArcAdditions() const { return minArcAdditions; }
     DynamicDiGraph::size_type maximumArcAdditions() const { return maxArcAdditions; }
     DynamicDiGraph::size_type medianArcAdditions() const { return medArcAdditions; }
     DynamicDiGraph::size_type totalArcAdditions() const { return sumArcAdditions; }
     double averageArcAdditions() const { return avgArcAdditions; }
+    const std::vector<DynamicDiGraph::size_type> &getArcAdditions() const { return arcAdditions; }
 
     DynamicDiGraph::size_type minimumArcRemovals() const { return minArcRemovals; }
     DynamicDiGraph::size_type maximumArcsRemovals() const { return maxArcRemovals; }
     DynamicDiGraph::size_type medianArcRemovals() const { return medArcRemovals; }
     DynamicDiGraph::size_type totalArcRemovals() const { return sumArcRemovals; }
     double averageArcRemovals() const { return avgArcRemovals; }
+    const std::vector<DynamicDiGraph::size_type> &getArcRemovals() const { return arcRemovals; }
 
     DynamicDiGraph::DynamicTime minimumTimeDelta() const { return minTimeDelta; }
     DynamicDiGraph::DynamicTime maximumTimeDelta() const { return maxTimeDelta; }
     DynamicDiGraph::DynamicTime medianTimeDelta() const { return medTimeDelta; }
     DynamicDiGraph::DynamicTime totalTimeDelta() const { return sumTimeDelta; }
     double averageTimeDelta() const { return avgTimeDelta; }
+    const std::vector<DynamicDiGraph::DynamicTime> &getTimeDeltas() const { return timeDeltas; }
+
+    const std::vector<DynamicDiGraph::DynamicTime> &getTimestamps() const { return timestamps; }
 
 private:
+    std::vector<DiGraph::size_type> graphSizes;
     DiGraph::size_type iGraphSize;
     DiGraph::size_type maxGraphSize;
     DiGraph::size_type minGraphSize;
@@ -84,6 +93,7 @@ private:
     DiGraph::size_type fGraphSize;
     double avgGraphSize;
 
+    std::vector<DiGraph::size_type> arcSizes;
     DiGraph::size_type iArcSize;
     DiGraph::size_type maxArcSize;
     DiGraph::size_type minArcSize;
@@ -91,6 +101,7 @@ private:
     DiGraph::size_type fArcSize;
     double avgArcSize;
 
+    std::vector<double> densities;
     double iDensity;
     double maxDensity;
     double minDensity;
@@ -98,23 +109,28 @@ private:
     double fDensity;
     double avgDensity;
 
+    std::vector<DynamicDiGraph::size_type> arcAdditions;
     DynamicDiGraph::size_type minArcAdditions;
     DynamicDiGraph::size_type maxArcAdditions;
     DynamicDiGraph::size_type medArcAdditions;
     DynamicDiGraph::size_type sumArcAdditions;
     double avgArcAdditions;
 
+    std::vector<DynamicDiGraph::size_type> arcRemovals;
     DynamicDiGraph::size_type minArcRemovals;
     DynamicDiGraph::size_type maxArcRemovals;
     DynamicDiGraph::size_type medArcRemovals;
     DynamicDiGraph::size_type sumArcRemovals;
     double avgArcRemovals;
 
+    std::vector<DynamicDiGraph::DynamicTime> timeDeltas;
     DynamicDiGraph::DynamicTime minTimeDelta;
     DynamicDiGraph::DynamicTime maxTimeDelta;
     DynamicDiGraph::DynamicTime medTimeDelta;
     DynamicDiGraph::DynamicTime sumTimeDelta;
     double avgTimeDelta;
+
+    std::vector<DynamicDiGraph::DynamicTime> timestamps;
 };
 
 }

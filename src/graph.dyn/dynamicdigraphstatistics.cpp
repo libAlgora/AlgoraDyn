@@ -53,7 +53,7 @@ void DynamicDiGraphStatistics::analyzeDynamicDiGraph(DynamicDiGraph *dyGraph)
     medGraphSize = 0U;
     avgGraphSize = 0.0;
     fGraphSize = 0U;
-    std::vector<DiGraph::size_type> graphSizes;
+    graphSizes.clear();
 
     iArcSize = 0U;
     maxArcSize = 0U;
@@ -61,7 +61,7 @@ void DynamicDiGraphStatistics::analyzeDynamicDiGraph(DynamicDiGraph *dyGraph)
     medArcSize = 0U;
     avgArcSize = 0.0;
     fArcSize = 0U;
-    std::vector<DiGraph::size_type> arcSizes;
+    arcSizes.clear();
 
     iDensity = 0.0;
     maxDensity = 0.0;
@@ -69,28 +69,28 @@ void DynamicDiGraphStatistics::analyzeDynamicDiGraph(DynamicDiGraph *dyGraph)
     medDensity = 0.0;
     avgDensity = 0.0;
     fDensity = 0.0;
-    std::vector<double> densities;
+    densities.clear();
 
     minArcAdditions = 0U;
     maxArcAdditions = 0U;
     medArcAdditions = 0U;
     sumArcAdditions = 0U;
     avgArcAdditions = 0.0;
-    std::vector<DynamicDiGraph::size_type> arcAdditions;
+    arcAdditions.clear();
 
     minArcRemovals = 0U;
     maxArcRemovals = 0U;
     medArcRemovals = 0U;
     sumArcRemovals = 0U;
     avgArcRemovals = 0.0;
-    std::vector<DynamicDiGraph::size_type> arcRemovals;
+    arcRemovals.clear();
 
     minTimeDelta = 0U;
     maxTimeDelta = 0U;
     medTimeDelta = 0U;
     sumTimeDelta = 0U;
     avgTimeDelta = 0.0;
-    std::vector<DynamicDiGraph::DynamicTime> timeDeltas;
+    timeDeltas.clear();
 
     dyGraph->resetToBigBang();
     auto graph = dyGraph->getDiGraph();
@@ -128,21 +128,24 @@ void DynamicDiGraphStatistics::analyzeDynamicDiGraph(DynamicDiGraph *dyGraph)
     minGraphSize = *(p.first);
     maxGraphSize = *(p.second);
     medGraphSize = medianOf(graphSizes);
-    avgGraphSize = (1.0 * std::accumulate(std::begin(graphSizes), std::end(graphSizes), 0ULL)) / graphSizes.size();
+    avgGraphSize = (1.0 * std::accumulate(std::begin(graphSizes), std::end(graphSizes), 0ULL))
+            / graphSizes.size();
     fGraphSize = graphSizes.back();
 
     p = std::minmax_element(std::begin(arcSizes), std::end(arcSizes));
     minArcSize = *(p.first);
     maxArcSize = *(p.second);
     medArcSize = medianOf(arcSizes);
-    avgArcSize = (1.0 * std::accumulate(std::begin(arcSizes), std::end(arcSizes), 0ULL)) / arcSizes.size();
+    avgArcSize = (1.0 * std::accumulate(std::begin(arcSizes), std::end(arcSizes), 0ULL))
+            / arcSizes.size();
     fArcSize = arcSizes.back();
 
     auto d = std::minmax_element(std::begin(densities), std::end(densities));
     minDensity = *(d.first);
     maxDensity = *(d.second);
     medDensity = medianOf(densities);
-    avgDensity = (1.0 * std::accumulate(std::begin(densities), std::end(densities), 0ULL)) / densities.size();
+    avgDensity = (1.0 * std::accumulate(std::begin(densities), std::end(densities), 0ULL))
+            / densities.size();
     fDensity = densities.back();
 
     auto pd = std::minmax_element(std::begin(arcAdditions), std::end(arcAdditions));
@@ -165,6 +168,8 @@ void DynamicDiGraphStatistics::analyzeDynamicDiGraph(DynamicDiGraph *dyGraph)
     medTimeDelta = medianOf(timeDeltas);
     sumTimeDelta = std::accumulate(std::begin(timeDeltas), std::end(timeDeltas), 0ULL);
     avgTimeDelta = (1.0 * sumTimeDelta) / timeDeltas.size();
+
+    timestamps = dyGraph->getTimestamps();
 }
 
 
