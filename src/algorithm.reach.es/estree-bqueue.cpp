@@ -494,7 +494,7 @@ std::vector<Arc *> OldESTree::queryPath(const Vertex *t)
     return path;
 }
 
-void OldESTree::dumpData(std::ostream &os)
+void OldESTree::dumpData(std::ostream &os) const
 {
     if (!initialized) {
         os << "uninitialized" << std::endl;

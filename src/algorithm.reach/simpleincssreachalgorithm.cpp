@@ -765,7 +765,7 @@ std::vector<Arc *> SimpleIncSSReachAlgorithm::queryPath(const Vertex *t)
     return path;
 }
 
-void SimpleIncSSReachAlgorithm::dumpData(std::ostream &os)
+void SimpleIncSSReachAlgorithm::dumpData(std::ostream &os) const
 {
     if (!initialized) {
         os << "uninitialized" << std::endl;

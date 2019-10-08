@@ -497,7 +497,7 @@ std::vector<Arc *> ESTreeQ::queryPath(const Vertex *t)
     return path;
 }
 
-void ESTreeQ::dumpData(std::ostream &os)
+void ESTreeQ::dumpData(std::ostream &os) const
 {
     if (!initialized) {
         os << "uninitialized" << std::endl;

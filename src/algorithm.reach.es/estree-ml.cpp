@@ -493,7 +493,7 @@ std::vector<Arc *> ESTreeML::queryPath(const Vertex *t)
     return path;
 }
 
-void ESTreeML::dumpData(std::ostream &os)
+void ESTreeML::dumpData(std::ostream &os) const
 {
     if (!initialized) {
         os << "uninitialized" << std::endl;

@@ -110,7 +110,11 @@ public:
 
 std::ostream& operator<<(std::ostream& os, const SESVertexData *vd);
 
-struct SES_Priority { SESVertexData::level_type operator()(const SESVertexData *vd) { return vd->getLevel(); }};
+struct SES_Priority {
+    SESVertexData::level_type operator()(const SESVertexData *vd) {
+        return vd->getLevel();
+    }
+};
 
 }
 

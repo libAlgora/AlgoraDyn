@@ -43,7 +43,7 @@ public:
     virtual bool query(const Vertex *t) = 0;
     virtual std::vector<Arc*> queryPath(const Vertex *) { return std::vector<Arc*>(); }
 
-    virtual void dumpData(std::ostream&) { }
+    virtual void dumpData(std::ostream&) const { }
     virtual Profile getProfile() const {
         return Profile {
             std::pair(std::string("vertices_considered"), pr_consideredVertices),

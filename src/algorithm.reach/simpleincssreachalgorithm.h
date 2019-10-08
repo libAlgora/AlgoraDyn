@@ -64,7 +64,7 @@ protected:
 public:
     virtual bool query(const Vertex *t) override;
     virtual std::vector<Arc*> queryPath(const Vertex *t) override;
-    virtual void dumpData(std::ostream &os) override;
+    virtual void dumpData(std::ostream &os) const override;
 
     // DynamicSSReachAlgorithm interface
 protected:

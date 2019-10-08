@@ -81,7 +81,7 @@ protected:
 public:
     virtual bool query(const Vertex *t) override;
     virtual std::vector<Arc*> queryPath(const Vertex *t) override;
-    virtual void dumpData(std::ostream &os) override;
+    virtual void dumpData(std::ostream &os) const override;
 
 private:
     typedef boost::circular_buffer<ESVertexData*> PriorityQueue;

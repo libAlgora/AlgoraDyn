@@ -37,7 +37,8 @@ std::ostream &operator<<(std::ostream &os, const SESVertexData *vd)
     //os << "parent: [" << vd->parent << "] ; level: " << vd->level;
     os << "parent: [";
     if (vd->parent) {
-      os << vd->parent->vertex << ", tree arc: " << vd->parent->treeArc << ", level: " << vd->parent->level;
+      os << vd->parent->vertex << ", tree arc: " << vd->parent->treeArc
+         << ", level: " << vd->parent->level;
     } else {
         os << "null";
     }

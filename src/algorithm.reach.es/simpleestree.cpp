@@ -47,7 +47,7 @@ namespace Algora {
 void printQueue(boost::circular_buffer<SESVertexData*> q) {
     std::cerr << "PriorityQueue: ";
     while(!q.empty()) {
-        std::cerr << q.front()->vertex << "[" << q.bot()->level << "]" << ", ";
+        std::cerr << q.front()->vertex << "[" << q.front()->level << "]" << ", ";
         q.pop_front();
     }
     std::cerr << std::endl;
@@ -482,7 +482,7 @@ std::vector<Arc *> SimpleESTree::queryPath(const Vertex *t)
     return path;
 }
 
-void SimpleESTree::dumpData(std::ostream &os)
+void SimpleESTree::dumpData(std::ostream &os) const
 {
     if (!initialized) {
         os << "uninitialized" << std::endl;
@@ -500,7 +500,8 @@ void SimpleESTree::dumpTree(std::ostream &os)
     }  else {
         diGraph->mapVertices([&](Vertex *v) {
           auto vd = data[v];
-          os << v << ": L " << vd->level << ", A " << vd->getTreeArc() << ", P " << vd->getParent() << '\n';
+          os << v << ": L " << vd->level << ", A " << vd->getTreeArc() << ", P " <<
+                vd->getParent() << '\n';
         });
     }
 }

@@ -36,7 +36,7 @@ class SimpleESTree : public DynamicSSReachAlgorithm
 {
 public:
     explicit SimpleESTree(unsigned int requeueLimit = 5, double maxAffectedRatio = .5);
-    virtual ~SimpleESTree();
+    virtual ~SimpleESTree() override;
     void setRequeueLimit(unsigned int limit) {
         requeueLimit = limit;
     }
@@ -83,7 +83,7 @@ protected:
 public:
     virtual bool query(const Vertex *t) override;
     virtual std::vector<Arc*> queryPath(const Vertex *t) override;
-    virtual void dumpData(std::ostream &os) override;
+    virtual void dumpData(std::ostream &os) const override;
 
 private:
     typedef boost::circular_buffer<SESVertexData*> PriorityQueue;
