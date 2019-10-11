@@ -22,6 +22,7 @@
 #   http://algora.xaikal.org                                           #
 ########################################################################
 
+set -e
 
 export QT_SELECT=qt5
 PRO_FILE="AlgoraDyn.pro"
