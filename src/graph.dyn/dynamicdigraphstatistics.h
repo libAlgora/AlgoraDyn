@@ -36,6 +36,7 @@ public:
     DynamicDiGraphStatistics() {}
 
     void analyzeDynamicDiGraph(DynamicDiGraph *dyGraph);
+    void clear();
 
     DiGraph::size_type initialGraphSize() const { return iGraphSize; }
     DiGraph::size_type maximumGraphSize() const { return maxGraphSize; }

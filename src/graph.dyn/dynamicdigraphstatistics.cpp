@@ -47,50 +47,7 @@ typename C::value_type medianOf(const C &container,
 
 void DynamicDiGraphStatistics::analyzeDynamicDiGraph(DynamicDiGraph *dyGraph)
 {
-    iGraphSize = 0U;
-    maxGraphSize = 0U;
-    minGraphSize = 0U;
-    medGraphSize = 0U;
-    avgGraphSize = 0.0;
-    fGraphSize = 0U;
-    graphSizes.clear();
-
-    iArcSize = 0U;
-    maxArcSize = 0U;
-    minArcSize = 0U;
-    medArcSize = 0U;
-    avgArcSize = 0.0;
-    fArcSize = 0U;
-    arcSizes.clear();
-
-    iDensity = 0.0;
-    maxDensity = 0.0;
-    minDensity = 0.0;
-    medDensity = 0.0;
-    avgDensity = 0.0;
-    fDensity = 0.0;
-    densities.clear();
-
-    minArcAdditions = 0U;
-    maxArcAdditions = 0U;
-    medArcAdditions = 0U;
-    sumArcAdditions = 0U;
-    avgArcAdditions = 0.0;
-    arcAdditions.clear();
-
-    minArcRemovals = 0U;
-    maxArcRemovals = 0U;
-    medArcRemovals = 0U;
-    sumArcRemovals = 0U;
-    avgArcRemovals = 0.0;
-    arcRemovals.clear();
-
-    minTimeDelta = 0U;
-    maxTimeDelta = 0U;
-    medTimeDelta = 0U;
-    sumTimeDelta = 0U;
-    avgTimeDelta = 0.0;
-    timeDeltas.clear();
+    clear();
 
     dyGraph->resetToBigBang();
     auto graph = dyGraph->getDiGraph();
@@ -170,6 +127,54 @@ void DynamicDiGraphStatistics::analyzeDynamicDiGraph(DynamicDiGraph *dyGraph)
     avgTimeDelta = (1.0 * sumTimeDelta) / timeDeltas.size();
 
     timestamps = dyGraph->getTimestamps();
+}
+
+void DynamicDiGraphStatistics::clear()
+{
+    iGraphSize = 0U;
+    maxGraphSize = 0U;
+    minGraphSize = 0U;
+    medGraphSize = 0U;
+    avgGraphSize = 0.0;
+    fGraphSize = 0U;
+    graphSizes.clear();
+
+    iArcSize = 0U;
+    maxArcSize = 0U;
+    minArcSize = 0U;
+    medArcSize = 0U;
+    avgArcSize = 0.0;
+    fArcSize = 0U;
+    arcSizes.clear();
+
+    iDensity = 0.0;
+    maxDensity = 0.0;
+    minDensity = 0.0;
+    medDensity = 0.0;
+    avgDensity = 0.0;
+    fDensity = 0.0;
+    densities.clear();
+
+    minArcAdditions = 0U;
+    maxArcAdditions = 0U;
+    medArcAdditions = 0U;
+    sumArcAdditions = 0U;
+    avgArcAdditions = 0.0;
+    arcAdditions.clear();
+
+    minArcRemovals = 0U;
+    maxArcRemovals = 0U;
+    medArcRemovals = 0U;
+    sumArcRemovals = 0U;
+    avgArcRemovals = 0.0;
+    arcRemovals.clear();
+
+    minTimeDelta = 0U;
+    maxTimeDelta = 0U;
+    medTimeDelta = 0U;
+    sumTimeDelta = 0U;
+    avgTimeDelta = 0.0;
+    timeDeltas.clear();
 }
 
 
