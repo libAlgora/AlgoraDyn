@@ -40,6 +40,8 @@ public:
     virtual ~DynamicSSReachAlgorithm() override { }
 
     void setSource(Vertex *s) { source = s; onSourceSet(); }
+    Vertex *getSource() const { return source; }
+
     virtual bool query(const Vertex *t) = 0;
     virtual std::vector<Arc*> queryPath(const Vertex *) { return std::vector<Arc*>(); }
 
