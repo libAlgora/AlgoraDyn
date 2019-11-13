@@ -25,6 +25,8 @@
 
 #include "algorithm/digraphalgorithm.h"
 
+#include <vector>
+
 namespace Algora {
 
 class Vertex;
@@ -34,8 +36,12 @@ class DynamicDiGraphAlgorithm
         : public DiGraphAlgorithm
 {
 public:
+    typedef unsigned long long profiling_counter;
+    typedef std::vector<std::pair<std::string, profiling_counter>> Profile;
+
     explicit DynamicDiGraphAlgorithm() : DiGraphAlgorithm(), autoUpdate(true), registered(false),
-        registerOnVertexAdd(true), registerOnVertexRemove(true), registerOnArcAdd(true), registerOnArcRemove(true)
+        registerOnVertexAdd(true), registerOnVertexRemove(true),
+        registerOnArcAdd(true), registerOnArcRemove(true)
     {}
     virtual ~DynamicDiGraphAlgorithm() override { deregister(); }
 
@@ -52,7 +58,22 @@ public:
     virtual void onArcAdd(Arc *) { }
     virtual void onArcRemove(Arc *) { }
 
+    virtual void dumpData(std::ostream&) const { }
+    virtual Profile getProfile() const {
+        return Profile {
+            std::pair(std::string("vertices_considered"), pr_consideredVertices),
+            std::pair(std::string("arcs_considered"), pr_consideredArcs),
+            std::pair(std::string("num_resets"), pr_numResets)
+                    };
+    }
+
+    virtual void ping() { }
+
 protected:
+    profiling_counter pr_consideredVertices;
+    profiling_counter pr_consideredArcs;
+    profiling_counter pr_numResets;
+
     virtual void onDiGraphSet() override;
     virtual void onDiGraphUnset() override;
 
@@ -61,6 +82,15 @@ protected:
         registerOnVertexRemove = vertexRemove;
         registerOnArcAdd = arcAdd;
         registerOnArcRemove = arcRemove;
+    }
+
+    void prVertexConsidered() { pr_consideredVertices++; }
+    void prVerticesConsidered(const profiling_counter &n) { pr_consideredVertices += n; }
+    void prArcConsidered() { pr_consideredArcs++; }
+    void prArcsConsidered(const profiling_counter &m) { pr_consideredArcs += m; }
+    void prReset() { pr_numResets++; }
+    void resetProfileData() {
+        pr_consideredVertices = 0UL; pr_consideredArcs = 0UL; pr_numResets = 0UL;
     }
 
 private:

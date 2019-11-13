@@ -33,9 +33,6 @@ namespace Algora {
 class DynamicSSReachAlgorithm : public DynamicDiGraphAlgorithm
 {
 public:
-    typedef unsigned long long profiling_counter;
-    typedef std::vector<std::pair<std::string, profiling_counter>> Profile;
-
     explicit DynamicSSReachAlgorithm() : DynamicDiGraphAlgorithm(), source(nullptr) { }
     virtual ~DynamicSSReachAlgorithm() override { }
 
@@ -44,17 +41,6 @@ public:
 
     virtual bool query(const Vertex *t) = 0;
     virtual std::vector<Arc*> queryPath(const Vertex *) { return std::vector<Arc*>(); }
-
-    virtual void dumpData(std::ostream&) const { }
-    virtual Profile getProfile() const {
-        return Profile {
-            std::pair(std::string("vertices_considered"), pr_consideredVertices),
-            std::pair(std::string("arcs_considered"), pr_consideredArcs),
-            std::pair(std::string("num_resets"), pr_numResets)
-                    };
-    }
-
-    virtual void ping() { }
 
     // DiGraphAlgorithm interface
 public:
@@ -71,19 +57,7 @@ protected:
     virtual void onSourceSet() { }
     virtual void onDiGraphSet() override { DynamicDiGraphAlgorithm::onDiGraphSet(); resetProfileData(); }
 
-    void prVertexConsidered() { pr_consideredVertices++; }
-    void prVerticesConsidered(const profiling_counter &n) { pr_consideredVertices += n; }
-    void prArcConsidered() { pr_consideredArcs++; }
-    void prArcsConsidered(const profiling_counter &m) { pr_consideredArcs += m; }
-    void prReset() { pr_numResets++; }
-    void resetProfileData() { pr_consideredVertices = 0UL; pr_consideredArcs = 0UL; pr_numResets = 0UL; }
-
     Vertex *source;
-
-    profiling_counter pr_consideredVertices;
-    profiling_counter pr_consideredArcs;
-    profiling_counter pr_numResets;
-
 };
 
 }
