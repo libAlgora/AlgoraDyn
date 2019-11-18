@@ -39,7 +39,7 @@ public:
     virtual bool provideDynamicDiGraph(DynamicDiGraph *dyGraph) = 0;
 
     virtual std::string getConfiguration() const;
-    virtual std::string getConfigurationAsJson(const std::string &/*indent*/) const;
+    virtual std::ostream &toJson(std::ostream &out, const std::string &/*newline*/) const;
     virtual std::string getName() const noexcept { return "Dynamic Digraph Provider"; }
 };
 

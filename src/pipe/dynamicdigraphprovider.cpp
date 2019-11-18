@@ -26,6 +26,10 @@ namespace Algora {
 
 std::string DynamicDiGraphProvider::getConfiguration() const { return std::string(); }
 
-std::string DynamicDiGraphProvider::getConfigurationAsJson(const std::string &) const {  return std::string(); }
+std::ostream &DynamicDiGraphProvider::toJson(std::ostream &out, const std::string &) const
+{
+    return out;
+}
+
 
 }

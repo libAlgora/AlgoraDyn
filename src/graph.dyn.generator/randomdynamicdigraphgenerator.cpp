@@ -169,22 +169,24 @@ std::string RandomDynamicDiGraphGenerator::getConfiguration() const
     return ss.str();
 }
 
-std::string RandomDynamicDiGraphGenerator::getConfigurationAsJson(const std::string &indent) const
+std::ostream &RandomDynamicDiGraphGenerator::toJson(
+        std::ostream &out, const std::string &newline) const
 {
-    std::stringstream ss;
-    ss << std::setprecision(17);
-    ss << indent << "\"vertices\": " << iGraphSize << ",";
-    ss << "\n" << indent << "\"arcs_init\": " << iArcSize << ",";
-    ss << "\n" << indent << "\"arcs_probability\": " << iArcProbability << ",";
-    ss << "\n" << indent << "\"multiarcs\": " << (multiArcs ? "true" : "false") << ",";
-    ss << "\n" << indent << "\"operations\": " << numOperations << ",";
-    ss << "\n" << indent << "\"prop_arc_addition\": " << propAddition << ",";
-    ss << "\n" << indent << "\"prop_arc_deletion\": " << propDeletion << ",";
-    ss << "\n" << indent << "\"prop_time_advance\": " << propAdvance << ",";
-    ss << "\n" << indent << "\"multiplier\": " << multiplier << ",";
-    ss << "\n" << indent << "\"seed\": " << seed;
+    auto oldFlags(out.flags());
+    out << std::setprecision(17)
+        << "\"vertices\": " << iGraphSize << ","
+        << newline << "\"arcs_init\": " << iArcSize << ","
+        << newline << "\"arcs_probability\": " << iArcProbability << ","
+        << newline << "\"multiarcs\": " << (multiArcs ? "true" : "false") << ","
+        << newline << "\"operations\": " << numOperations << ","
+        << newline << "\"prop_arc_addition\": " << propAddition << ","
+        << newline << "\"prop_arc_deletion\": " << propDeletion << ","
+        << newline << "\"prop_time_advance\": " << propAdvance << ","
+        << newline << "\"multiplier\": " << multiplier << ","
+        << newline << "\"seed\": " << seed;
 
-    return ss.str();
+    out.flags(oldFlags);
+    return out;
 }
 
 void RandomDynamicDiGraphGenerator::init()

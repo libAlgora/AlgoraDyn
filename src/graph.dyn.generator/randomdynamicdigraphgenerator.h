@@ -73,7 +73,7 @@ public:
     virtual bool isGraphAvailable() override { return true; }
     virtual bool provideDynamicDiGraph(DynamicDiGraph *dyGraph) override;
     virtual std::string getConfiguration() const override;
-    virtual std::string getConfigurationAsJson(const std::string &indent) const override;
+    virtual std::ostream &toJson(std::ostream &out, const std::string &newline) const override;
     virtual std::string getName() const noexcept override { return "Random Dynamic Digraph Generator"; }
 
 private:
