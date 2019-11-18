@@ -118,7 +118,7 @@ ESVertexData::level_type ESVertexData::reparent(ESVertexData *in, Arc *a)
     }
 }
 
-void ESVertexData::findAndRemoveInNeighbor(ESVertexData *in, const Arc *a)
+void ESVertexData::findAndRemoveInNeighbor([[maybe_unused]] ESVertexData *in, const Arc *a)
 {
     auto index = (*inNeighborIndices)[a] - 1U;
     assert(inNeighbors[index] == in);
