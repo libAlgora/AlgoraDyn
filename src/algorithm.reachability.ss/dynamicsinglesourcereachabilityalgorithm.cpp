@@ -14,9 +14,5 @@ bool DynamicSingleSourceReachabilityAlgorithm::prepare()
             && diGraph->containsVertex(source);
 }
 
-void DynamicSingleSourceReachabilityAlgorithm::onDiGraphSet()
-{
-    DynamicDiGraphAlgorithm::onDiGraphSet();
-    resetProfileData();
-}
+
 }

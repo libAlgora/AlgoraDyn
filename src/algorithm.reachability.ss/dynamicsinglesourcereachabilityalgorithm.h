@@ -35,7 +35,7 @@ class DynamicSingleSourceReachabilityAlgorithm : public DynamicDiGraphAlgorithm
 public:
     explicit DynamicSingleSourceReachabilityAlgorithm()
         : DynamicDiGraphAlgorithm(), source(nullptr) { }
-    virtual ~DynamicSingleSourceReachabilityAlgorithm() override { }
+    virtual ~DynamicSingleSourceReachabilityAlgorithm() override = default;
 
     void setSource(Vertex *s) { source = s; onSourceSet(); }
     Vertex *getSource() const { return source; }
@@ -49,7 +49,6 @@ public:
 
 protected:
     virtual void onSourceSet() { }
-    virtual void onDiGraphSet() override;
 
     Vertex *source;
 };

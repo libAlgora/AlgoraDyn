@@ -79,6 +79,7 @@ void DynamicDiGraphAlgorithm::onDiGraphSet()
         }
         registered = true;
     }
+    resetProfileData();
 }
 
 void DynamicDiGraphAlgorithm::onDiGraphUnset()
