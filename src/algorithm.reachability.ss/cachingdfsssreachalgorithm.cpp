@@ -110,7 +110,7 @@ struct CachingDFSSSReachAlgorithm::CheshireCat {
 };
 
 CachingDFSSSReachAlgorithm::CachingDFSSSReachAlgorithm()
-    : DynamicSSReachAlgorithm(), grin(new CheshireCat)
+    : DynamicSingleSourceReachabilityAlgorithm(), grin(new CheshireCat)
 {
     grin->parent = this;
     registerEvents(false, false, true, true);
@@ -141,7 +141,7 @@ std::vector<Arc *> CachingDFSSSReachAlgorithm::queryPath(const Vertex *t)
 
 void CachingDFSSSReachAlgorithm::onDiGraphSet()
 {
-    DynamicSSReachAlgorithm::onDiGraphSet();
+    DynamicSingleSourceReachabilityAlgorithm::onDiGraphSet();
     grin->initialized = false;
     grin->arcAdded = false;
     grin->arcRemoved = false;
@@ -155,7 +155,7 @@ void CachingDFSSSReachAlgorithm::onDiGraphUnset()
     grin->arcAdded = false;
     grin->arcRemoved = false;
     grin->diGraph = nullptr;
-    DynamicSSReachAlgorithm::onDiGraphUnset();
+    DynamicSingleSourceReachabilityAlgorithm::onDiGraphUnset();
 }
 
 void CachingDFSSSReachAlgorithm::onArcAdd(Arc *a)
@@ -200,7 +200,7 @@ void CachingDFSSSReachAlgorithm::onArcRemove(Arc *a)
 
 void CachingDFSSSReachAlgorithm::onSourceSet()
 {
-    DynamicSSReachAlgorithm::onSourceSet();
+    DynamicSingleSourceReachabilityAlgorithm::onSourceSet();
     grin->initialized = false;
     grin->source = source;
 }

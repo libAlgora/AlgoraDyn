@@ -20,7 +20,7 @@
  *   http://algora.xaikal.org
  */
 
-#include "estree-ml.h"
+#include "estree-bqueue.h"
 
 #include <vector>
 #include <climits>
@@ -29,10 +29,11 @@
 #include "graph/vertex.h"
 #include "algorithm.basic.traversal/breadthfirstsearch.h"
 #include "algorithm/digraphalgorithmexception.h"
+#include "property/fastpropertymap.h"
 
-//#define DEBUG_ESTREEML
+//#define DEBUG_OLDESTREE
 
-#ifdef DEBUG_ESTREEML
+#ifdef DEBUG_OLDESTREE
 #include <iostream>
 #define PRINT_DEBUG(msg) std::cerr << msg << std::endl;
 #define IF_DEBUG(cmd) cmd;
@@ -43,19 +44,19 @@
 
 namespace Algora {
 
-#ifdef DEBUG_ESTREEML
-void printQueue(boost::circular_buffer<ESVertexData*> q) {
+#ifdef DEBUG_OLDESTREE
+void printQueue(PriorityQueue q) {
     std::cerr << "PriorityQueue: ";
     while(!q.empty()) {
-        std::cerr << q.front()->vertex << "[" << q.bot()->level << "]" << ", ";
-        q.pop_front();
+        std::cerr << q.bot()->vertex << "[" << q.bot()->level << "]" << ", ";
+        q.popBot();
     }
     std::cerr << std::endl;
 }
 #endif
 
-ESTreeML::ESTreeML(unsigned int requeueLimit, double maxAffectedRatio)
-    : DynamicSSReachAlgorithm(), root(nullptr),
+OldESTree::OldESTree(unsigned int requeueLimit, double maxAffectedRatio)
+    : DynamicSingleSourceReachabilityAlgorithm(), root(nullptr),
       initialized(false), requeueLimit(requeueLimit),
       maxAffectedRatio(maxAffectedRatio),
       movesDown(0U), movesUp(0U),
@@ -70,22 +71,20 @@ ESTreeML::ESTreeML(unsigned int requeueLimit, double maxAffectedRatio)
     data.setDefaultValue(nullptr);
     inNeighborIndices.setDefaultValue(0U);
     reachable.setDefaultValue(false);
-
-    timesInQueue.setDefaultValue(0U);
 }
 
-ESTreeML::~ESTreeML()
+OldESTree::~OldESTree()
 {
-    cleanup(true);
+    cleanup();
 }
 
-void ESTreeML::run()
+void OldESTree::run()
 {
     if (initialized) {
         return;
     }
 
-   PRINT_DEBUG("Initializing ESTreeML...")
+   PRINT_DEBUG("Initializing OldESTree...")
 
    reachable.resetAll(diGraph->getSize());
    inNeighborIndices.resetAll(diGraph->getNumArcs(true));
@@ -128,7 +127,7 @@ void ESTreeML::run()
         Vertex *h = a->getHead();
         ESVertexData *td = data(t);
         ESVertexData *hd = data(h);
-        PRINT_DEBUG( "(" << td->getVertex() << ", " << hd->getVertex() << ")" << " is a non-tree arc.")
+        PRINT_DEBUG( "(" << td->vertex << ", " << hd->vertex << ")" << " is a non-tree arc.")
         hd->addInNeighbor(td, a);
    });
    runAlgorithm(bfs, diGraph);
@@ -154,7 +153,7 @@ void ESTreeML::run()
            data[h] = hd;
        }
        if (!td->isReachable()) {
-            PRINT_DEBUG( "(" << td->getVertex() << ", " << hd->getVertex() << ")" << " is an unvisited non-tree arc.")
+            PRINT_DEBUG( "(" << td->vertex << ", " << hd->vertex << ")" << " is an unvisited non-tree arc.")
             hd->addInNeighbor(td, a);
        }
    });
@@ -181,7 +180,7 @@ void ESTreeML::run()
    assert(checkTree());
 }
 
-std::string ESTreeML::getProfilingInfo() const
+std::string OldESTree::getProfilingInfo() const
 {
     std::stringstream ss;
 #ifdef COLLECT_PR_DATA
@@ -208,9 +207,9 @@ std::string ESTreeML::getProfilingInfo() const
     return ss.str();
 }
 
-DynamicSSReachAlgorithm::Profile ESTreeML::getProfile() const
+DynamicSingleSourceReachabilityAlgorithm::Profile OldESTree::getProfile() const
 {
-    auto profile = DynamicSSReachAlgorithm::getProfile();
+    auto profile = DynamicSingleSourceReachabilityAlgorithm::getProfile();
     profile.push_back(std::make_pair(std::string("vertices_moved_down"), movesDown));
     profile.push_back(std::make_pair(std::string("vertices_moved_up"), movesUp));
     profile.push_back(std::make_pair(std::string("total_level_increase"), levelIncrease));
@@ -232,10 +231,10 @@ DynamicSSReachAlgorithm::Profile ESTreeML::getProfile() const
     return profile;
 }
 
-void ESTreeML::onDiGraphSet()
+void OldESTree::onDiGraphSet()
 {
-    DynamicSSReachAlgorithm::onDiGraphSet();
-    cleanup(false);
+    DynamicSingleSourceReachabilityAlgorithm::onDiGraphSet();
+    cleanup();
 
     movesDown = 0U;
     movesUp = 0U;
@@ -251,15 +250,17 @@ void ESTreeML::onDiGraphSet()
     totalAffected = 0U;
     rerunRequeued = 0U;
     rerunNumAffected = 0U;
+    data.resetAll(diGraph->getSize());
+    reachable.resetAll(diGraph->getSize());
 }
 
-void ESTreeML::onDiGraphUnset()
+void OldESTree::onDiGraphUnset()
 {
-    DynamicSSReachAlgorithm::onDiGraphUnset();
-    cleanup(true);
+    cleanup();
+    DynamicSingleSourceReachabilityAlgorithm::onDiGraphUnset();
 }
 
-void ESTreeML::onVertexAdd(Vertex *v)
+void OldESTree::onVertexAdd(Vertex *v)
 {
     if (!initialized) {
         return;
@@ -267,7 +268,7 @@ void ESTreeML::onVertexAdd(Vertex *v)
     data[v] = new ESVertexData(&inNeighborIndices, v);
 }
 
-void ESTreeML::onArcAdd(Arc *a)
+void OldESTree::onArcAdd(Arc *a)
 {
     if (!initialized) {
         return;
@@ -337,10 +338,10 @@ void ESTreeML::onArcAdd(Arc *a)
         if (a->isLoop()) {
             return false;
         }
-        auto at = a->getTail();
-        auto ah = a->getHead();
-        auto atd = data(at);
-        auto ahd = data(ah);
+        Vertex *at = a->getTail();
+        Vertex *ah = a->getHead();
+        ESVertexData *atd = data(at);
+        ESVertexData *ahd = data(ah);
 
         auto diff = ahd->reparent(atd, a);
 #ifdef COLLECT_PR_DATA
@@ -375,7 +376,7 @@ void ESTreeML::onArcAdd(Arc *a)
    assert(checkTree());
 }
 
-void ESTreeML::onVertexRemove(Vertex *v)
+void OldESTree::onVertexRemove(Vertex *v)
 {
     if (!initialized) {
         return;
@@ -389,7 +390,7 @@ void ESTreeML::onVertexRemove(Vertex *v)
      }
 }
 
-void ESTreeML::onArcRemove(Arc *a)
+void OldESTree::onArcRemove(Arc *a)
 {
    if (!initialized) {
         return;
@@ -400,8 +401,8 @@ void ESTreeML::onArcRemove(Arc *a)
         return;
     }
 
-    auto tail= a->getTail();
-    auto head = a->getHead();
+    Vertex *tail= a->getTail();
+    Vertex *head = a->getHead();
 
     if (head == source) {
         PRINT_DEBUG("Head is source.")
@@ -456,12 +457,12 @@ void ESTreeML::onArcRemove(Arc *a)
    assert(checkTree());
 }
 
-void ESTreeML::onSourceSet()
+void OldESTree::onSourceSet()
 {
-    cleanup(false);
+    cleanup();
 }
 
-bool ESTreeML::query(const Vertex *t)
+bool OldESTree::query(const Vertex *t)
 {
     if (t == source) {
         return true;
@@ -474,7 +475,7 @@ bool ESTreeML::query(const Vertex *t)
     return reachable(t);
 }
 
-std::vector<Arc *> ESTreeML::queryPath(const Vertex *t)
+std::vector<Arc *> OldESTree::queryPath(const Vertex *t)
 {
     std::vector<Arc*> path;
     if (!query(t) || t == source) {
@@ -493,7 +494,7 @@ std::vector<Arc *> ESTreeML::queryPath(const Vertex *t)
     return path;
 }
 
-void ESTreeML::dumpData(std::ostream &os) const
+void OldESTree::dumpData(std::ostream &os) const
 {
     if (!initialized) {
         os << "uninitialized" << std::endl;
@@ -501,32 +502,22 @@ void ESTreeML::dumpData(std::ostream &os) const
         for (auto i = data.cbegin(); i != data.cend(); i++) {
             os << (*i) << std::endl;
         }
-
-        os << "Tree in dot format:\ndigraph MESTree {\n";
-        for (const auto vd : data) {
-            auto treeArc = vd->getTreeArc();
-            if (treeArc) {
-                os << treeArc->getTail()->getName() << " -> "
-                   << treeArc->getHead()->getName() << ";\n";
-            }
-        }
-        os << "}" << std::endl;
     }
 }
 
-void ESTreeML::dumpTree(std::ostream &os)
+void OldESTree::dumpTree(std::ostream &os)
 {
     if (!initialized) {
         os << "uninitialized" << std::endl;
     }  else {
         diGraph->mapVertices([&](Vertex *v) {
           auto vd = data[v];
-          os << v << ": L " << vd->getLevel() << ", P " << vd->getParent() << '\n';
+          os << v << ": L " << vd->level << ", P " << vd->getParent() << '\n';
         });
     }
 }
 
-bool ESTreeML::checkTree()
+bool OldESTree::checkTree()
 {
    BreadthFirstSearch<FastPropertyMap> bfs;
    bfs.setStartVertex(source);
@@ -539,7 +530,7 @@ bool ESTreeML::checkTree()
    bool ok = true;
    diGraph->mapVertices([&](Vertex *v) {
        auto bfsLevel = levels[v] == bfs.INF ? ESVertexData::UNREACHABLE : levels[v];
-       if (data[v]->getLevel() != bfsLevel) {
+       if (data[v]->level != bfsLevel) {
            std::cerr << "Level mismatch for vertex " << data[v]
                         << ": expected level " << bfsLevel << std::endl;
            ok = false;
@@ -557,11 +548,9 @@ bool ESTreeML::checkTree()
    return ok;
 }
 
-void ESTreeML::rerun()
+void OldESTree::rerun()
 {
-#ifdef COLLECT_PR_DATA
     reruns++;
-#endif
     diGraph->mapVertices([&](Vertex *v) {
         data[v]->reset();
     });
@@ -569,7 +558,7 @@ void ESTreeML::rerun()
     run();
 }
 
-DiGraph::size_type ESTreeML::process(ESVertexData *vd, bool &limitReached)
+DiGraph::size_type OldESTree::process(ESVertexData *vd, PriorityQueue &queue, FastPropertyMap<bool> &inQueue, FastPropertyMap<unsigned> &timesInQueue, bool &limitReached)
 {
     if (vd->getLevel() == 0ULL) {
         PRINT_DEBUG("No need to process source vertex " << vd << ".");
@@ -584,8 +573,8 @@ DiGraph::size_type ESTreeML::process(ESVertexData *vd, bool &limitReached)
     }
 
 #ifdef COLLECT_PR_DATA
-    auto verticesConsidered = 0U;
-    auto arcsConsidered = 0U;
+        auto verticesConsidered = 0U;
+        auto arcsConsidered = 0U;
 #endif
 
     Vertex *v = vd->getVertex();
@@ -595,7 +584,7 @@ DiGraph::size_type ESTreeML::process(ESVertexData *vd, bool &limitReached)
     auto oldVLevel = vd->getLevel();
     auto levelDiff = 0ULL;
 
-    auto enqueue = [this,&limitReached](ESVertexData *vd) {
+    auto enqueue = [this,&queue,&inQueue,&timesInQueue,&limitReached](ESVertexData *vd) {
         auto vertex = vd->getVertex();
         if (timesInQueue[vertex] < requeueLimit) {
             PRINT_DEBUG("    Adding " << vd << " to queue...");
@@ -603,7 +592,8 @@ DiGraph::size_type ESTreeML::process(ESVertexData *vd, bool &limitReached)
             if (timesInQueue[vertex] > maxReQueued) {
                 maxReQueued = timesInQueue[vertex];
             }
-            queue.push_back(vd);
+            queue.push(vd);
+            inQueue[vertex] = true;
         } else {
             timesInQueue[vertex]++;
             limitReached = true;
@@ -611,8 +601,6 @@ DiGraph::size_type ESTreeML::process(ESVertexData *vd, bool &limitReached)
         }
     };
 
-    auto minParentLevel = ESVertexData::UNREACHABLE;
-    auto minParentIndex = 0ULL;
     if (vd->inNeighbors.empty()) {
         PRINT_DEBUG("Vertex is a source.");
         if (reachV) {
@@ -625,19 +613,14 @@ DiGraph::size_type ESTreeML::process(ESVertexData *vd, bool &limitReached)
         }
     } else {
         auto *parent = vd->getParentData();
-        auto oldIndex = vd->parentIndex;
-        if (parent != nullptr) {
-            minParentLevel = parent->level;
-        }
-        minParentIndex = oldIndex;
 
         PRINT_DEBUG("Size of graph is " << n << ".");
         PRINT_DEBUG("Parent is " << parent);
 
-        while (reachV && (parent == nullptr || vd->level <= parent->level)
-               && (!levelChanged || vd->parentIndex < oldIndex)) {
+        while (reachV && (parent == nullptr || vd->level <= parent->level) && !levelChanged) {
 #ifdef COLLECT_PR_DATA
             verticesConsidered++;
+
 #endif
             vd->parentIndex++;
             PRINT_DEBUG("  Advancing parent index to " << vd->parentIndex << ".")
@@ -654,32 +637,23 @@ DiGraph::size_type ESTreeML::process(ESVertexData *vd, bool &limitReached)
                     vd->level++;
                     levelDiff++;
                     levelChanged = true;
-                    vd->parentIndex = 0;
                     PRINT_DEBUG("  Maximum parent index exceeded, increasing level to " << vd->level << ".")
-                    PRINT_DEBUG("  Resetting index to " << vd->parentIndex << ".")
+                    vd->parentIndex = 0;
                 }
             }
-            if (reachV)  {
+            if (reachV && !levelChanged)  {
                 parent = vd->getParentData();
-                PRINT_DEBUG("  Trying " << parent << " as parent.");
-                if (parent != nullptr
-                        && (parent->level < minParentLevel
-                            || (parent->level == minParentLevel && vd->parentIndex < minParentIndex))) {
-                    minParentLevel = parent->level;
-                    minParentIndex = vd->parentIndex;
-                }
+                PRINT_DEBUG("  Trying " << parent << " as parent.")
             }
         }
     }
-    PRINT_DEBUG("Finished search for new parent.")
     if (levelChanged) {
-        PRINT_DEBUG("Level has changed, checking children in BFS tree.")
-        diGraph->mapOutgoingArcsUntil(vd->getVertex(), [this,&enqueue](Arc *a) {
+        diGraph->mapOutgoingArcsUntil(vd->getVertex(), [this,&enqueue,&inQueue,vd](Arc *a) {
 #ifdef COLLECT_PR_DATA
             prArcConsidered();
 #endif
             if (a->isLoop()) {
-              PRINT_DEBUG("  Ignoring loop.");
+              PRINT_DEBUG("    Ignoring loop.");
               return;
             }
             Vertex *head = a->getHead();
@@ -687,65 +661,52 @@ DiGraph::size_type ESTreeML::process(ESVertexData *vd, bool &limitReached)
             prVertexConsidered();
 #endif
             auto *hd = data(head);
-            if (hd->isTreeArc(a)) {
-                PRINT_DEBUG("  Adding child " << hd << " to queue.");
+            if (hd->isTreeArc(a) && !inQueue[head]) {
                 enqueue(hd);
             } else {
-              PRINT_DEBUG("  NOT adding " << hd << " to queue: not a child of " << vd)
+              PRINT_DEBUG("    NOT adding " << hd << " to queue: not a child of " << vd)
             }
         }, [&limitReached](const Arc *) { return limitReached; });
-        PRINT_DEBUG("Done checking children. Limit has " << (limitReached ? "(!)" : "not") << " been reached.")
         if (reachV && !limitReached) {
-            if (minParentLevel == ESVertexData::UNREACHABLE) {
-                PRINT_DEBUG("Vertex " << v << " is unreachable.")
-                vd->setUnreachable();
-                reachable.resetToDefault(v);
-                reachV = false;
-                levelDiff = n - oldVLevel;
-            } else {
-                vd->level = minParentLevel + 1;
-                vd->parentIndex = minParentIndex;
-            }
+            enqueue(vd);
         }
     }
 
     PRINT_DEBUG("Returning level diff " << levelDiff  << " for " << vd << ".");
 
-    assert(limitReached || vd->checkIntegrity());
+    //assert(vd->checkIntegrity());
 #ifdef COLLECT_PR_DATA
         prVerticesConsidered(verticesConsidered);
         prArcsConsidered(arcsConsidered);
 #endif
 
     return levelDiff;
-
 }
 
-void ESTreeML::restoreTree(ESVertexData *rd)
+void OldESTree::restoreTree(ESVertexData *vd)
 {
-		auto n = diGraph->getSize();
-		DiGraph::size_type affectedLimit = maxAffectedRatio < 1.0 ? floor(maxAffectedRatio * n) : n;
-    queue.set_capacity(affectedLimit);
-    timesInQueue.resetAll(n);
-    timesInQueue[rd->getVertex()]++;
-		queue.clear();
-    queue.push_back(rd);
-    if (maxReQueued == 0U) {
-        maxReQueued = 1U;
-    }
-    PRINT_DEBUG("Initialized queue with " << rd << ".")
+    PriorityQueue queue;
+    queue.setLimit(diGraph->getSize());
+    FastPropertyMap<bool> inQueue(false, "", diGraph->getSize());
+    FastPropertyMap<unsigned int> timesInQueue(0U, "", diGraph->getSize());
+    queue.push(vd);
+    inQueue[vd->getVertex()] = true;
+    timesInQueue[vd->getVertex()]++;
+    PRINT_DEBUG("Initialized queue with " << vds.size() << " vertices.");
     bool limitReached = false;
     auto processed = 0U;
+    auto affectedLimit = maxAffectedRatio * diGraph->getSize();
 
     while (!queue.empty()) {
         IF_DEBUG(printQueue(queue))
         auto vd = queue.front();
         queue.pop_front();
+        inQueue[vd->getVertex()] = false;
 #ifdef COLLECT_PR_DATA
         prVertexConsidered();
-        auto levels = 
+        auto levels =
 #endif
-        process(vd, limitReached);
+                process(vd, queue, inQueue, timesInQueue, limitReached);
         processed++;
 
         if (limitReached || ((processed + queue.size() > affectedLimit) && !queue.empty())) {
@@ -757,7 +718,6 @@ void ESTreeML::restoreTree(ESVertexData *rd)
                 rerunNumAffected++;
             }
 #endif
-						queue.clear();
             rerun();
             break;
 #ifdef COLLECT_PR_DATA
@@ -780,31 +740,20 @@ void ESTreeML::restoreTree(ESVertexData *rd)
 #endif
 }
 
-void ESTreeML::cleanup(bool freeSpace)
+void OldESTree::cleanup()
 {
-    if (initialized) {
-        for (auto i = data.cbegin(); i != data.cend(); i++) {
-            if ((*i)) {
-                delete (*i);
-            }
+    for (auto i = data.cbegin(); i != data.cend(); i++) {
+        if ((*i)) {
+            delete (*i);
         }
     }
 
-		queue.clear();
-    if (freeSpace || !diGraph) {
-        data.resetAll(0);
-        reachable.resetAll(0);
-        inNeighborIndices.resetAll(0);
-        timesInQueue.resetAll(0);
-				queue.set_capacity(0);
-    } else {
-        data.resetAll(diGraph->getSize());
-        reachable.resetAll(diGraph->getSize());
-        inNeighborIndices.resetAll(diGraph->getNumArcs(true));
-        timesInQueue.resetAll(diGraph->getSize());
-    }
+    data.resetAll();
+    reachable.resetAll();
+    inNeighborIndices.resetAll();
 
     initialized = false ;
+
 }
 
 }

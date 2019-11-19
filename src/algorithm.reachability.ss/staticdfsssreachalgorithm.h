@@ -20,49 +20,31 @@
  *   http://algora.xaikal.org
  */
 
-#ifndef CACHINGDFSSSREACHALGORITHM_H
-#define CACHINGDFSSSREACHALGORITHM_H
+#ifndef STATICDFSSSREACHALGORITHM_H
+#define STATICDFSSSREACHALGORITHM_H
 
-#include "algorithm.reach/dynamicssreachalgorithm.h"
-#include "algorithm.basic.traversal/depthfirstsearch.h"
-#include "property/fastpropertymap.h"
+#include "dynamicsinglesourcereachabilityalgorithm.h"
 
 namespace Algora {
 
-class CachingDFSSSReachAlgorithm : public DynamicSSReachAlgorithm
+class StaticDFSSSReachAlgorithm : public DynamicSingleSourceReachabilityAlgorithm
 {
 public:
-    explicit CachingDFSSSReachAlgorithm();
-    virtual ~CachingDFSSSReachAlgorithm();
+    explicit StaticDFSSSReachAlgorithm();
+    virtual ~StaticDFSSSReachAlgorithm();
 
     // DiGraphAlgorithm interface
 public:
     virtual void run() override;
-    virtual std::string getName() const noexcept override { return "Caching DFS Single-Source Reachability Algorithm";  }
-    virtual std::string getShortName() const noexcept override { return "CachingDFS-SSReach"; }
+    virtual std::string getName() const noexcept override { return "Static DFS Single-Source Reachability Algorithm"; }
+    virtual std::string getShortName() const noexcept override { return "Static-DFS-SSReach"; }
 
     // DynamicSSReachAlgorithm interface
+public:
     virtual bool query(const Vertex *t) override;
     virtual std::vector<Arc*> queryPath(const Vertex *t) override;
-
-    // DynamicDiGraphAlgorithm interface
-    virtual void onArcAdd(Arc *a) override;
-    virtual void onArcRemove(Arc *a) override;
-
-protected:
-    // DiGraphAlgorithm interface
-    virtual void onDiGraphSet() override;
-    virtual void onDiGraphUnset() override;
-
-    // DynamicSSReachAlgorithm interface
-protected:
-    virtual void onSourceSet() override;
-
-private:
-    struct CheshireCat;
-    CheshireCat *grin;
 };
 
 }
 
-#endif // CACHINGDFSSSREACHALGORITHM_H
+#endif // STATICDFSSSREACHALGORITHM_H

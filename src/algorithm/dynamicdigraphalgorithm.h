@@ -39,11 +39,8 @@ public:
     typedef unsigned long long profiling_counter;
     typedef std::vector<std::pair<std::string, profiling_counter>> Profile;
 
-    explicit DynamicDiGraphAlgorithm() : DiGraphAlgorithm(), autoUpdate(true), registered(false),
-        registerOnVertexAdd(true), registerOnVertexRemove(true),
-        registerOnArcAdd(true), registerOnArcRemove(true)
-    {}
-    virtual ~DynamicDiGraphAlgorithm() override { deregister(); }
+    explicit DynamicDiGraphAlgorithm();
+    virtual ~DynamicDiGraphAlgorithm() override;
 
     void setAutoUpdate(bool au) {
         this->autoUpdate = au;
@@ -59,15 +56,13 @@ public:
     virtual void onArcRemove(Arc *) { }
 
     virtual void dumpData(std::ostream&) const { }
-    virtual Profile getProfile() const {
-        return Profile {
-            std::pair(std::string("vertices_considered"), pr_consideredVertices),
-            std::pair(std::string("arcs_considered"), pr_consideredArcs),
-            std::pair(std::string("num_resets"), pr_numResets)
-                    };
-    }
+    virtual Profile getProfile() const;
 
     virtual void ping() { }
+
+    // DiGraphAlgorithm interface
+public:
+    virtual std::string getProfilingInfo() const override;
 
 protected:
     profiling_counter pr_consideredVertices;
@@ -84,6 +79,7 @@ protected:
         registerOnArcRemove = arcRemove;
     }
 
+    //inline
     void prVertexConsidered() { pr_consideredVertices++; }
     void prVerticesConsidered(const profiling_counter &n) { pr_consideredVertices += n; }
     void prArcConsidered() { pr_consideredArcs++; }

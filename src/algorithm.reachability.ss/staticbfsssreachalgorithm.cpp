@@ -31,7 +31,7 @@
 namespace Algora {
 
 StaticBFSSSReachAlgorithm::StaticBFSSSReachAlgorithm(bool twoWayBFS)
-    : DynamicSSReachAlgorithm(), twoWayBFS(twoWayBFS), bfsStepSize(5UL)
+    : DynamicSingleSourceReachabilityAlgorithm(), twoWayBFS(twoWayBFS), bfsStepSize(5UL)
 {
     registerEvents(false, false, false, false);
 }

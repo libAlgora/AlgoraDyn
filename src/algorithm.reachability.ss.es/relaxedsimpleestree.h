@@ -20,45 +20,47 @@
  *   http://algora.xaikal.org
  */
 
-#ifndef ESTREE_BQUEUE_H
-#define ESTREE_BQUEUE_H
+#ifndef RELAXEDSIMPLEESTREE_H
+#define RELAXEDSIMPLEESTREE_H
 
-#include "algorithm.reach/dynamicssreachalgorithm.h"
-#include "esvertexdata.h"
+#include "algorithm.reachability.ss/dynamicssreachalgorithm.h"
 #include "property/propertymap.h"
 #include "property/fastpropertymap.h"
+#include "sesvertexdata.h"
 #include <sstream>
-#include "datastructure/bucketqueue.h"
+#include <boost/circular_buffer.hpp>
 
 namespace Algora {
 
-class OldESTree : public DynamicSSReachAlgorithm
+class RelaxedSimpleESTree : public DynamicSSReachAlgorithm
 {
 public:
-    explicit OldESTree(unsigned int requeueLimit = 5U, double maxAffectedRatio = 0.5);
-    virtual ~OldESTree();
+    explicit RelaxedSimpleESTree(unsigned int requeueLimit = 5, double maxAffectedRatio = .5);
+    virtual ~RelaxedSimpleESTree();
     void setRequeueLimit(unsigned int limit) {
         requeueLimit = limit;
     }
     void setMaxAffectedRatio(double ratio) {
         maxAffectedRatio = ratio;
     }
+		DiGraph::size_type getDepthOfBFSTree() const;
+		DiGraph::size_type getNumReachable() const;
 
     // DiGraphAlgorithm interface
 public:
     virtual void run() override;
     virtual std::string getName() const noexcept override {
-        std::stringstream ss;
-        ss << "BucketQueue ES-Tree Single-Source Reachability Algorithm (";
-        ss << requeueLimit << "/" << maxAffectedRatio << ")";
-        return ss.str();
-    }
+      std::stringstream ss;
+			ss << "Relaxed Simple ES-Tree Single-Source Reachability Algorithm (";
+      ss << requeueLimit << "/" << maxAffectedRatio << ")";
+      return ss.str();
+		}
     virtual std::string getShortName() const noexcept override {
-        std::stringstream ss;
-        ss << "BQ-EST-DSSR(";
-        ss << requeueLimit << "/" << maxAffectedRatio << ")";
-        return ss.str();
-    }
+      std::stringstream ss;
+            ss << "RSES-DSSR(";
+      ss << requeueLimit << "/" << maxAffectedRatio << ")";
+      return ss.str();
+		}
     virtual std::string getProfilingInfo() const override;
     virtual Profile getProfile() const override;
 
@@ -81,12 +83,16 @@ protected:
 public:
     virtual bool query(const Vertex *t) override;
     virtual std::vector<Arc*> queryPath(const Vertex *t) override;
-    virtual void dumpData(std::ostream &os) const override;
+    virtual void dumpData(std::ostream &os) override;
 
 private:
-    FastPropertyMap<ESVertexData*> data;
-    FastPropertyMap<DiGraph::size_type> inNeighborIndices;
+    typedef boost::circular_buffer<SESVertexData*> PriorityQueue;
+
+    FastPropertyMap<SESVertexData*> data;
     FastPropertyMap<bool> reachable;
+    FastPropertyMap<unsigned int> timesInQueue;
+		PriorityQueue queue;
+
     Vertex *root;
     bool initialized;
     unsigned int requeueLimit;
@@ -96,7 +102,7 @@ private:
     profiling_counter movesUp;
     profiling_counter levelIncrease;
     profiling_counter levelDecrease;
-		DiGraph::size_type maxLevelIncrease;
+    DiGraph::size_type maxLevelIncrease;
     DiGraph::size_type maxLevelDecrease;
     profiling_counter decUnreachableHead;
     profiling_counter decNonTreeArc;
@@ -104,23 +110,19 @@ private:
     profiling_counter incNonTreeArc;
     profiling_counter reruns;
     unsigned int maxReQueued;
-		DiGraph::size_type maxAffected;
+    DiGraph::size_type maxAffected;
     profiling_counter totalAffected;
     profiling_counter rerunRequeued;
     profiling_counter rerunNumAffected;
 
-    void restoreTree(ESVertexData *vd);
-    void cleanup();
+    void restoreTree(SESVertexData *rd);
+    void cleanup(bool freeSpace);
     void dumpTree(std::ostream &os);
     bool checkTree();
     void rerun();
-    typedef BucketQueue<ESVertexData*, ES_Priority> PriorityQueue;
-		DiGraph::size_type process(ESVertexData *vd, PriorityQueue &queue,
-                     FastPropertyMap<bool> &inQueue,
-                     FastPropertyMap<unsigned int> &timesInQueue,
-                     bool &limitReached);
+    DiGraph::size_type process(SESVertexData *vd, bool &limitReached);
 };
 
 }
 
-#endif // ESTREE_BQUEUE_H
+#endif // RELAXEDSIMPLEESTREE_H

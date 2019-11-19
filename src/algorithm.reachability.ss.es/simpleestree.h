@@ -20,10 +20,10 @@
  *   http://algora.xaikal.org
  */
 
-#ifndef RELAXEDSIMPLEESTREE_H
-#define RELAXEDSIMPLEESTREE_H
+#ifndef SIMPLEESTREE_H
+#define SIMPLEESTREE_H
 
-#include "algorithm.reach/dynamicssreachalgorithm.h"
+#include "algorithm.reachability.ss/dynamicsinglesourcereachabilityalgorithm.h"
 #include "property/propertymap.h"
 #include "property/fastpropertymap.h"
 #include "sesvertexdata.h"
@@ -32,11 +32,11 @@
 
 namespace Algora {
 
-class RelaxedSimpleESTree : public DynamicSSReachAlgorithm
+class SimpleESTree : public DynamicSingleSourceReachabilityAlgorithm
 {
 public:
-    explicit RelaxedSimpleESTree(unsigned int requeueLimit = 5, double maxAffectedRatio = .5);
-    virtual ~RelaxedSimpleESTree();
+    explicit SimpleESTree(unsigned int requeueLimit = 5, double maxAffectedRatio = .5);
+    virtual ~SimpleESTree() override;
     void setRequeueLimit(unsigned int limit) {
         requeueLimit = limit;
     }
@@ -51,13 +51,13 @@ public:
     virtual void run() override;
     virtual std::string getName() const noexcept override {
       std::stringstream ss;
-			ss << "Relaxed Simple ES-Tree Single-Source Reachability Algorithm (";
+			ss << "Simple ES-Tree Single-Source Reachability Algorithm (";
       ss << requeueLimit << "/" << maxAffectedRatio << ")";
       return ss.str();
 		}
     virtual std::string getShortName() const noexcept override {
       std::stringstream ss;
-            ss << "RSES-DSSR(";
+            ss << "Simple-EST-DSSR(";
       ss << requeueLimit << "/" << maxAffectedRatio << ")";
       return ss.str();
 		}
@@ -83,7 +83,7 @@ protected:
 public:
     virtual bool query(const Vertex *t) override;
     virtual std::vector<Arc*> queryPath(const Vertex *t) override;
-    virtual void dumpData(std::ostream &os) override;
+    virtual void dumpData(std::ostream &os) const override;
 
 private:
     typedef boost::circular_buffer<SESVertexData*> PriorityQueue;
@@ -125,4 +125,4 @@ private:
 
 }
 
-#endif // RELAXEDSIMPLEESTREE_H
+#endif // SIMPLEESTREE_H

@@ -23,11 +23,11 @@
 #ifndef CACHINGBFSSSREACHALGORITHM_H
 #define CACHINGBFSSSREACHALGORITHM_H
 
-#include "algorithm.reach/dynamicssreachalgorithm.h"
+#include "dynamicsinglesourcereachabilityalgorithm.h"
 
 namespace Algora {
 
-class CachingBFSSSReachAlgorithm : public DynamicSSReachAlgorithm
+class CachingBFSSSReachAlgorithm : public DynamicSingleSourceReachabilityAlgorithm
 {
 public:
     explicit CachingBFSSSReachAlgorithm();

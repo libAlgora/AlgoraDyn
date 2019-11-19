@@ -503,7 +503,7 @@ struct SimpleIncSSReachAlgorithm::Reachability {
 
 
 SimpleIncSSReachAlgorithm::SimpleIncSSReachAlgorithm(bool reverse, bool searchForward, double maxUS, bool radicalReset)
-    : DynamicSSReachAlgorithm(), initialized(false),
+    : DynamicSingleSourceReachabilityAlgorithm(), initialized(false),
       reverse(reverse), searchForward(searchForward), maxUnknownStateRatio(maxUS),
       maxUSSqrt(false), maxUSLog(false), relateToReachable(false), radicalReset(radicalReset),
       data(new Reachability(this, reverse, searchForward, maxUS))
@@ -605,9 +605,9 @@ std::string SimpleIncSSReachAlgorithm::getProfilingInfo() const
     return ss.str();
 }
 
-DynamicSSReachAlgorithm::Profile SimpleIncSSReachAlgorithm::getProfile() const
+DynamicSingleSourceReachabilityAlgorithm::Profile SimpleIncSSReachAlgorithm::getProfile() const
 {
-    auto profile = DynamicSSReachAlgorithm::getProfile();
+    auto profile = DynamicSingleSourceReachabilityAlgorithm::getProfile();
     profile.push_back(std::make_pair(std::string("total_reached"), data->numReached));
     profile.push_back(std::make_pair(std::string("total_unknown"), data->numUnknown));
     profile.push_back(std::make_pair(std::string("total_unreached"), data->numUnreached));
@@ -630,14 +630,14 @@ DynamicSSReachAlgorithm::Profile SimpleIncSSReachAlgorithm::getProfile() const
 
 void SimpleIncSSReachAlgorithm::onDiGraphSet()
 {
-    DynamicSSReachAlgorithm::onDiGraphSet();
+    DynamicSingleSourceReachabilityAlgorithm::onDiGraphSet();
     data->reset();
     data->diGraph = diGraph;
 }
 
 void SimpleIncSSReachAlgorithm::onDiGraphUnset() {
     initialized = false;
-    DynamicSSReachAlgorithm::onDiGraphUnset();
+    DynamicSingleSourceReachabilityAlgorithm::onDiGraphUnset();
 }
 
 void SimpleIncSSReachAlgorithm::onVertexAdd(Vertex *)
@@ -785,7 +785,7 @@ void SimpleIncSSReachAlgorithm::dumpData(std::ostream &os) const
 
 void SimpleIncSSReachAlgorithm::onSourceSet()
 {
-    DynamicSSReachAlgorithm::onSourceSet();
+    DynamicSingleSourceReachabilityAlgorithm::onSourceSet();
     initialized = false;
     data->reset(source);
 }

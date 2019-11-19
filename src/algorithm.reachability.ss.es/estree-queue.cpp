@@ -57,7 +57,7 @@ void printQueue(boost::circular_buffer<ESVertexData*> q) {
 #endif
 
 ESTreeQ::ESTreeQ(unsigned int requeueLimit, double maxAffectedRatio)
-    : DynamicSSReachAlgorithm(), root(nullptr),
+    : DynamicSingleSourceReachabilityAlgorithm(), root(nullptr),
       initialized(false), requeueLimit(requeueLimit),
       maxAffectedRatio(maxAffectedRatio),
       movesDown(0U), movesUp(0U),
@@ -210,9 +210,9 @@ std::string ESTreeQ::getProfilingInfo() const
     return ss.str();
 }
 
-DynamicSSReachAlgorithm::Profile ESTreeQ::getProfile() const
+DynamicSingleSourceReachabilityAlgorithm::Profile ESTreeQ::getProfile() const
 {
-    auto profile = DynamicSSReachAlgorithm::getProfile();
+    auto profile = DynamicSingleSourceReachabilityAlgorithm::getProfile();
     profile.push_back(std::make_pair(std::string("vertices_moved_down"), movesDown));
     profile.push_back(std::make_pair(std::string("vertices_moved_up"), movesUp));
     profile.push_back(std::make_pair(std::string("total_level_increase"), levelIncrease));
@@ -236,7 +236,7 @@ DynamicSSReachAlgorithm::Profile ESTreeQ::getProfile() const
 
 void ESTreeQ::onDiGraphSet()
 {
-    DynamicSSReachAlgorithm::onDiGraphSet();
+    DynamicSingleSourceReachabilityAlgorithm::onDiGraphSet();
     cleanup(false);
 
     movesDown = 0U;
@@ -259,7 +259,7 @@ void ESTreeQ::onDiGraphSet()
 
 void ESTreeQ::onDiGraphUnset()
 {
-    DynamicSSReachAlgorithm::onDiGraphUnset();
+    DynamicSingleSourceReachabilityAlgorithm::onDiGraphUnset();
     cleanup(true);
 }
 

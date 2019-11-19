@@ -20,10 +20,10 @@
  *   http://algora.xaikal.org
  */
 
-#ifndef ESTREEML_H
-#define ESTREEML_H
+#ifndef ESTREE_QUEUE_H
+#define ESTREE_QUEUE_H
 
-#include "algorithm.reach/dynamicssreachalgorithm.h"
+#include "algorithm.reachability.ss/dynamicsinglesourcereachabilityalgorithm.h"
 #include "esvertexdata.h"
 #include "property/propertymap.h"
 #include "property/fastpropertymap.h"
@@ -32,11 +32,11 @@
 
 namespace Algora {
 
-class ESTreeML : public DynamicSSReachAlgorithm
+class ESTreeQ : public DynamicSingleSourceReachabilityAlgorithm
 {
 public:
-    explicit ESTreeML(unsigned int requeueLimit = 5, double maxAffectedRatio = 0.5);
-    virtual ~ESTreeML() override;
+    explicit ESTreeQ(unsigned int requeueLimit = 5, double maxAffectedRatio = 0.5);
+    virtual ~ESTreeQ();
     void setRequeueLimit(unsigned int limit) {
         requeueLimit = limit;
     }
@@ -49,13 +49,13 @@ public:
     virtual void run() override;
     virtual std::string getName() const noexcept override {
       std::stringstream ss;
-            ss << "Multilevel ES-Tree Single-Source Reachability Algorithm (";
+            ss << "Queue ES-Tree Single-Source Reachability Algorithm (";
       ss << requeueLimit << "/" << maxAffectedRatio << ")";
       return ss.str();
 		}
     virtual std::string getShortName() const noexcept override {
       std::stringstream ss;
-            ss << "ML-EST-DSSR(";
+            ss << "Q-EST-DSSR(";
       ss << requeueLimit << "/" << maxAffectedRatio << ")";
       return ss.str();
 		}
@@ -89,9 +89,9 @@ private:
     FastPropertyMap<ESVertexData*> data;
     FastPropertyMap<DiGraph::size_type> inNeighborIndices;
     FastPropertyMap<bool> reachable;
+    FastPropertyMap<bool> inQueue;
     FastPropertyMap<unsigned int> timesInQueue;
 		PriorityQueue queue;
-
     Vertex *root;
     bool initialized;
     unsigned int requeueLimit;
@@ -119,9 +119,9 @@ private:
     void dumpTree(std::ostream &os);
     bool checkTree();
     void rerun();
-    DiGraph::size_type process(ESVertexData *vd, bool &limitReached);
+    DiGraph::size_type process(ESVertexData *vd, bool &requeued);
 };
 
 }
 
-#endif // ESTREEML_H
+#endif // ESTREE_QUEUE_H

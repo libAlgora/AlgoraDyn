@@ -23,14 +23,14 @@
 #ifndef SIMPLEINCSSREACHALGORITHM_H
 #define SIMPLEINCSSREACHALGORITHM_H
 
-#include "dynamicssreachalgorithm.h"
+#include "dynamicsinglesourcereachabilityalgorithm.h"
 #include <sstream>
 
 #include "property/propertymap.h"
 
 namespace Algora {
 
-class SimpleIncSSReachAlgorithm : public DynamicSSReachAlgorithm
+class SimpleIncSSReachAlgorithm : public DynamicSingleSourceReachabilityAlgorithm
 {
 public:
     explicit SimpleIncSSReachAlgorithm(bool reverse = false, bool searchForward = true, double maxUS = 0.25,

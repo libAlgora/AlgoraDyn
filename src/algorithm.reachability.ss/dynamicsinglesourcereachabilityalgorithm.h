@@ -30,32 +30,26 @@
 
 namespace Algora {
 
-class DynamicSSReachAlgorithm : public DynamicDiGraphAlgorithm
+class DynamicSingleSourceReachabilityAlgorithm : public DynamicDiGraphAlgorithm
 {
 public:
-    explicit DynamicSSReachAlgorithm() : DynamicDiGraphAlgorithm(), source(nullptr) { }
-    virtual ~DynamicSSReachAlgorithm() override { }
+    explicit DynamicSingleSourceReachabilityAlgorithm()
+        : DynamicDiGraphAlgorithm(), source(nullptr) { }
+    virtual ~DynamicSingleSourceReachabilityAlgorithm() override { }
 
     void setSource(Vertex *s) { source = s; onSourceSet(); }
     Vertex *getSource() const { return source; }
 
     virtual bool query(const Vertex *t) = 0;
-    virtual std::vector<Arc*> queryPath(const Vertex *) { return std::vector<Arc*>(); }
+    virtual std::vector<Arc*> queryPath(const Vertex *);
 
     // DiGraphAlgorithm interface
 public:
-    virtual bool prepare() override { return source != nullptr && DynamicDiGraphAlgorithm::prepare() && diGraph->containsVertex(source); }
-    virtual std::string getProfilingInfo() const override {
-        std::stringstream ss;
-        for (const auto &[key, value] : getProfile()) {
-            ss << key << ": " << value << '\n';
-        }
-        return ss.str();
-    }
+    virtual bool prepare() override;
 
 protected:
     virtual void onSourceSet() { }
-    virtual void onDiGraphSet() override { DynamicDiGraphAlgorithm::onDiGraphSet(); resetProfileData(); }
+    virtual void onDiGraphSet() override;
 
     Vertex *source;
 };

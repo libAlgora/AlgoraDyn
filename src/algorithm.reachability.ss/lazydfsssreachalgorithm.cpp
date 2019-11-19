@@ -156,7 +156,7 @@ void LazyDFSSSReachAlgorithm::run()
 
 void LazyDFSSSReachAlgorithm::onDiGraphSet()
 {
-    DynamicSSReachAlgorithm::onDiGraphSet();
+    DynamicSingleSourceReachabilityAlgorithm::onDiGraphSet();
     grin->initialized = false;
     grin->arcAdded = false;
     grin->arcRemoved = false;
@@ -229,7 +229,7 @@ std::vector<Arc *> LazyDFSSSReachAlgorithm::queryPath(const Vertex *t)
 
 void LazyDFSSSReachAlgorithm::onSourceSet()
 {
-    DynamicSSReachAlgorithm::onSourceSet();
+    DynamicSingleSourceReachabilityAlgorithm::onSourceSet();
     grin->initialized = false;
     grin->arcAdded = false;
     grin->arcRemoved = false;

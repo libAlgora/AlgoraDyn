@@ -77,8 +77,8 @@ SOURCES += \
 
 include(graph.dyn/graph.dyn.pri)
 include(algorithm/algorithm.pri)
-include(algorithm.reach/algorithm.reach.pri)
-include(algorithm.reach.es/algorithm.reach.es.pri)
+include(algorithm.reachability.ss/algorithm.reachability.ss.pri)
+include(algorithm.reachability.ss.es/algorithm.reachability.ss.es.pri)
 include(pipe/pipe.pri)
 include(io/io.pri)
 include(graph.dyn.generator/graph.dyn.generator.pri)

@@ -24,7 +24,7 @@
 
 #include "graph.incidencelist/incidencelistvertex.h"
 #include "graph/arc.h"
-#include "algorithm.reach/dynamicssreachalgorithm.h"
+#include "algorithm.reachability.ss/dynamicsinglesourcereachabilityalgorithm.h"
 
 #include <cassert>
 //#define DEBUG_ESVD

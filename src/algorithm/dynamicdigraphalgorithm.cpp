@@ -24,8 +24,39 @@
 
 #include "graph/digraph.h"
 #include <functional>
+#include <sstream>
 
 namespace Algora {
+
+DynamicDiGraphAlgorithm::DynamicDiGraphAlgorithm()
+    : DiGraphAlgorithm(),
+      autoUpdate(true), registered(false),
+      registerOnVertexAdd(true), registerOnVertexRemove(true),
+      registerOnArcAdd(true), registerOnArcRemove(true)
+{}
+
+DynamicDiGraphAlgorithm::~DynamicDiGraphAlgorithm()
+{
+    deregister();
+}
+
+DynamicDiGraphAlgorithm::Profile DynamicDiGraphAlgorithm::getProfile() const
+{
+    return Profile {
+        std::pair(std::string("vertices_considered"), pr_consideredVertices),
+                std::pair(std::string("arcs_considered"), pr_consideredArcs),
+                std::pair(std::string("num_resets"), pr_numResets)
+    };
+}
+
+std::string DynamicDiGraphAlgorithm::getProfilingInfo() const
+{
+    std::stringstream ss;
+    for (const auto &[key, value] : getProfile()) {
+        ss << key << ": " << value << '\n';
+    }
+    return ss.str();
+}
 
 void DynamicDiGraphAlgorithm::onDiGraphSet()
 {

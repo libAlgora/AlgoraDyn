@@ -151,7 +151,7 @@ void LazyBFSSSReachAlgorithm::run()
 
 void LazyBFSSSReachAlgorithm::onDiGraphSet()
 {
-    DynamicSSReachAlgorithm::onDiGraphSet();
+    DynamicSingleSourceReachabilityAlgorithm::onDiGraphSet();
     grin->initialized = false;
     grin->arcAdded = false;
     grin->arcRemoved = false;
@@ -224,7 +224,7 @@ std::vector<Arc *> LazyBFSSSReachAlgorithm::queryPath(const Vertex *t)
 
 void LazyBFSSSReachAlgorithm::onSourceSet()
 {
-    DynamicSSReachAlgorithm::onSourceSet();
+    DynamicSingleSourceReachabilityAlgorithm::onSourceSet();
     grin->initialized = false;
     grin->arcAdded = false;
     grin->arcRemoved = false;

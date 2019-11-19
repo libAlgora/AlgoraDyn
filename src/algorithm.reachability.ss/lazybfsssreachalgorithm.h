@@ -20,31 +20,48 @@
  *   http://algora.xaikal.org
  */
 
-#ifndef STATICDFSSSREACHALGORITHM_H
-#define STATICDFSSSREACHALGORITHM_H
+#ifndef LAZYBFSSSREACHALGORITHM_H
+#define LAZYBFSSSREACHALGORITHM_H
 
-#include "dynamicssreachalgorithm.h"
+#include "dynamicsinglesourcereachabilityalgorithm.h"
 
 namespace Algora {
 
-class StaticDFSSSReachAlgorithm : public DynamicSSReachAlgorithm
+class LazyBFSSSReachAlgorithm : public DynamicSingleSourceReachabilityAlgorithm
 {
 public:
-    explicit StaticDFSSSReachAlgorithm();
-    virtual ~StaticDFSSSReachAlgorithm();
+    explicit LazyBFSSSReachAlgorithm();
+    virtual ~LazyBFSSSReachAlgorithm();
 
     // DiGraphAlgorithm interface
 public:
     virtual void run() override;
-    virtual std::string getName() const noexcept override { return "Static DFS Single-Source Reachability Algorithm"; }
-    virtual std::string getShortName() const noexcept override { return "Static-DFS-SSReach"; }
+    virtual std::string getName() const noexcept override { return "Lazy BFS Single-Source Reachability Algorithm"; }
+    virtual std::string getShortName() const noexcept override { return "Lazy-BFS-SSReach"; }
+
+    // DynamicDiGraphAlgorithm interface
+public:
+    virtual void onVertexAdd(Vertex *v) override;
+    virtual void onVertexRemove(Vertex *v) override;
+    virtual void onArcAdd(Arc *a) override;
+    virtual void onArcRemove(Arc *a) override;
+
+protected:
+    virtual void onDiGraphSet() override;
 
     // DynamicSSReachAlgorithm interface
 public:
     virtual bool query(const Vertex *t) override;
     virtual std::vector<Arc*> queryPath(const Vertex *t) override;
+
+protected:
+    virtual void onSourceSet() override;
+
+private:
+    struct CheshireCat;
+    CheshireCat *grin;
 };
 
 }
 
-#endif // STATICDFSSSREACHALGORITHM_H
+#endif // LAZYBFSSSREACHALGORITHM_H

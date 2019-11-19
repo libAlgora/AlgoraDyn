@@ -20,7 +20,7 @@
  *   http://algora.xaikal.org
  */
 
-#include "estree-bqueue.h"
+#include "simpleestree.h"
 
 #include <vector>
 #include <climits>
@@ -29,37 +29,37 @@
 #include "graph/vertex.h"
 #include "algorithm.basic.traversal/breadthfirstsearch.h"
 #include "algorithm/digraphalgorithmexception.h"
-#include "property/fastpropertymap.h"
 
-//#define DEBUG_OLDESTREE
+//#define DEBUG_SIMPLEESTREE
 
-#ifdef DEBUG_OLDESTREE
 #include <iostream>
+#ifdef DEBUG_SIMPLEESTREE
 #define PRINT_DEBUG(msg) std::cerr << msg << std::endl;
 #define IF_DEBUG(cmd) cmd;
 #else
-#define PRINT_DEBUG(msg)
+#define PRINT_DEBUG(msg) ((void)0);
 #define IF_DEBUG(cmd)
 #endif
 
 namespace Algora {
 
-#ifdef DEBUG_OLDESTREE
-void printQueue(PriorityQueue q) {
+#ifdef DEBUG_SIMPLEESTREE
+void printQueue(boost::circular_buffer<SESVertexData*> q) {
     std::cerr << "PriorityQueue: ";
     while(!q.empty()) {
-        std::cerr << q.bot()->vertex << "[" << q.bot()->level << "]" << ", ";
-        q.popBot();
+        std::cerr << q.front()->vertex << "[" << q.front()->level << "]" << ", ";
+        q.pop_front();
     }
     std::cerr << std::endl;
 }
 #endif
 
-OldESTree::OldESTree(unsigned int requeueLimit, double maxAffectedRatio)
-    : DynamicSSReachAlgorithm(), root(nullptr),
+
+SimpleESTree::SimpleESTree(unsigned int requeueLimit, double maxAffectedRatio)
+    : DynamicSingleSourceReachabilityAlgorithm(), root(nullptr),
       initialized(false), requeueLimit(requeueLimit),
       maxAffectedRatio(maxAffectedRatio),
-      movesDown(0U), movesUp(0U),
+			movesDown(0U), movesUp(0U),
       levelIncrease(0U), levelDecrease(0U),
       maxLevelIncrease(0U), maxLevelDecrease(0U),
       decUnreachableHead(0U), decNonTreeArc(0U),
@@ -69,25 +69,47 @@ OldESTree::OldESTree(unsigned int requeueLimit, double maxAffectedRatio)
       rerunRequeued(0U), rerunNumAffected(0U)
 {
     data.setDefaultValue(nullptr);
-    inNeighborIndices.setDefaultValue(0U);
     reachable.setDefaultValue(false);
+
+    timesInQueue.setDefaultValue(0U);
 }
 
-OldESTree::~OldESTree()
+SimpleESTree::~SimpleESTree()
 {
-    cleanup();
+    cleanup(true);
 }
 
-void OldESTree::run()
+DiGraph::size_type SimpleESTree::getDepthOfBFSTree() const
+{
+	DiGraph::size_type maxLevel = 0U;
+    diGraph->mapVertices([&](Vertex *v) {
+        if (reachable(v) && data(v)->level > maxLevel) {
+            maxLevel = data(v)->level;
+        }
+    });
+    return maxLevel;
+}
+
+DiGraph::size_type SimpleESTree::getNumReachable() const
+{
+	DiGraph::size_type numR = 0U;
+    diGraph->mapVertices([&](Vertex *v) {
+        if (reachable(v)) {
+            numR++;
+        }
+    });
+    return numR;
+}
+
+void SimpleESTree::run()
 {
     if (initialized) {
         return;
     }
 
-   PRINT_DEBUG("Initializing OldESTree...")
+    PRINT_DEBUG("Initializing SimpleESTree...")
 
    reachable.resetAll(diGraph->getSize());
-   inNeighborIndices.resetAll(diGraph->getNumArcs(true));
 
    BreadthFirstSearch<FastPropertyMap,false> bfs(false);
    root = source;
@@ -96,9 +118,9 @@ void OldESTree::run()
    }
    bfs.setStartVertex(root);
    if (data[root] == nullptr) {
-      data[root] = new ESVertexData(&inNeighborIndices, root, nullptr, nullptr, 0U);
+      data[root] = new SESVertexData(root, nullptr, nullptr, 0);
    } else {
-       data[root]->reset(nullptr, nullptr, 0U);
+       data[root]->reset(nullptr, nullptr, 0);
    }
    reachable[root] = true;
    bfs.onTreeArcDiscover([this](Arc *a) {
@@ -108,79 +130,42 @@ void OldESTree::run()
 #endif
         Vertex *t = a->getTail();
         Vertex *h = a->getHead();
-        PRINT_DEBUG( "(" << t << ", " << h << ")" << " is a tree arc.")
         if (data[h] == nullptr) {
-            data[h] = new ESVertexData(&inNeighborIndices, h, data(t), a, 0U);
+            data[h] = new SESVertexData(h, data(t), a);
         } else {
             data[h]->reset(data(t), a);
         }
         reachable[h] = true;
-   });
-   bfs.onNonTreeArcDiscover([this](Arc *a) {
-        if (a->isLoop() || a->getHead() == source) {
-            return;
-        }
+        PRINT_DEBUG( "(" << t << ", " << h << ")" << " is a tree arc.")
 #ifdef COLLECT_PR_DATA
         prArcConsidered();
 #endif
-        Vertex *t = a->getTail();
-        Vertex *h = a->getHead();
-        ESVertexData *td = data(t);
-        ESVertexData *hd = data(h);
-        PRINT_DEBUG( "(" << td->vertex << ", " << hd->vertex << ")" << " is a non-tree arc.")
-        hd->addInNeighbor(td, a);
    });
    runAlgorithm(bfs, diGraph);
-
-   diGraph->mapArcs([this](Arc *a) {
-#ifdef COLLECT_PR_DATA
-        prArcConsidered();
-#endif
-       if (a->isLoop() || a->getHead() == source) {
-           return;
-       }
-       Vertex *t = a->getTail();
-       Vertex *h = a->getHead();
-       ESVertexData *td = data(t);
-       ESVertexData *hd = data(h);
-
-       if (td == nullptr) {
-           td = new ESVertexData(&inNeighborIndices, t);
-           data[t] = td;
-       }
-       if (hd == nullptr) {
-           hd = new ESVertexData(&inNeighborIndices, h);
-           data[h] = hd;
-       }
-       if (!td->isReachable()) {
-            PRINT_DEBUG( "(" << td->vertex << ", " << hd->vertex << ")" << " is an unvisited non-tree arc.")
-            hd->addInNeighbor(td, a);
-       }
-   });
 
    diGraph->mapVertices([this](Vertex *v) {
 #ifdef COLLECT_PR_DATA
         prVertexConsidered();
 #endif
        if (data(v) == nullptr) {
-           data[v] = new ESVertexData(&inNeighborIndices, v);
-           PRINT_DEBUG( v << " is unreachable.")
+           data[v] = new SESVertexData(v);
+           PRINT_DEBUG( v << " is a unreachable.")
        }
    });
 
    initialized = true;
-   PRINT_DEBUG("Initializing completed.")
+   PRINT_DEBUG("Initializing completed.");
 
    IF_DEBUG(
     if (!checkTree()) {
         std::cerr.flush();
         dumpTree(std::cerr);
         std::cerr.flush();
-    });
+   });
    assert(checkTree());
 }
 
-std::string OldESTree::getProfilingInfo() const
+std::string SimpleESTree::getProfilingInfo() const
 {
     std::stringstream ss;
 #ifdef COLLECT_PR_DATA
@@ -207,9 +192,9 @@ std::string OldESTree::getProfilingInfo() const
     return ss.str();
 }
 
-DynamicSSReachAlgorithm::Profile OldESTree::getProfile() const
+DynamicSingleSourceReachabilityAlgorithm::Profile SimpleESTree::getProfile() const
 {
-    auto profile = DynamicSSReachAlgorithm::getProfile();
+    auto profile = DynamicSingleSourceReachabilityAlgorithm::getProfile();
     profile.push_back(std::make_pair(std::string("vertices_moved_down"), movesDown));
     profile.push_back(std::make_pair(std::string("vertices_moved_up"), movesUp));
     profile.push_back(std::make_pair(std::string("total_level_increase"), levelIncrease));
@@ -231,10 +216,10 @@ DynamicSSReachAlgorithm::Profile OldESTree::getProfile() const
     return profile;
 }
 
-void OldESTree::onDiGraphSet()
+void SimpleESTree::onDiGraphSet()
 {
-    DynamicSSReachAlgorithm::onDiGraphSet();
-    cleanup();
+    DynamicSingleSourceReachabilityAlgorithm::onDiGraphSet();
+    cleanup(false);
 
     movesDown = 0U;
     movesUp = 0U;
@@ -250,57 +235,50 @@ void OldESTree::onDiGraphSet()
     totalAffected = 0U;
     rerunRequeued = 0U;
     rerunNumAffected = 0U;
-    data.resetAll(diGraph->getSize());
-    reachable.resetAll(diGraph->getSize());
+    // called by cleanup
 }
 
-void OldESTree::onDiGraphUnset()
+void SimpleESTree::onDiGraphUnset()
 {
-    cleanup();
-    DynamicSSReachAlgorithm::onDiGraphUnset();
+    DynamicSingleSourceReachabilityAlgorithm::onDiGraphUnset();
+    cleanup(true);
 }
 
-void OldESTree::onVertexAdd(Vertex *v)
-{
-    if (!initialized) {
-        return;
-    }
-    data[v] = new ESVertexData(&inNeighborIndices, v);
-}
-
-void OldESTree::onArcAdd(Arc *a)
+void SimpleESTree::onVertexAdd(Vertex *v)
 {
     if (!initialized) {
         return;
     }
+
+    data[v] = new SESVertexData(v);
+}
+
+void SimpleESTree::onArcAdd(Arc *a)
+{
+    if (!initialized) {
+        return;
+    }
+
     PRINT_DEBUG("An arc has been added: (" << a->getTail() << ", " << a->getHead() << ")")
-
-    Vertex *tail = a->getTail();
-    Vertex *head = a->getHead();
-
-    IF_DEBUG(
-        std::stringstream ss;
-        dumpTree(ss);
-    )
 
     if (a->isLoop()) {
         PRINT_DEBUG("Arc is a loop.")
         return;
     }
 
+    auto tail = a->getTail();
+    auto head = a->getHead();
+
     if (head == source) {
         PRINT_DEBUG("Head is source.")
         return;
     }
 
-    ESVertexData *td = data(tail);
-    ESVertexData *hd = data(head);
+    auto td = data(tail);
+    auto hd = data(head);
 
     assert(td != nullptr);
     assert(hd != nullptr);
-
-    // store arc
-    hd->addInNeighbor(td, a);
 
     if (!td->isReachable()) {
         PRINT_DEBUG("Tail is unreachable.")
@@ -310,79 +288,95 @@ void OldESTree::onArcAdd(Arc *a)
         return;
     }
 
+#ifdef COLLECT_PR_DATA
+    auto n = diGraph->getSize();
+#endif
+
     //update...
-    auto diff = hd->reparent(td, a);
-    if (diff == 0U) {
+    if (hd->level <= td->level + 1) {
         // arc does not change anything
-        PRINT_DEBUG("Does not decrease level.")
 #ifdef COLLECT_PR_DATA
         incNonTreeArc++;
 #endif
+        PRINT_DEBUG("Not a tree arc.")
         return;
     } else {
-        PRINT_DEBUG("Is a new tree arc, diff is " << diff);
+        PRINT_DEBUG("Is a new tree arc.")
 #ifdef COLLECT_PR_DATA
         movesUp++;
+        if (!hd->isReachable()) {
+            levelDecrease += (n -  (td->level + 1));
+        } else {
+            levelDecrease += (hd->level - (td->level + 1));
+        }
 #endif
+        hd->setParent(td, a);
         reachable[head] = true;
     }
 
     BreadthFirstSearch<FastPropertyMap,false> bfs(false);
     bfs.setStartVertex(head);
-    bfs.onArcDiscover([this](const Arc *ca) {
-        auto *a = const_cast<Arc*>(ca);
+#ifdef COLLECT_PR_DATA
+    bfs.onArcDiscover([this,n](const Arc *a) {
+#else
+    bfs.onArcDiscover([this](const Arc *a) {
+#endif
         PRINT_DEBUG( "Discovering arc (" << a->getTail() << ", " << a->getHead() << ")...");
 #ifdef COLLECT_PR_DATA
         prArcConsidered();
 #endif
         if (a->isLoop()) {
+            PRINT_DEBUG( "Loop ignored.");
             return false;
         }
-        Vertex *at = a->getTail();
-        Vertex *ah = a->getHead();
-        ESVertexData *atd = data(at);
-        ESVertexData *ahd = data(ah);
+        auto at = a->getTail();
+        auto ah = a->getHead();
+        auto atd = data(at);
+        auto ahd = data(ah);
 
-        auto diff = ahd->reparent(atd, a);
 #ifdef COLLECT_PR_DATA
         prVertexConsidered();
 #endif
-        if (diff > 0U) {
-            PRINT_DEBUG("Is a new tree arc.");
-            reachable[ah] = true;
+        if (!ahd->isReachable() ||  atd->level + 1 < ahd->level) {
 #ifdef COLLECT_PR_DATA
             movesUp++;
-            if (diff > maxLevelDecrease) {
-                if (diff - diGraph->getSize() > 0) {
-                    diff -= (ESVertexData::UNREACHABLE - diGraph->getSize());
-                }
-                maxLevelDecrease = diff;
+            auto newLevel = atd->level + 1;
+            auto dec = n - newLevel;
+            if (ahd->isReachable()) {
+                dec = ahd->level - newLevel;
+            }
+            levelDecrease += dec;
+            if (dec > maxLevelDecrease) {
+                maxLevelDecrease = dec;
             }
 #endif
+            ahd->setParent(atd, const_cast<Arc*>(a));
+            reachable[ah] = true;
+            PRINT_DEBUG( "(" << at << ", " << ah << ")" << " is a new tree arc.");
+            return true;
+        } else {
+            PRINT_DEBUG( "(" << at << ", " << ah << ")" << " is a non-tree arc.")
         }
-        return diff > 0U;
-
+        return false;
     });
     runAlgorithm(bfs, diGraph);
 
-    IF_DEBUG(
+   IF_DEBUG(
     if (!checkTree()) {
-        std::cerr << "Tree before:" << std::endl;
-        std::cerr << ss.rdbuf();
-        std::cerr << "Tree after:" << std::endl;
+        std::cerr.flush();
         dumpTree(std::cerr);
         std::cerr.flush();
-    });
+   });
    assert(checkTree());
 }
 
-void OldESTree::onVertexRemove(Vertex *v)
+void SimpleESTree::onVertexRemove(Vertex *v)
 {
     if (!initialized) {
         return;
     }
 
-     ESVertexData *vd = data(v);
+     auto vd = data(v);
      if (vd != nullptr) {
          delete vd;
          data.resetToDefault(v);
@@ -390,44 +384,35 @@ void OldESTree::onVertexRemove(Vertex *v)
      }
 }
 
-void OldESTree::onArcRemove(Arc *a)
+void SimpleESTree::onArcRemove(Arc *a)
 {
    if (!initialized) {
         return;
     }
+
+    PRINT_DEBUG("An arc is about to be removed: (" << a->getTail() << ", " << a->getHead() << ")");
 
     if (a->isLoop()) {
         PRINT_DEBUG("Arc is a loop.")
         return;
     }
 
-    Vertex *tail= a->getTail();
-    Vertex *head = a->getHead();
+    auto head = a->getHead();
 
     if (head == source) {
         PRINT_DEBUG("Head is source.")
         return;
     }
 
-    PRINT_DEBUG("An arc is about to be removed: (" << tail << ", " << head << ")");
 
-    PRINT_DEBUG("Stored data of tail: " << data(tail));
+    PRINT_DEBUG("Stored data of tail: " << data(a->getTail()));
     PRINT_DEBUG("Stored data of head: " << data(head));
 
-    IF_DEBUG(
-        std::stringstream ss;
-        dumpTree(ss);
-    );
-
-    ESVertexData *hd = data(head);
+    auto hd = data(head);
     if (hd == nullptr) {
         PRINT_DEBUG("Head of arc is unreachable (and never was). Nothing to do.")
         throw std::logic_error("Should not happen");
     }
-
-    ESVertexData *td = data(tail);
-    bool isParent = hd->isTreeArc(a);
-    hd->findAndRemoveInNeighbor(td, a);
 
     if (!hd->isReachable()) {
         PRINT_DEBUG("Head of arc is already unreachable. Nothing to do.")
@@ -437,45 +422,48 @@ void OldESTree::onArcRemove(Arc *a)
         return;
     }
 
-    if (hd->level <= td->level || !isParent) {
-        PRINT_DEBUG("Arc is not a tree arc. Nothing to do.");
+    if (hd->isTreeArc(a)) {
+        hd->parent = nullptr;
+        hd->treeArc = nullptr;
+        restoreTree(hd);
+    } else {
+        PRINT_DEBUG("Arc is not a tree arc. Nothing to do.")
 #ifdef COLLECT_PR_DATA
         decNonTreeArc++;
 #endif
-    } else {
-        restoreTree(hd);
     }
 
-    IF_DEBUG(
+   IF_DEBUG(
     if (!checkTree()) {
-        std::cerr << "Tree before:" << std::endl;
-        std::cerr << ss.rdbuf();
-        std::cerr << "Tree after:" << std::endl;
+        std::cerr.flush();
         dumpTree(std::cerr);
         std::cerr.flush();
-    });
+   });
    assert(checkTree());
 }
 
-void OldESTree::onSourceSet()
+void SimpleESTree::onSourceSet()
 {
-    cleanup();
+    cleanup(false);
 }
 
-bool OldESTree::query(const Vertex *t)
+bool SimpleESTree::query(const Vertex *t)
 {
+    PRINT_DEBUG("Querying reachability of " << t);
     if (t == source) {
+        PRINT_DEBUG("TRUE");
         return true;
     }
 
     if (!initialized) {
+        PRINT_DEBUG("Query in uninitialized state.");
         run();
     }
-    assert(checkTree());
+    PRINT_DEBUG((reachable[t] ? "TRUE" : "FALSE"));
     return reachable(t);
 }
 
-std::vector<Arc *> OldESTree::queryPath(const Vertex *t)
+std::vector<Arc *> SimpleESTree::queryPath(const Vertex *t)
 {
     std::vector<Arc*> path;
     if (!query(t) || t == source) {
@@ -494,7 +482,7 @@ std::vector<Arc *> OldESTree::queryPath(const Vertex *t)
     return path;
 }
 
-void OldESTree::dumpData(std::ostream &os) const
+void SimpleESTree::dumpData(std::ostream &os) const
 {
     if (!initialized) {
         os << "uninitialized" << std::endl;
@@ -502,22 +490,33 @@ void OldESTree::dumpData(std::ostream &os) const
         for (auto i = data.cbegin(); i != data.cend(); i++) {
             os << (*i) << std::endl;
         }
+
+        os << "Tree in dot format:\ndigraph SESTree {\n";
+        for (const auto vd : data) {
+            auto treeArc = vd->getTreeArc();
+            if (treeArc) {
+                os << treeArc->getTail()->getName() << " -> "
+                   << treeArc->getHead()->getName() << ";\n";
+            }
+        }
+        os << "}" << std::endl;
     }
 }
 
-void OldESTree::dumpTree(std::ostream &os)
+void SimpleESTree::dumpTree(std::ostream &os)
 {
     if (!initialized) {
         os << "uninitialized" << std::endl;
     }  else {
         diGraph->mapVertices([&](Vertex *v) {
           auto vd = data[v];
-          os << v << ": L " << vd->level << ", P " << vd->getParent() << '\n';
+          os << v << ": L " << vd->level << ", A " << vd->getTreeArc() << ", P " <<
+                vd->getParent() << '\n';
         });
     }
 }
 
-bool OldESTree::checkTree()
+bool SimpleESTree::checkTree()
 {
    BreadthFirstSearch<FastPropertyMap> bfs;
    bfs.setStartVertex(source);
@@ -529,28 +528,21 @@ bool OldESTree::checkTree()
 
    bool ok = true;
    diGraph->mapVertices([&](Vertex *v) {
-       auto bfsLevel = levels[v] == bfs.INF ? ESVertexData::UNREACHABLE : levels[v];
+       auto bfsLevel = levels[v] == bfs.INF ? SESVertexData::UNREACHABLE : levels[v];
        if (data[v]->level != bfsLevel) {
            std::cerr << "Level mismatch for vertex " << data[v]
                         << ": expected level " << bfsLevel << std::endl;
-           ok = false;
-       }
-       if (!data[v]->checkIntegrity()) {
-           std::cerr << "Integrity check failed for vertex " << data[v] << std::endl;
-           ok = false;
-       }
-       if (reachable(v) != data[v]->isReachable()) {
-           std::cerr << "Reachability flag diverges from state according to BFS tree: " <<
-                     reachable(v) << " vs " << data[v] << std::endl;
            ok = false;
        }
    });
    return ok;
 }
 
-void OldESTree::rerun()
+void SimpleESTree::rerun()
 {
+#ifdef COLLECT_PR_DATA
     reruns++;
+#endif
     diGraph->mapVertices([&](Vertex *v) {
         data[v]->reset();
     });
@@ -558,123 +550,110 @@ void OldESTree::rerun()
     run();
 }
 
-DiGraph::size_type OldESTree::process(ESVertexData *vd, PriorityQueue &queue, FastPropertyMap<bool> &inQueue, FastPropertyMap<unsigned> &timesInQueue, bool &limitReached)
-{
-    if (vd->getLevel() == 0ULL) {
+DiGraph::size_type SimpleESTree::process(SESVertexData *vd, bool &limitReached) {
+
+    if (vd->level == 0UL) {
         PRINT_DEBUG("No need to process source vertex " << vd << ".");
         return 0U;
     }
 
-    PRINT_DEBUG("Processing vertex " << vd << ".");
+#ifdef COLLECT_PR_DATA
+    auto verticesConsidered = 0U;
+    auto arcsConsidered = 0U;
+#endif
 
-    if (!vd->isReachable()) {
-        PRINT_DEBUG("vertex is already unreachable.");
+    PRINT_DEBUG("Processing vertex " << vd << ".");
+    Vertex *v = vd->getVertex();
+
+    auto oldParent = vd->getParentData();
+
+    if (vd->hasValidParent()) {
+        PRINT_DEBUG("Parent still valid. No further processing required.");
+        return 0U;
+    } else if (!vd->isReachable()) {
+        PRINT_DEBUG("Vertex is already unreachable.");
         return 0U;
     }
 
-#ifdef COLLECT_PR_DATA
-        auto verticesConsidered = 0U;
-        auto arcsConsidered = 0U;
-#endif
+    auto parent = oldParent;
+    auto oldVLevel = vd->level;
+    auto minParentLevel = parent == nullptr ? SESVertexData::UNREACHABLE : parent->level;
+    auto treeArc = vd->treeArc;
 
-    Vertex *v = vd->getVertex();
-    bool reachV = true;
-    bool levelChanged = false;
+    PRINT_DEBUG("Min parent level is " << minParentLevel << ".");
+
+    diGraph->mapIncomingArcsUntil(v, [this,&parent,&minParentLevel,&oldVLevel,&treeArc](Arc *a) {
+#ifdef COLLECT_PR_DATA
+            prArcConsidered();
+#endif
+        if (a->isLoop()) {
+            PRINT_DEBUG( "Loop ignored.");
+            return;
+        }
+        auto pd = data(a->getTail());
+#ifdef COLLECT_PR_DATA
+            prVertexConsidered();
+#endif
+        auto pLevel = pd->level;
+        if (pLevel < minParentLevel) {
+            minParentLevel = pLevel;
+            parent = pd;
+            treeArc = a;
+            PRINT_DEBUG("Update: Min parent level now is " << minParentLevel << ", parent " << parent);
+            assert (minParentLevel + 1 >= oldVLevel);
+        }
+    }, [&oldVLevel, &minParentLevel](const Arc *) { return minParentLevel + 1 == oldVLevel; });
+
+		DiGraph::size_type levelDiff = 0U;
     auto n = diGraph->getSize();
-    auto oldVLevel = vd->getLevel();
-    auto levelDiff = 0ULL;
 
-    auto enqueue = [this,&queue,&inQueue,&timesInQueue,&limitReached](ESVertexData *vd) {
-        auto vertex = vd->getVertex();
-        if (timesInQueue[vertex] < requeueLimit) {
-            PRINT_DEBUG("    Adding " << vd << " to queue...");
-            timesInQueue[vertex]++;
-            if (timesInQueue[vertex] > maxReQueued) {
-                maxReQueued = timesInQueue[vertex];
-            }
-            queue.push(vd);
-            inQueue[vertex] = true;
-        } else {
-            timesInQueue[vertex]++;
-            limitReached = true;
-            PRINT_DEBUG("Limit reached for vertex " << vertex << ".");
-        }
-    };
-
-    if (vd->inNeighbors.empty()) {
-        PRINT_DEBUG("Vertex is a source.");
-        if (reachV) {
-            reachV = false;
-            vd->setUnreachable();
-            reachable[v] = false;
-            levelChanged = true;
-            levelDiff = n - oldVLevel;
-            PRINT_DEBUG("Level changed.");
-        }
-    } else {
-        auto *parent = vd->getParentData();
-
-        PRINT_DEBUG("Size of graph is " << n << ".");
-        PRINT_DEBUG("Parent is " << parent);
-
-        while (reachV && (parent == nullptr || vd->level <= parent->level) && !levelChanged) {
-#ifdef COLLECT_PR_DATA
-            verticesConsidered++;
-
-#endif
-            vd->parentIndex++;
-            PRINT_DEBUG("  Advancing parent index to " << vd->parentIndex << ".")
-
-            if (vd->parentIndex >= vd->inNeighbors.size()) {
-                if (vd->level + 1 >= diGraph->getSize()) {
-                    PRINT_DEBUG("    Vertex " << v << " is unreachable.")
-                    vd->setUnreachable();
-                    reachable.resetToDefault(v);
-                    reachV = false;
-                    levelChanged = true;
-                    levelDiff = n - oldVLevel;
-                } else {
-                    vd->level++;
-                    levelDiff++;
-                    levelChanged = true;
-                    PRINT_DEBUG("  Maximum parent index exceeded, increasing level to " << vd->level << ".")
-                    vd->parentIndex = 0;
-                }
-            }
-            if (reachV && !levelChanged)  {
-                parent = vd->getParentData();
-                PRINT_DEBUG("  Trying " << parent << " as parent.")
-            }
-        }
+    if ((parent == nullptr || minParentLevel >= n - 1)
+            && vd->isReachable()) {
+        vd->setUnreachable();
+        reachable.resetToDefault(v);
+        levelDiff = n - oldVLevel;
+        PRINT_DEBUG("No parent or parent is unreachable. Vertex is unreachable. Level diff " << levelDiff);
+    } else if (parent != oldParent || oldVLevel <= minParentLevel) {
+        assert(parent->isReachable());
+        assert(minParentLevel != SESVertexData::UNREACHABLE);
+        vd->setParent(parent, treeArc);
+        assert (vd->level >= oldVLevel);
+        levelDiff = vd->level - oldVLevel;
+        PRINT_DEBUG("Parent has changed, new parent is " << parent);
     }
-    if (levelChanged) {
-        diGraph->mapOutgoingArcsUntil(vd->getVertex(), [this,&enqueue,&inQueue,vd](Arc *a) {
+
+    if (levelDiff > 0U) {
+        PRINT_DEBUG("Updating children...");
+        //diGraph->mapOutgoingArcsUntil(vd->vertex, [this,&queue,&limitReached](Arc *a) {
+        diGraph->mapOutgoingArcsUntil(vd->vertex, [this,&limitReached](Arc *a) {
 #ifdef COLLECT_PR_DATA
             prArcConsidered();
 #endif
             if (a->isLoop()) {
-              PRINT_DEBUG("    Ignoring loop.");
-              return;
+                return;
             }
             Vertex *head = a->getHead();
+            auto *hd = data(head);
 #ifdef COLLECT_PR_DATA
             prVertexConsidered();
 #endif
-            auto *hd = data(head);
-            if (hd->isTreeArc(a) && !inQueue[head]) {
-                enqueue(hd);
-            } else {
-              PRINT_DEBUG("    NOT adding " << hd << " to queue: not a child of " << vd)
+            if (hd->isTreeArc(a)) {
+                if (timesInQueue[head] < requeueLimit) {
+                    PRINT_DEBUG("    Adding child " << hd << " to queue...");
+                    timesInQueue[head]++;
+                    if (timesInQueue[head] > maxReQueued) {
+                        maxReQueued = timesInQueue[head];
+                    }
+                    queue.push_back(hd);
+                } else {
+                    timesInQueue[head]++;
+                    limitReached = true;
+                    PRINT_DEBUG("Limit reached for vertex " << head << ".");
+                }
             }
         }, [&limitReached](const Arc *) { return limitReached; });
-        if (reachV && !limitReached) {
-            enqueue(vd);
-        }
     }
 
-    PRINT_DEBUG("Returning level diff " << levelDiff  << " for " << vd << ".");
-
-    //assert(vd->checkIntegrity());
 #ifdef COLLECT_PR_DATA
         prVerticesConsidered(verticesConsidered);
         prArcsConsidered(arcsConsidered);
@@ -683,30 +662,31 @@ DiGraph::size_type OldESTree::process(ESVertexData *vd, PriorityQueue &queue, Fa
     return levelDiff;
 }
 
-void OldESTree::restoreTree(ESVertexData *vd)
+void SimpleESTree::restoreTree(SESVertexData *rd)
 {
-    PriorityQueue queue;
-    queue.setLimit(diGraph->getSize());
-    FastPropertyMap<bool> inQueue(false, "", diGraph->getSize());
-    FastPropertyMap<unsigned int> timesInQueue(0U, "", diGraph->getSize());
-    queue.push(vd);
-    inQueue[vd->getVertex()] = true;
-    timesInQueue[vd->getVertex()]++;
-    PRINT_DEBUG("Initialized queue with " << vds.size() << " vertices.");
+		auto n = diGraph->getSize();
+		DiGraph::size_type affectedLimit = maxAffectedRatio < 1.0 ? floor(maxAffectedRatio * n) : n;
+    queue.set_capacity(affectedLimit);
+    timesInQueue.resetAll(n);
+    timesInQueue[rd->getVertex()]++;
+		queue.clear();
+    queue.push_back(rd);
+    if (maxReQueued == 0U) {
+        maxReQueued = 1U;
+    }
+    PRINT_DEBUG("Initialized queue with " << rd << ".")
     bool limitReached = false;
-    auto processed = 0U;
-    auto affectedLimit = maxAffectedRatio * diGraph->getSize();
+    auto processed = 0ULL;
 
     while (!queue.empty()) {
         IF_DEBUG(printQueue(queue))
         auto vd = queue.front();
         queue.pop_front();
-        inQueue[vd->getVertex()] = false;
 #ifdef COLLECT_PR_DATA
         prVertexConsidered();
         auto levels =
 #endif
-                process(vd, queue, inQueue, timesInQueue, limitReached);
+        process(vd, limitReached);
         processed++;
 
         if (limitReached || ((processed + queue.size() > affectedLimit) && !queue.empty())) {
@@ -718,16 +698,15 @@ void OldESTree::restoreTree(ESVertexData *vd)
                 rerunNumAffected++;
             }
 #endif
+            queue.clear();
             rerun();
             break;
 #ifdef COLLECT_PR_DATA
         } else if (levels > 0U) {
             movesDown++;
             levelIncrease += levels;
-            PRINT_DEBUG("total level increase " << levelIncrease);
             if (levels > maxLevelIncrease) {
                 maxLevelIncrease = levels;
-                PRINT_DEBUG("new max level increase " << maxLevelIncrease);
             }
 #endif
         }
@@ -740,20 +719,30 @@ void OldESTree::restoreTree(ESVertexData *vd)
 #endif
 }
 
-void OldESTree::cleanup()
+void SimpleESTree::cleanup(bool freeSpace)
 {
-    for (auto i = data.cbegin(); i != data.cend(); i++) {
-        if ((*i)) {
-            delete (*i);
+    if (initialized) {
+        for (auto i = data.cbegin(); i != data.cend(); i++) {
+            if ((*i)) {
+                delete (*i);
+            }
         }
     }
 
-    data.resetAll();
-    reachable.resetAll();
-    inNeighborIndices.resetAll();
+		queue.clear();
 
-    initialized = false ;
+    if (freeSpace || !diGraph) {
+        data.resetAll(0);
+        reachable.resetAll(0);
+        timesInQueue.resetAll(0);
+        queue.set_capacity(0);
+    } else {
+        data.resetAll(diGraph->getSize());
+        reachable.resetAll(diGraph->getSize());
+        timesInQueue.resetAll(diGraph->getSize());
+    }
 
+    initialized = false;
 }
 
 }

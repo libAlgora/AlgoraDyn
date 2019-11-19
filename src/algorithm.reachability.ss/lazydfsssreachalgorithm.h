@@ -23,11 +23,11 @@
 #ifndef LAZYDFSSSREACHALGORITHM_H
 #define LAZYDFSSSREACHALGORITHM_H
 
-#include "dynamicssreachalgorithm.h"
+#include "dynamicsinglesourcereachabilityalgorithm.h"
 
 namespace Algora {
 
-class LazyDFSSSReachAlgorithm : public DynamicSSReachAlgorithm
+class LazyDFSSSReachAlgorithm : public DynamicSingleSourceReachabilityAlgorithm
 {
 public:
     explicit LazyDFSSSReachAlgorithm();

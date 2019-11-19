@@ -31,7 +31,7 @@
 namespace Algora {
 
 StaticDFSSSReachAlgorithm::StaticDFSSSReachAlgorithm()
-    : DynamicSSReachAlgorithm()
+    : DynamicSingleSourceReachabilityAlgorithm()
 {
     registerEvents(false, false, false, false);
 }

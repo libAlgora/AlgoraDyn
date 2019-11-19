@@ -109,7 +109,7 @@ struct CachingBFSSSReachAlgorithm::CheshireCat {
 };
 
 CachingBFSSSReachAlgorithm::CachingBFSSSReachAlgorithm()
-    : DynamicSSReachAlgorithm(),
+    : DynamicSingleSourceReachabilityAlgorithm(),
 		grin(new CheshireCat)
 {
     grin->parent = this;
@@ -141,7 +141,7 @@ std::vector<Arc *> CachingBFSSSReachAlgorithm::queryPath(const Vertex *t)
 
 void CachingBFSSSReachAlgorithm::onDiGraphSet()
 {
-    DynamicSSReachAlgorithm::onDiGraphSet();
+    DynamicSingleSourceReachabilityAlgorithm::onDiGraphSet();
     grin->initialized = false;
     grin->arcAdded = false;
     grin->arcRemoved = false;
@@ -155,7 +155,7 @@ void CachingBFSSSReachAlgorithm::onDiGraphUnset()
     grin->arcAdded = false;
     grin->arcRemoved = false;
     grin->diGraph = nullptr;
-    DynamicSSReachAlgorithm::onDiGraphUnset();
+    DynamicSingleSourceReachabilityAlgorithm::onDiGraphUnset();
 }
 
 
@@ -201,7 +201,7 @@ void CachingBFSSSReachAlgorithm::onArcRemove(Arc *a)
 
 void CachingBFSSSReachAlgorithm::onSourceSet()
 {
-    DynamicSSReachAlgorithm::onSourceSet();
+    DynamicSingleSourceReachabilityAlgorithm::onSourceSet();
     grin->initialized = false;
     grin->arcAdded = false;
     grin->arcRemoved = false;

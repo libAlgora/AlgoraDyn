@@ -23,11 +23,11 @@
 #ifndef STATICBFSSSREACHALGORITHM_H
 #define STATICBFSSSREACHALGORITHM_H
 
-#include "dynamicssreachalgorithm.h"
+#include "dynamicsinglesourcereachabilityalgorithm.h"
 
 namespace Algora {
 
-class StaticBFSSSReachAlgorithm : public DynamicSSReachAlgorithm
+class StaticBFSSSReachAlgorithm : public DynamicSingleSourceReachabilityAlgorithm
 {
 public:
     explicit StaticBFSSSReachAlgorithm(bool twoWayBFS = false);

@@ -20,40 +20,41 @@
  *   http://algora.xaikal.org
  */
 
-#ifndef LAZYBFSSSREACHALGORITHM_H
-#define LAZYBFSSSREACHALGORITHM_H
+#ifndef CACHINGDFSSSREACHALGORITHM_H
+#define CACHINGDFSSSREACHALGORITHM_H
 
-#include "dynamicssreachalgorithm.h"
+#include "dynamicsinglesourcereachabilityalgorithm.h"
+#include "algorithm.basic.traversal/depthfirstsearch.h"
+#include "property/fastpropertymap.h"
 
 namespace Algora {
 
-class LazyBFSSSReachAlgorithm : public DynamicSSReachAlgorithm
+class CachingDFSSSReachAlgorithm : public DynamicSingleSourceReachabilityAlgorithm
 {
 public:
-    explicit LazyBFSSSReachAlgorithm();
-    virtual ~LazyBFSSSReachAlgorithm();
+    explicit CachingDFSSSReachAlgorithm();
+    virtual ~CachingDFSSSReachAlgorithm();
 
     // DiGraphAlgorithm interface
 public:
     virtual void run() override;
-    virtual std::string getName() const noexcept override { return "Lazy BFS Single-Source Reachability Algorithm"; }
-    virtual std::string getShortName() const noexcept override { return "Lazy-BFS-SSReach"; }
+    virtual std::string getName() const noexcept override { return "Caching DFS Single-Source Reachability Algorithm";  }
+    virtual std::string getShortName() const noexcept override { return "CachingDFS-SSReach"; }
+
+    // DynamicSSReachAlgorithm interface
+    virtual bool query(const Vertex *t) override;
+    virtual std::vector<Arc*> queryPath(const Vertex *t) override;
 
     // DynamicDiGraphAlgorithm interface
-public:
-    virtual void onVertexAdd(Vertex *v) override;
-    virtual void onVertexRemove(Vertex *v) override;
     virtual void onArcAdd(Arc *a) override;
     virtual void onArcRemove(Arc *a) override;
 
 protected:
+    // DiGraphAlgorithm interface
     virtual void onDiGraphSet() override;
+    virtual void onDiGraphUnset() override;
 
     // DynamicSSReachAlgorithm interface
-public:
-    virtual bool query(const Vertex *t) override;
-    virtual std::vector<Arc*> queryPath(const Vertex *t) override;
-
 protected:
     virtual void onSourceSet() override;
 
@@ -64,4 +65,4 @@ private:
 
 }
 
-#endif // LAZYBFSSSREACHALGORITHM_H
+#endif // CACHINGDFSSSREACHALGORITHM_H
