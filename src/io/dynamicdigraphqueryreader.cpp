@@ -7,7 +7,8 @@
 
 namespace Algora {
 
-std::vector<DynamicDiGraphQueryProvider::VertexQueryList> DynamicDiGraphQueryReader::provideVertexQueries(DynamicDiGraph *dyGraph)
+std::vector<DynamicDiGraphQueryProvider::VertexQueryList>
+DynamicDiGraphQueryReader::provideVertexQueries(DynamicDiGraph *dyGraph)
 {
     std::vector<DynamicDiGraphQueryProvider::VertexQueryList> allQueries;
     if (!checkInputStream()) {
@@ -64,7 +65,8 @@ std::vector<DynamicDiGraphQueryProvider::VertexQueryList> DynamicDiGraphQueryRea
     }
 
     // Special treatment for NOOPs at end
-    if (dyGraph->getSizeOfFinalDelta() == dyGraph->countNoops(dyGraph->getMaxTime(), dyGraph->getMaxTime())) {
+    if (dyGraph->getSizeOfFinalDelta()
+            == dyGraph->countNoops(dyGraph->getMaxTime(), dyGraph->getMaxTime())) {
         allQueries.pop_back();
     }
 
