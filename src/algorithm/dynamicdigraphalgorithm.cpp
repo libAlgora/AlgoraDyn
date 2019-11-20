@@ -30,6 +30,7 @@ namespace Algora {
 
 DynamicDiGraphAlgorithm::DynamicDiGraphAlgorithm()
     : DiGraphAlgorithm(),
+      pr_consideredVertices(0), pr_consideredArcs(0), pr_numResets(0),
       autoUpdate(true), registered(false),
       registerOnVertexAdd(true), registerOnVertexRemove(true),
       registerOnArcAdd(true), registerOnArcRemove(true)
