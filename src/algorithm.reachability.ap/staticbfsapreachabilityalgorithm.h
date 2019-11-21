@@ -2,6 +2,7 @@
 #define STATICBFSAPREACHABILITYALGORITHM_H
 
 #include "dynamicallpairsreachabilityalgorithm.h"
+#include "algorithm.basic/finddipathalgorithm.h"
 
 namespace Algora {
 
@@ -29,11 +30,16 @@ public:
 
     // DynamicAllPairsReachabilityAlgorithm interface
 public:
-    virtual bool query(const Vertex *s, const Vertex *t) override;
-    virtual std::vector<Arc *> queryPath(const Vertex *s, const Vertex *t) override;
+    virtual bool query(Vertex *s, Vertex *t) override;
+    virtual std::vector<Arc *> queryPath(Vertex *s, Vertex *t) override;
+
+protected:
+    virtual void onDiGraphSet() override;
 
 private:
     bool twoWayBFS;
+    DiGraph::size_type bfsStepSize;
+    FindDiPathAlgorithm<FastPropertyMap> fpa;
 };
 
 }
