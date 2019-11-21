@@ -39,11 +39,6 @@ StaticBFSSSReachAlgorithm::StaticBFSSSReachAlgorithm(bool twoWayBFS)
     fpa.useTwoWaySearch(twoWayBFS);
 }
 
-StaticBFSSSReachAlgorithm::~StaticBFSSSReachAlgorithm()
-{
-
-}
-
 void StaticBFSSSReachAlgorithm::run()
 {
 

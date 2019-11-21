@@ -32,7 +32,7 @@ class StaticBFSSSReachAlgorithm : public DynamicSingleSourceReachabilityAlgorith
 {
 public:
     explicit StaticBFSSSReachAlgorithm(bool twoWayBFS = false);
-    virtual ~StaticBFSSSReachAlgorithm() override;
+    virtual ~StaticBFSSSReachAlgorithm() override = default;
 
     // DiGraphAlgorithm interface
 public:
@@ -61,9 +61,6 @@ private:
     bool twoWayBFS;
     DiGraph::size_type bfsStepSize;
     FindDiPathAlgorithm<FastPropertyMap> fpa;
-
-    bool twoWayQuery(const Vertex *t);
-    std::vector<Arc*> twoWayQueryPath(const Vertex *t);
 };
 
 }
