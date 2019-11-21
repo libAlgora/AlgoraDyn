@@ -2,7 +2,7 @@
 
 namespace Algora {
 
-std::vector<Arc *> DynamicAllPairsReachabilityAlgorithm::queryPath(const Vertex*, const Vertex*)
+std::vector<Arc *> DynamicAllPairsReachabilityAlgorithm::queryPath(Vertex *, Vertex *)
 {
     return std::vector<Arc*>();
 }

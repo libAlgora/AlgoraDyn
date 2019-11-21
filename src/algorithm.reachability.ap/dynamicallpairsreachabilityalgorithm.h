@@ -11,8 +11,8 @@ public:
     explicit DynamicAllPairsReachabilityAlgorithm() = default;
     virtual ~DynamicAllPairsReachabilityAlgorithm() override = default;
 
-    virtual bool query(const Vertex *s, const Vertex *t) = 0;
-    virtual std::vector<Arc*> queryPath(const Vertex *, const Vertex *);
+    virtual bool query(Vertex *s, Vertex *t) = 0;
+    virtual std::vector<Arc*> queryPath(Vertex *, Vertex *);
 };
 
 }
