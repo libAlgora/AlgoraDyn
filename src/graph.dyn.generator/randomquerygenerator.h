@@ -19,7 +19,7 @@ public:
     RandomQueryGenerator();
 
     void setSeed(unsigned long long s) { seed = s; initialized = false; }
-    void setAbsoluteNumberOfQueries(unsigned int n) { absoluteQueries = n; relativeQueries = 0.0; }
+    void setAbsoluteNumberOfQueries(unsigned long n) { absoluteQueries = n; relativeQueries = 0.0; }
     void setRelativeNumberOfQueries(double n, const NUM_QUERY_RELATION &r) {
         relativeQueries = n;
         relateTo = r;
