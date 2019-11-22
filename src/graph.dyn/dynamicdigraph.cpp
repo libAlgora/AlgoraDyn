@@ -790,7 +790,6 @@ Vertex *DynamicDiGraph::getCurrentVertexForId(VertexIdentifier vertexId) const
 
 DynamicDiGraph::VertexIdentifier DynamicDiGraph::idOfIthVertex(DynamicDiGraph::size_type i)
 {
-    //return stoull(grin->dynGraph.vertexAt(i)->getName());
     return grin->idOfIthVertex(i);
 }
 
@@ -804,27 +803,32 @@ DynamicDiGraph::size_type DynamicDiGraph::getSizeOfFinalDelta() const
     return grin->getSizeOfFinalDelta();
 }
 
-DynamicDiGraph::size_type DynamicDiGraph::countVertexAdditions(DynamicTime timeFrom, DynamicTime timeUntil) const
+DynamicDiGraph::size_type DynamicDiGraph::countVertexAdditions(DynamicTime timeFrom,
+                                                               DynamicTime timeUntil) const
 {
     return grin->countOperations(timeFrom, timeUntil, Operation::Type::VERTEX_ADDITION);
 }
 
-DynamicDiGraph::size_type DynamicDiGraph::countVertexRemovals(DynamicTime timeFrom, DynamicTime timeUntil) const
+DynamicDiGraph::size_type DynamicDiGraph::countVertexRemovals(DynamicTime timeFrom,
+                                                              DynamicTime timeUntil) const
 {
     return grin->countOperations(timeFrom, timeUntil, Operation::Type::VERTEX_REMOVAL);
 }
 
-DynamicDiGraph::size_type DynamicDiGraph::countArcAdditions(DynamicTime timeFrom, DynamicTime timeUntil) const
+DynamicDiGraph::size_type DynamicDiGraph::countArcAdditions(DynamicTime timeFrom,
+                                                            DynamicTime timeUntil) const
 {
     return grin->countOperations(timeFrom, timeUntil, Operation::Type::ARC_ADDITION);
 }
 
-DynamicDiGraph::size_type DynamicDiGraph::countArcRemovals(DynamicTime timeFrom, DynamicTime timeUntil) const
+DynamicDiGraph::size_type DynamicDiGraph::countArcRemovals(DynamicTime timeFrom,
+                                                           DynamicTime timeUntil) const
 {
     return grin->countOperations(timeFrom, timeUntil, Operation::Type::ARC_REMOVAL);
 }
 
-DynamicDiGraph::size_type DynamicDiGraph::countNoops(DynamicDiGraph::DynamicTime timeFrom, DynamicDiGraph::DynamicTime timeUntil) const
+DynamicDiGraph::size_type DynamicDiGraph::countNoops(DynamicDiGraph::DynamicTime timeFrom,
+                                                     DynamicDiGraph::DynamicTime timeUntil) const
 {
     return grin->countOperations(timeFrom, timeUntil, Operation::Type::NONE);
 }
