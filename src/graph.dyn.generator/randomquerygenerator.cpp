@@ -12,7 +12,7 @@ RandomQueryGenerator::RandomQueryGenerator()
 }
 
 RandomQueryGenerator::VertexQueryList RandomQueryGenerator::generateVertexQueries(
-        const DynamicDiGraph *dyGraph)
+        DynamicDiGraph *dyGraph)
 {
     init();
 
@@ -24,7 +24,7 @@ RandomQueryGenerator::VertexQueryList RandomQueryGenerator::generateVertexQuerie
     auto randomVertex = std::bind(distVertex, std::ref(gen));
 
     for (auto i = numQueries; i > 0; i--) {
-        queries.push_back(randomVertex());
+        queries.push_back(dyGraph->idOfIthVertex(randomVertex()));
     }
 
     return queries;

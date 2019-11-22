@@ -27,7 +27,7 @@ public:
     }
     unsigned long long getSeed() const { return seed; }
 
-    VertexQueryList generateVertexQueries(const DynamicDiGraph *dyGraph);
+    VertexQueryList generateVertexQueries(DynamicDiGraph *dyGraph);
     std::vector<VertexQueryList> provideVertexQueries(DynamicDiGraph *dyGraph) override;
 
     // DynamicDiGraphQueryProvider interface
