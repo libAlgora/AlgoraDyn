@@ -59,7 +59,7 @@ SimpleESTree::SimpleESTree(unsigned int requeueLimit, double maxAffectedRatio)
     : DynamicSingleSourceReachabilityAlgorithm(), root(nullptr),
       initialized(false), requeueLimit(requeueLimit),
       maxAffectedRatio(maxAffectedRatio),
-			movesDown(0U), movesUp(0U),
+      movesDown(0U), movesUp(0U),
       levelIncrease(0U), levelDecrease(0U),
       maxLevelIncrease(0U), maxLevelDecrease(0U),
       decUnreachableHead(0U), decNonTreeArc(0U),
@@ -107,9 +107,13 @@ void SimpleESTree::run()
         return;
     }
 
-    PRINT_DEBUG("Initializing SimpleESTree...")
+    PRINT_DEBUG("Initializing SimpleESTree...");
 
-   reachable.resetAll(diGraph->getSize());
+    if (reachable.size() < diGraph->getSize()) {
+        reachable.resetAll(diGraph->getSize());
+    } else {
+        reachable.resetAll();
+    }
 
    BreadthFirstSearch<FastPropertyMap,false> bfs(false);
    root = source;
@@ -249,6 +253,8 @@ void SimpleESTree::onVertexAdd(Vertex *v)
     if (!initialized) {
         return;
     }
+
+    assert(data(v) == nullptr);
 
     data[v] = new SESVertexData(v);
 }

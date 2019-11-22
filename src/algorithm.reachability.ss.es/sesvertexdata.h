@@ -41,7 +41,8 @@ public:
     typedef DiGraph::size_type level_type;
     static constexpr level_type UNREACHABLE = std::numeric_limits<level_type>::max();
 
-    SESVertexData(Vertex *v, SESVertexData *p = nullptr, Arc *a = nullptr, level_type l = UNREACHABLE)
+    SESVertexData(Vertex *v, SESVertexData *p = nullptr, Arc *a = nullptr,
+                  level_type l = UNREACHABLE)
         : vertex(v), parent(p), treeArc(a), level(l) {
         if (p != nullptr) {
             level = p->level + 1;
