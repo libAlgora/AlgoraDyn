@@ -697,7 +697,8 @@ void DynamicDiGraph::removeVertex(VertexIdentifier vertexId, DynamicTime timesta
     grin->removeVertex(vertexId, timestamp);
 }
 
-void DynamicDiGraph::addArc(VertexIdentifier tailId, VertexIdentifier headId, DynamicTime timestamp, bool antedateVertexAdditions)
+void DynamicDiGraph::addArc(VertexIdentifier tailId, VertexIdentifier headId,
+                            DynamicTime timestamp, bool antedateVertexAdditions)
 {
     if (grin->doubleArcIsRemoval && hasArc(tailId, headId)) {
         grin->removeArc(tailId, headId, timestamp, antedateVertexAdditions);
@@ -706,7 +707,8 @@ void DynamicDiGraph::addArc(VertexIdentifier tailId, VertexIdentifier headId, Dy
     }
 }
 
-void DynamicDiGraph::removeArc(VertexIdentifier tailId, VertexIdentifier headId, DynamicTime timestamp, bool removeIsolatedEnds)
+void DynamicDiGraph::removeArc(VertexIdentifier tailId, VertexIdentifier headId,
+                               DynamicTime timestamp, bool removeIsolatedEnds)
 {
     grin->removeArc(tailId, headId, timestamp, removeIsolatedEnds);
 }

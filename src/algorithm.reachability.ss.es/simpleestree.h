@@ -91,7 +91,7 @@ private:
     FastPropertyMap<SESVertexData*> data;
     FastPropertyMap<bool> reachable;
     FastPropertyMap<unsigned int> timesInQueue;
-		PriorityQueue queue;
+    PriorityQueue queue;
 
     Vertex *root;
     bool initialized;

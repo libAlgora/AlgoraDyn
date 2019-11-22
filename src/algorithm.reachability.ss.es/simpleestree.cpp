@@ -664,29 +664,29 @@ DiGraph::size_type SimpleESTree::process(SESVertexData *vd, bool &limitReached) 
 
 void SimpleESTree::restoreTree(SESVertexData *rd)
 {
-		auto n = diGraph->getSize();
-		DiGraph::size_type affectedLimit = maxAffectedRatio < 1.0 ? floor(maxAffectedRatio * n) : n;
+    auto n = diGraph->getSize();
+    DiGraph::size_type affectedLimit = maxAffectedRatio < 1.0 ? floor(maxAffectedRatio * n) : n;
     queue.set_capacity(affectedLimit);
     timesInQueue.resetAll(n);
     timesInQueue[rd->getVertex()]++;
-		queue.clear();
+    queue.clear();
     queue.push_back(rd);
     if (maxReQueued == 0U) {
         maxReQueued = 1U;
     }
     PRINT_DEBUG("Initialized queue with " << rd << ".")
-    bool limitReached = false;
+            bool limitReached = false;
     auto processed = 0ULL;
 
     while (!queue.empty()) {
         IF_DEBUG(printQueue(queue))
-        auto vd = queue.front();
+                auto vd = queue.front();
         queue.pop_front();
 #ifdef COLLECT_PR_DATA
         prVertexConsidered();
         auto levels =
-#endif
-        process(vd, limitReached);
+        #endif
+                process(vd, limitReached);
         processed++;
 
         if (limitReached || ((processed + queue.size() > affectedLimit) && !queue.empty())) {
@@ -729,7 +729,7 @@ void SimpleESTree::cleanup(bool freeSpace)
         }
     }
 
-		queue.clear();
+    queue.clear();
 
     if (freeSpace || !diGraph) {
         data.resetAll(0);
