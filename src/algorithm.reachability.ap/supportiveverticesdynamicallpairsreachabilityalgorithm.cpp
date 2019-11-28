@@ -1,8 +1,11 @@
 // license
+
 #include "supportiveverticesdynamicallpairsreachabilityalgorithm.h"
 #include "graph/digraph.h"
 #include "graph.incidencelist/incidencelistgraph.h"
 #include "graph.incidencelist/incidencelistvertex.h"
+#include "algorithm.basic.traversal/breadthfirstsearch.h"
+
 #include <sstream>
 #include <random>
 
@@ -11,7 +14,7 @@ namespace Algora {
 template<typename DynamicSSRAlgorithm>
 SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>
     ::SupportiveVerticesDynamicAllPairsReachabilityAlgorithm(double supportSizeRatio)
-    : DynamicAllPairsReachabilityAlgorithm(), supportSizeRatio(supportSizeRatio)
+    : DynamicAllPairsReachabilityAlgorithm(), initialized(false), supportSizeRatio(supportSizeRatio)
 {
     supportiveVertexToSSRAlgorithm.setDefaultValue(nullptr);
 }
@@ -199,7 +202,59 @@ template<typename DynamicSSRAlgorithm>
 bool SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>::query(Vertex *s,
                                                                                         Vertex *t)
 {
-    return false;
+    if (s == t) {
+        return true;
+    }
+    if (diGraph->isSink(s) || diGraph->isSource(t)) {
+        return false;
+    }
+
+    if (supportiveVertexToSSRAlgorithm[s]) {
+        return supportiveVertexToSSRAlgorithm[s]->query(t);
+    }
+
+    bool reachable = false;
+    std::vector<DynamicSSRAlgorithm*> suppAlgorithms;
+    FastPropertyMap<bool> knownUnreachableFrom(false, "", diGraph->getSize());
+
+    BreadthFirstSearch<FastPropertyMap,false> bfs(false, false);
+    bfs.setStartVertex(s);
+    bfs.setVertexStopCondition([&reachable](const Vertex *) { return reachable; });
+    bfs.setArcStopCondition([&reachable](const Arc*) { return reachable; });
+    bfs.onArcDiscover([&knownUnreachableFrom,&t,&reachable,&suppAlgorithms,this](const Arc *a) {
+        auto head = a->getHead();
+        if (head == t) {
+            reachable = true;
+            // stop
+            return false;
+        }
+        if (knownUnreachableFrom(head)) {
+            return false;
+        }
+        auto suppAlg = supportiveVertexToSSRAlgorithm(head);
+        if (suppAlg) {
+            bool reach = suppAlg->query(t);
+            if (!reach) {
+                knownUnreachableFrom[head] = true;
+                suppAlgorithms.push_back(suppAlg);
+            } else {
+                reachable = true;
+            }
+            // stop anyway
+            return false;
+        }
+        for (auto *alg : suppAlgorithms) {
+            if (alg->query(head)) {
+                // source of alg could not reach t, but head, so head cannot reach t
+                knownUnreachableFrom[head] = true;
+                return false;
+            }
+        }
+        // can't say anything about reachability
+        return true;
+    });
+    runAlgorithm(bfs, diGraph);
+    return reachable;
 }
 
 template<typename DynamicSSRAlgorithm>
