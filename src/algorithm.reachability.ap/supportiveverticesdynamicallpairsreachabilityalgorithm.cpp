@@ -288,9 +288,9 @@ void SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>
     assert(!supportiveVertexToSSRAlgorithm(v));
 
     auto *ssrAlgorithm = new DynamicSSRAlgorithm;
+    ssrAlgorithm->setAutoUpdate(this->doesAutoUpdate());
     ssrAlgorithm->setGraph(diGraph);
     ssrAlgorithm->setSource(v);
-    ssrAlgorithm->setAutoUpdate(this->doesAutoUpdate());
     if (!ssrAlgorithm->prepare()) {
         throw DiGraphAlgorithmException(this, "Could not prepare SSR subalgorithm.");
     }
