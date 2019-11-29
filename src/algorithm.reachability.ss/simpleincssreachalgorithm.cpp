@@ -219,9 +219,8 @@ struct SimpleIncSSReachAlgorithm::Reachability {
     bool checkReachability(const Vertex *u, std::vector<const Vertex*> &visitedUnknown) {
         assert (u != source);
         PRINT_DEBUG("Trying to find reachable predecessor of " << u << ".");
-        BreadthFirstSearch<FastPropertyMap,false> bfs(false);
+        BreadthFirstSearch<FastPropertyMap,false,true> bfs(false);
         bfs.setGraph(diGraph);
-        bfs.reverseArcDirection(true);
         bfs.setStartVertex(u);
 
         assert(reachability(u) == State::UNKNOWN);
