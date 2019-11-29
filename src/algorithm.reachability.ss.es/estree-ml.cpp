@@ -34,7 +34,7 @@
 
 #ifdef DEBUG_ESTREEML
 #include <iostream>
-#define PRINT_DEBUG(msg) std::cerr << msg << std::endl;
+#define PRINT_DEBUG(msg) std::cerr << "MES(" << getSource() << "): " << msg << std::endl;
 #define IF_DEBUG(cmd) cmd;
 #else
 #define PRINT_DEBUG(msg)
@@ -47,7 +47,7 @@ namespace Algora {
 void printQueue(boost::circular_buffer<ESVertexData*> q) {
     std::cerr << "PriorityQueue: ";
     while(!q.empty()) {
-        std::cerr << q.front()->vertex << "[" << q.bot()->level << "]" << ", ";
+        std::cerr << q.front()->getVertex() << "[" << q.front()->getLevel() << "]" << ", ";
         q.pop_front();
     }
     std::cerr << std::endl;
@@ -85,10 +85,18 @@ void ESTreeML::run()
         return;
     }
 
-   PRINT_DEBUG("Initializing ESTreeML...")
+   PRINT_DEBUG("Initializing ESTreeML...");
 
-   reachable.resetAll(diGraph->getSize());
-   inNeighborIndices.resetAll(diGraph->getNumArcs(true));
+   if (reachable.size() < diGraph->getSize()) {
+       reachable.resetAll(diGraph->getSize());
+   } else {
+       reachable.resetAll();
+   }
+   if (inNeighborIndices.size() < diGraph->getNumArcs(true)) {
+       inNeighborIndices.resetAll(diGraph->getNumArcs(true));
+   } else {
+       inNeighborIndices.resetAll();
+   }
 
    BreadthFirstSearch<FastPropertyMap,false> bfs(false);
    root = source;
@@ -109,7 +117,7 @@ void ESTreeML::run()
 #endif
         Vertex *t = a->getTail();
         Vertex *h = a->getHead();
-        PRINT_DEBUG( "(" << t << ", " << h << ")" << " is a tree arc.")
+        PRINT_DEBUG( a << " is a tree arc.")
         if (data[h] == nullptr) {
             data[h] = new ESVertexData(&inNeighborIndices, h, data(t), a, 0U);
         } else {
@@ -128,7 +136,7 @@ void ESTreeML::run()
         Vertex *h = a->getHead();
         ESVertexData *td = data(t);
         ESVertexData *hd = data(h);
-        PRINT_DEBUG( "(" << td->getVertex() << ", " << hd->getVertex() << ")" << " is a non-tree arc.")
+        PRINT_DEBUG( a << " is a non-tree arc.")
         hd->addInNeighbor(td, a);
    });
    runAlgorithm(bfs, diGraph);
@@ -154,7 +162,7 @@ void ESTreeML::run()
            data[h] = hd;
        }
        if (!td->isReachable()) {
-            PRINT_DEBUG( "(" << td->getVertex() << ", " << hd->getVertex() << ")" << " is an unvisited non-tree arc.")
+            PRINT_DEBUG( a << " is an unvisited non-tree arc.")
             hd->addInNeighbor(td, a);
        }
    });
@@ -170,7 +178,7 @@ void ESTreeML::run()
    });
 
    initialized = true;
-   PRINT_DEBUG("Initializing completed.")
+   PRINT_DEBUG("Initialization completed.")
 
    IF_DEBUG(
     if (!checkTree()) {
@@ -272,7 +280,7 @@ void ESTreeML::onArcAdd(Arc *a)
     if (!initialized) {
         return;
     }
-    PRINT_DEBUG("An arc has been added: (" << a->getTail() << ", " << a->getHead() << ")")
+    PRINT_DEBUG("An arc has been added: " << a);
 
     Vertex *tail = a->getTail();
     Vertex *head = a->getHead();
@@ -330,7 +338,7 @@ void ESTreeML::onArcAdd(Arc *a)
     bfs.setStartVertex(head);
     bfs.onArcDiscover([this](const Arc *ca) {
         auto *a = const_cast<Arc*>(ca);
-        PRINT_DEBUG( "Discovering arc (" << a->getTail() << ", " << a->getHead() << ")...");
+        PRINT_DEBUG( "Discovering arc " << a << "...");
 #ifdef COLLECT_PR_DATA
         prArcConsidered();
 #endif
@@ -408,7 +416,7 @@ void ESTreeML::onArcRemove(Arc *a)
         return;
     }
 
-    PRINT_DEBUG("An arc is about to be removed: (" << tail << ", " << head << ")");
+    PRINT_DEBUG("An arc is about to be removed: " << a);
 
     PRINT_DEBUG("Stored data of tail: " << data(tail));
     PRINT_DEBUG("Stored data of head: " << data(head));
@@ -655,7 +663,8 @@ DiGraph::size_type ESTreeML::process(ESVertexData *vd, bool &limitReached)
                     levelDiff++;
                     levelChanged = true;
                     vd->parentIndex = 0;
-                    PRINT_DEBUG("  Maximum parent index exceeded, increasing level to " << vd->level << ".")
+                    PRINT_DEBUG("  Maximum parent index exceeded, increasing level to "
+                                << vd->level << ".")
                     PRINT_DEBUG("  Resetting index to " << vd->parentIndex << ".")
                 }
             }
@@ -664,7 +673,8 @@ DiGraph::size_type ESTreeML::process(ESVertexData *vd, bool &limitReached)
                 PRINT_DEBUG("  Trying " << parent << " as parent.");
                 if (parent != nullptr
                         && (parent->level < minParentLevel
-                            || (parent->level == minParentLevel && vd->parentIndex < minParentIndex))) {
+                            || (parent->level == minParentLevel
+                                && vd->parentIndex < minParentIndex))) {
                     minParentLevel = parent->level;
                     minParentIndex = vd->parentIndex;
                 }
@@ -674,7 +684,7 @@ DiGraph::size_type ESTreeML::process(ESVertexData *vd, bool &limitReached)
     PRINT_DEBUG("Finished search for new parent.")
     if (levelChanged) {
         PRINT_DEBUG("Level has changed, checking children in BFS tree.")
-        diGraph->mapOutgoingArcsUntil(vd->getVertex(), [this,&enqueue](Arc *a) {
+        diGraph->mapOutgoingArcsUntil(vd->getVertex(), [this,&enqueue,&vd](Arc *a) {
 #ifdef COLLECT_PR_DATA
             prArcConsidered();
 #endif
@@ -694,7 +704,8 @@ DiGraph::size_type ESTreeML::process(ESVertexData *vd, bool &limitReached)
               PRINT_DEBUG("  NOT adding " << hd << " to queue: not a child of " << vd)
             }
         }, [&limitReached](const Arc *) { return limitReached; });
-        PRINT_DEBUG("Done checking children. Limit has " << (limitReached ? "(!)" : "not") << " been reached.")
+        PRINT_DEBUG("Done checking children. Limit has " << (limitReached ? "(!)" : "not")
+                    << " been reached.")
         if (reachV && !limitReached) {
             if (minParentLevel == ESVertexData::UNREACHABLE) {
                 PRINT_DEBUG("Vertex " << v << " is unreachable.")
@@ -723,12 +734,12 @@ DiGraph::size_type ESTreeML::process(ESVertexData *vd, bool &limitReached)
 
 void ESTreeML::restoreTree(ESVertexData *rd)
 {
-		auto n = diGraph->getSize();
-		DiGraph::size_type affectedLimit = maxAffectedRatio < 1.0 ? floor(maxAffectedRatio * n) : n;
+    auto n = diGraph->getSize();
+    DiGraph::size_type affectedLimit = maxAffectedRatio < 1.0 ? floor(maxAffectedRatio * n) : n;
     queue.set_capacity(affectedLimit);
     timesInQueue.resetAll(n);
     timesInQueue[rd->getVertex()]++;
-		queue.clear();
+    queue.clear();
     queue.push_back(rd);
     if (maxReQueued == 0U) {
         maxReQueued = 1U;
