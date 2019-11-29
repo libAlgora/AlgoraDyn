@@ -46,7 +46,7 @@ public:
         if (!au && registered) {
             deregisterAsObserver();
         } else if (au && !registered) {
-
+            registerAsObserver();
         }
         this->autoUpdate = au;
     }

@@ -74,20 +74,24 @@ void DynamicDiGraphAlgorithm::onDiGraphUnset()
 
 void DynamicDiGraphAlgorithm::registerAsObserver()
 {
-    if (autoUpdate) {
+    if (diGraph && autoUpdate) {
         using namespace std::placeholders;  // for _1, _2, _3...
         //auto ova = std::bind(&DynamicDiGraphAlgorithm::onVertexAdd, this, _1);
         if (registerOnVertexAdd) {
-            diGraph->onVertexAdd(this, std::bind(&DynamicDiGraphAlgorithm::onVertexAdd, this, _1));
+            diGraph->onVertexAdd(this,
+                                 std::bind(&DynamicDiGraphAlgorithm::onVertexAdd, this, _1));
         }
         if (registerOnVertexRemove) {
-            diGraph->onVertexRemove(this, std::bind(&DynamicDiGraphAlgorithm::onVertexRemove, this, _1));
+            diGraph->onVertexRemove(this,
+                                    std::bind(&DynamicDiGraphAlgorithm::onVertexRemove, this, _1));
         }
         if (registerOnArcAdd) {
-            diGraph->onArcAdd(this, std::bind(&DynamicDiGraphAlgorithm::onArcAdd, this, _1));
+            diGraph->onArcAdd(this,
+                              std::bind(&DynamicDiGraphAlgorithm::onArcAdd, this, _1));
         }
         if (registerOnArcRemove) {
-            diGraph->onArcRemove(this, std::bind(&DynamicDiGraphAlgorithm::onArcRemove, this, _1));
+            diGraph->onArcRemove(this,
+                                 std::bind(&DynamicDiGraphAlgorithm::onArcRemove, this, _1));
         }
         registered = true;
     }
