@@ -38,7 +38,7 @@ DynamicDiGraphAlgorithm::DynamicDiGraphAlgorithm()
 
 DynamicDiGraphAlgorithm::~DynamicDiGraphAlgorithm()
 {
-    deregister();
+    deregisterAsObserver();
 }
 
 DynamicDiGraphAlgorithm::Profile DynamicDiGraphAlgorithm::getProfile() const
@@ -62,7 +62,18 @@ std::string DynamicDiGraphAlgorithm::getProfilingInfo() const
 void DynamicDiGraphAlgorithm::onDiGraphSet()
 {
     DiGraphAlgorithm::onDiGraphSet();
+    registerAsObserver();
+    resetProfileData();
+}
 
+void DynamicDiGraphAlgorithm::onDiGraphUnset()
+{
+    deregisterAsObserver();
+    DiGraphAlgorithm::onDiGraphUnset();
+}
+
+void DynamicDiGraphAlgorithm::registerAsObserver()
+{
     if (autoUpdate) {
         using namespace std::placeholders;  // for _1, _2, _3...
         //auto ova = std::bind(&DynamicDiGraphAlgorithm::onVertexAdd, this, _1);
@@ -80,16 +91,9 @@ void DynamicDiGraphAlgorithm::onDiGraphSet()
         }
         registered = true;
     }
-    resetProfileData();
 }
 
-void DynamicDiGraphAlgorithm::onDiGraphUnset()
-{
-    deregister();
-    DiGraphAlgorithm::onDiGraphUnset();
-}
-
-void DynamicDiGraphAlgorithm::deregister()
+void DynamicDiGraphAlgorithm::deregisterAsObserver()
 {
     if (diGraph && registered) {
         if (registerOnVertexAdd) {

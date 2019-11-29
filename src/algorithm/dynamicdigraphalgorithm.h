@@ -43,6 +43,11 @@ public:
     virtual ~DynamicDiGraphAlgorithm() override;
 
     void setAutoUpdate(bool au) {
+        if (!au && registered) {
+            deregisterAsObserver();
+        } else if (au && !registered) {
+
+        }
         this->autoUpdate = au;
     }
 
@@ -93,7 +98,8 @@ private:
     bool autoUpdate;
     bool registered;
 
-    void deregister();
+    void registerAsObserver();
+    void deregisterAsObserver();
 
     bool registerOnVertexAdd;
     bool registerOnVertexRemove;
