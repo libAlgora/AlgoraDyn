@@ -4,6 +4,7 @@
 
 #include "dynamicallpairsreachabilityalgorithm.h"
 #include "property/fastpropertymap.h"
+#include "graph/digraph.h"
 
 namespace Algora {
 
@@ -42,6 +43,7 @@ private:
     std::vector<DynamicSSRAlgorithm*> supportiveSSRAlgorithms;
     bool initialized;
     double supportSizeRatio;
+    DiGraph::size_type twoWayStepSize;
 
     void reset();
     void createAndInitAlgorithm(Vertex *v);

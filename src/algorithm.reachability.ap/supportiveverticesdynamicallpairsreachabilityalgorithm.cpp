@@ -14,7 +14,8 @@ namespace Algora {
 template<typename DynamicSSRAlgorithm>
 SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>
     ::SupportiveVerticesDynamicAllPairsReachabilityAlgorithm(double supportSizeRatio)
-    : DynamicAllPairsReachabilityAlgorithm(), initialized(false), supportSizeRatio(supportSizeRatio)
+    : DynamicAllPairsReachabilityAlgorithm(),
+      initialized(false), supportSizeRatio(supportSizeRatio), twoWayStepSize(5U)
 {
     supportiveVertexToSSRAlgorithm.setDefaultValue(nullptr);
 }
@@ -213,15 +214,36 @@ bool SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>
         return supportiveVertexToSSRAlgorithm[s]->query(t);
     }
 
+    assert(twoWayStepSize > 0);
     bool reachable = false;
     std::vector<DynamicSSRAlgorithm*> suppAlgorithms;
     FastPropertyMap<bool> knownUnreachableFrom(false, "", diGraph->getSize());
+    auto forwardStop = twoWayStepSize;
+    auto backwardStop = twoWayStepSize;
 
-    BreadthFirstSearch<FastPropertyMap,false> bfs(false, false);
-    bfs.setStartVertex(s);
-    bfs.setVertexStopCondition([&reachable](const Vertex *) { return reachable; });
-    bfs.setArcStopCondition([&reachable](const Arc*) { return reachable; });
-    bfs.onArcDiscover([&knownUnreachableFrom,&t,&reachable,&suppAlgorithms,this](const Arc *a) {
+    BreadthFirstSearch<FastPropertyMap,false> forwardBfs(false, false);
+    forwardBfs.setStartVertex(s);
+    forwardBfs.setGraph(diGraph);
+
+    BreadthFirstSearch<FastPropertyMap,false,true> backwardBfs(false, false);
+    backwardBfs.setStartVertex(t);
+    backwardBfs.setGraph(diGraph);
+
+    forwardBfs.setArcStopCondition([&reachable,&backwardBfs](const Arc *a) {
+        if (backwardBfs.vertexDiscovered(a->getHead())) {
+            reachable = true;
+        }
+        return reachable;
+    });
+    backwardBfs.setArcStopCondition([&reachable,&forwardBfs](const Arc *a) {
+        if (forwardBfs.vertexDiscovered(a->getTail())) {
+            reachable = true;
+        }
+        return reachable;
+    });
+
+    forwardBfs.onArcDiscover(
+                [&knownUnreachableFrom,&t,&reachable,&suppAlgorithms,this](const Arc *a) {
         auto head = a->getHead();
         if (head == t) {
             reachable = true;
@@ -253,7 +275,37 @@ bool SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>
         // can't say anything about reachability
         return true;
     });
-    runAlgorithm(bfs, diGraph);
+
+    auto stepSize = twoWayStepSize;
+    forwardBfs.setVertexStopCondition(
+                [&forwardBfs,&forwardStop,&stepSize](const Vertex *) {
+        if (forwardBfs.getMaxBfsNumber() >= forwardStop) {
+            forwardStop += stepSize;
+            return true;
+        }
+        return false;
+    });
+
+    backwardBfs.setVertexStopCondition(
+                [&backwardBfs,&backwardStop,&stepSize](const Vertex *) {
+        if (backwardBfs.getMaxBfsNumber() >= backwardStop) {
+            backwardStop += stepSize;
+            return true;
+        }
+        return false;
+    });
+
+    forwardBfs.prepare();
+    backwardBfs.prepare();
+
+    forwardBfs.run();
+    backwardBfs.run();
+
+    while (!reachable && !forwardBfs.isExhausted() && !backwardBfs.isExhausted()
+           && forwardBfs.getMaxLevel() + backwardBfs.getMaxLevel() < diGraph->getSize()) {
+        forwardBfs.resume();
+        backwardBfs.resume();
+    }
     return reachable;
 }
 
