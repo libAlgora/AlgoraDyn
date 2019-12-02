@@ -82,6 +82,27 @@ std::string SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlg
 }
 
 template<typename DynamicSSRAlgorithm>
+std::string
+SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>::getProfilingInfo()
+const
+{
+    std::stringstream ss;
+#ifdef COLLECT_PR_DATA
+    ss << DynamicAllPairsReachabilityAlgorithm::getProfilingInfo();
+    ss << "#supportive vertices: " << supportiveSSRAlgorithms.size() << std::endl;
+    ss << "#supportive vertex hits: " <<  supportive_ssr_hits << std::endl;
+    ss << "#known unreachable hits: " <<  known_unreachable_hits << std::endl;
+    ss << "#ssr subtree checks: " <<  ssr_subtree_checks << std::endl;
+    ss << "total #steps forward bfs: " <<  forward_bfs_total_steps << std::endl;
+    ss << "total #steps backward bfs: " <<  backward_bfs_total_steps << std::endl;
+    ss << "#query resumes: " <<  num_query_resume<< std::endl;
+    ss << "#trivial queries: " <<  num_trivial_queries << std::endl;
+    ss << "#SSR-only queries: " <<  num_only_ssr_queries << std::endl;
+#endif
+    return ss.str();
+}
+
+template<typename DynamicSSRAlgorithm>
 void SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>
     ::onVertexAdd(Vertex *v)
 {
@@ -193,6 +214,48 @@ void SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>
 }
 
 template<typename DynamicSSRAlgorithm>
+DynamicDiGraphAlgorithm::Profile
+SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>::getProfile() const
+{
+    auto profile = DynamicAllPairsReachabilityAlgorithm::getProfile();
+    profile.push_back(std::make_pair(std::string("num_supportive_ssr"),
+                                     supportiveSSRAlgorithms.size()));
+    profile.push_back(std::make_pair(std::string("supportive_ssr_hits"),
+                                     supportive_ssr_hits));
+    profile.push_back(std::make_pair(std::string("known_unreachable_hits"),
+                                     known_unreachable_hits));
+    profile.push_back(std::make_pair(std::string("ssr_subtree_checks"),
+                                     ssr_subtree_checks));
+    profile.push_back(std::make_pair(std::string("forward_bfs_total_steps"),
+                                     forward_bfs_total_steps));
+    profile.push_back(std::make_pair(std::string("backward_bfs_total_steps"),
+                                     backward_bfs_total_steps));
+    profile.push_back(std::make_pair(std::string("num_query_resume"),
+                                     num_query_resume));
+    profile.push_back(std::make_pair(std::string("num_trivial_queries"),
+                                     num_trivial_queries));
+    profile.push_back(std::make_pair(std::string("num_ssr_only_queries"),
+                                     num_only_ssr_queries));
+
+    return profile;
+}
+
+template<typename DynamicSSRAlgorithm>
+void SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>::onDiGraphSet()
+{
+    DynamicAllPairsReachabilityAlgorithm::onDiGraphSet();
+
+    supportive_ssr_hits = 0;
+    known_unreachable_hits = 0;
+    ssr_subtree_checks = 0;
+    forward_bfs_total_steps = 0;
+    backward_bfs_total_steps = 0;
+    num_trivial_queries = 0;
+    num_only_ssr_queries = 0;
+    num_query_resume = 0;
+}
+
+template<typename DynamicSSRAlgorithm>
 void SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>::onDiGraphUnset()
 {
     reset();
@@ -204,13 +267,22 @@ bool SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>
                                                                                         Vertex *t)
 {
     if (s == t) {
+#ifdef COLLECT_PR_DATA
+        num_trivial_queries++;
+#endif
         return true;
     }
     if (diGraph->isSink(s) || diGraph->isSource(t)) {
+#ifdef COLLECT_PR_DATA
+        num_trivial_queries++;
+#endif
         return false;
     }
 
     if (supportiveVertexToSSRAlgorithm[s]) {
+#ifdef COLLECT_PR_DATA
+        num_only_ssr_queries++;
+#endif
         return supportiveVertexToSSRAlgorithm[s]->query(t);
     }
 
@@ -229,13 +301,19 @@ bool SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>
     backwardBfs.setStartVertex(t);
     backwardBfs.setGraph(diGraph);
 
-    forwardBfs.setArcStopCondition([&reachable,&backwardBfs](const Arc *a) {
+    forwardBfs.setArcStopCondition([&reachable,&backwardBfs,this](const Arc *a) {
+#ifdef COLLECT_PR_DATA
+        this->forward_bfs_total_steps++;
+#endif
         if (backwardBfs.vertexDiscovered(a->getHead())) {
             reachable = true;
         }
         return reachable;
     });
-    backwardBfs.setArcStopCondition([&reachable,&forwardBfs](const Arc *a) {
+    backwardBfs.setArcStopCondition([&reachable,&forwardBfs,this](const Arc *a) {
+#ifdef COLLECT_PR_DATA
+        this->backward_bfs_total_steps++;
+#endif
         if (forwardBfs.vertexDiscovered(a->getTail())) {
             reachable = true;
         }
@@ -251,10 +329,16 @@ bool SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>
             return false;
         }
         if (knownUnreachableFrom(head)) {
+#ifdef COLLECT_PR_DATA
+        this->known_unreachable_hits++;
+#endif
             return false;
         }
         auto suppAlg = supportiveVertexToSSRAlgorithm(head);
         if (suppAlg) {
+#ifdef COLLECT_PR_DATA
+        this->supportive_ssr_hits++;
+#endif
             bool reach = suppAlg->query(t);
             if (!reach) {
                 knownUnreachableFrom[head] = true;
@@ -266,6 +350,9 @@ bool SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>
             return false;
         }
         for (auto *alg : suppAlgorithms) {
+#ifdef COLLECT_PR_DATA
+        this->ssr_subtree_checks++;
+#endif
             if (alg->query(head)) {
                 // source of alg could not reach t, but head, so head cannot reach t
                 knownUnreachableFrom[head] = true;
@@ -303,6 +390,9 @@ bool SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>
 
     while (!reachable && !forwardBfs.isExhausted() && !backwardBfs.isExhausted()
            && forwardBfs.getMaxLevel() + backwardBfs.getMaxLevel() < diGraph->getSize()) {
+#ifdef COLLECT_PR_DATA
+        this->num_query_resume++;
+#endif
         forwardBfs.resume();
         backwardBfs.resume();
     }

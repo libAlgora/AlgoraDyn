@@ -21,6 +21,7 @@ public:
     virtual void run() override;
     virtual std::string getName() const noexcept override;
     virtual std::string getShortName() const noexcept override;
+    virtual std::string getProfilingInfo() const override;
 
     // DynamicDiGraphAlgorithm interface
 public:
@@ -28,9 +29,11 @@ public:
     virtual void onVertexRemove(Vertex *v) override;
     virtual void onArcAdd(Arc *a) override;
     virtual void onArcRemove(Arc *a) override;
+    virtual Profile getProfile() const override;
 
     // DiGraphAlgorithm interface
 protected:
+    virtual void onDiGraphSet() override;
     virtual void onDiGraphUnset() override;
 
     // DynamicAllPairsReachabilityAlgorithm interface
@@ -44,6 +47,15 @@ private:
     bool initialized;
     double supportSizeRatio;
     DiGraph::size_type twoWayStepSize;
+
+    profiling_counter supportive_ssr_hits = 0;
+    profiling_counter known_unreachable_hits = 0;
+    profiling_counter ssr_subtree_checks = 0;
+    profiling_counter forward_bfs_total_steps = 0;
+    profiling_counter backward_bfs_total_steps = 0;
+    profiling_counter num_trivial_queries = 0;
+    profiling_counter num_only_ssr_queries = 0;
+    profiling_counter num_query_resume = 0;
 
     void reset();
     void createAndInitAlgorithm(Vertex *v);
