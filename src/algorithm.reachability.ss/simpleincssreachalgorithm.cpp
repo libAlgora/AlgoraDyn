@@ -583,7 +583,7 @@ std::string SimpleIncSSReachAlgorithm::getProfilingInfo() const
 {
     std::stringstream ss;
 #ifdef COLLECT_PR_DATA
-    ss << DynamicSSReachAlgorithm::getProfilingInfo();
+    ss << DynamicSingleSourceReachabilityAlgorithm::getProfilingInfo();
     ss << "total reached vertices: " << data->numReached << std::endl;
     ss << "total unknown state vertices: " << data->numUnknown << std::endl;
     ss << "total unreached vertices: " << data->numUnreached << std::endl;

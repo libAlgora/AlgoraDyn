@@ -187,7 +187,7 @@ std::string ESTreeQ::getProfilingInfo() const
 {
     std::stringstream ss;
 #ifdef COLLECT_PR_DATA
-    ss << DynamicSSReachAlgorithm::getProfilingInfo();
+    ss << DynamicSingleSourceReachabilityAlgorithm::getProfilingInfo();
     ss << "#moves down (level increase): " << movesDown << std::endl;
     ss << "#moves up (level decrease): " << movesUp << std::endl;
     ss << "total level increase: " << levelIncrease << std::endl;
