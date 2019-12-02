@@ -9,6 +9,17 @@
 #include <sstream>
 #include <random>
 
+//#define DEBUG_SUPPVAPR
+
+#include <iostream>
+#ifdef DEBUG_SUPPVAPR
+#define PRINT_DEBUG(msg) std::cerr << msg << std::endl;
+#define IF_DEBUG(cmd) cmd;
+#else
+#define PRINT_DEBUG(msg) ((void)0);
+#define IF_DEBUG(cmd)
+#endif
+
 namespace Algora {
 
 template<typename DynamicSSRAlgorithm>
@@ -34,6 +45,7 @@ void SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>
         return;
     }
 
+    PRINT_DEBUG("Initializing...");
     if (supportiveVertexToSSRAlgorithm.size() < diGraph->getSize()) {
         supportiveVertexToSSRAlgorithm.resetAll(diGraph->getSize());
     }
@@ -52,9 +64,13 @@ void SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>
         assert(v);
         if (supportiveVertexToSSRAlgorithm(v) == nullptr) {
             createAndInitAlgorithm(v);
+            PRINT_DEBUG("Created supportive SSR algorithm with source " << v);
         }
     }
+    min_supportive_vertices = supportiveSSRAlgorithms.size();
+    max_supportive_vertices = min_supportive_vertices;
     initialized = true;
+    PRINT_DEBUG("Initialization complete.");
 }
 
 template<typename DynamicSSRAlgorithm>
@@ -88,16 +104,18 @@ const
 {
     std::stringstream ss;
 #ifdef COLLECT_PR_DATA
-    ss << DynamicAllPairsReachabilityAlgorithm::getProfilingInfo();
-    ss << "#supportive vertices: " << supportiveSSRAlgorithms.size() << std::endl;
-    ss << "#supportive vertex hits: " <<  supportive_ssr_hits << std::endl;
-    ss << "#known unreachable hits: " <<  known_unreachable_hits << std::endl;
-    ss << "#ssr subtree checks: " <<  ssr_subtree_checks << std::endl;
-    ss << "total #steps forward bfs: " <<  forward_bfs_total_steps << std::endl;
-    ss << "total #steps backward bfs: " <<  backward_bfs_total_steps << std::endl;
-    ss << "#query resumes: " <<  num_query_resume<< std::endl;
-    ss << "#trivial queries: " <<  num_trivial_queries << std::endl;
-    ss << "#SSR-only queries: " <<  num_only_ssr_queries << std::endl;
+    ss << "#vertices considered:         " << pr_consideredVertices << std::endl;
+    ss << "#arcs considered:             " << pr_consideredArcs << std::endl;
+    ss << "#supportive vertices (min):   " << min_supportive_vertices << std::endl;
+    ss << "#supportive vertices (max):   " << max_supportive_vertices << std::endl;
+    ss << "#supportive vertex hits:      " << supportive_ssr_hits << std::endl;
+    ss << "#known unreachable hits:      " << known_unreachable_hits << std::endl;
+    ss << "#ssr subtree checks:          " << ssr_subtree_checks << std::endl;
+    ss << "total #steps forward bfs:     " << forward_bfs_total_steps << std::endl;
+    ss << "total #steps backward bfs:    " << backward_bfs_total_steps << std::endl;
+    ss << "#query resumes:               " << num_query_resume<< std::endl;
+    ss << "#trivial queries:             " << num_trivial_queries << std::endl;
+    ss << "#SSR-only queries:            " << num_only_ssr_queries << std::endl;
 #endif
     return ss.str();
 }
@@ -106,6 +124,7 @@ template<typename DynamicSSRAlgorithm>
 void SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>
     ::onVertexAdd(Vertex *v)
 {
+    PRINT_DEBUG("A vertex has been added: " << v);
     DynamicDiGraphAlgorithm::onVertexAdd(v);
 
     if (!initialized) {
@@ -120,6 +139,11 @@ void SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>
 
     if (supportiveSSRAlgorithms.size() < std::round(supportSizeRatio * diGraph->getSize())) {
         createAndInitAlgorithm(v);
+        PRINT_DEBUG("Becomes new supportive vertex.");
+    }
+
+    if (max_supportive_vertices < supportiveSSRAlgorithms.size()) {
+        max_supportive_vertices = supportiveSSRAlgorithms.size();
     }
 }
 
@@ -127,6 +151,7 @@ template<typename DynamicSSRAlgorithm>
 void SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>
     ::onVertexRemove(Vertex *v)
 {
+    PRINT_DEBUG("A vertex is about to be deleted: " << v);
     DynamicDiGraphAlgorithm::onVertexRemove(v);
 
     if (!initialized) {
@@ -142,6 +167,7 @@ void SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>
     auto *ssrAlgorithm = supportiveVertexToSSRAlgorithm(v);
     if (ssrAlgorithm) {
         assert(!supportiveSSRAlgorithms.empty());
+        PRINT_DEBUG("Was a supportive vertex.");
 
         if (supportiveSSRAlgorithms.size() == 1) {
             assert(supportiveSSRAlgorithms.back() == ssrAlgorithm);
@@ -179,11 +205,15 @@ void SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>
             // TODO: if still no replacement found, try other strategy
         }
     }
+    if (min_supportive_vertices > supportiveSSRAlgorithms.size()) {
+        min_supportive_vertices = supportiveSSRAlgorithms.size();
+    }
 }
 
 template<typename DynamicSSRAlgorithm>
 void SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>::onArcAdd(Arc *a)
 {
+    PRINT_DEBUG("An arc has been added: " << a);
     DynamicDiGraphAlgorithm::onArcAdd(a);
 
     if (!initialized) {
@@ -200,7 +230,8 @@ void SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>
 template<typename DynamicSSRAlgorithm>
 void SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>::onArcRemove(Arc *a)
 {
-    DynamicDiGraphAlgorithm::onArcAdd(a);
+    PRINT_DEBUG("An arc is about to be deleted: " << a);
+    DynamicDiGraphAlgorithm::onArcRemove(a);
 
     if (!initialized) {
         return;
@@ -218,8 +249,10 @@ DynamicDiGraphAlgorithm::Profile
 SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>::getProfile() const
 {
     auto profile = DynamicAllPairsReachabilityAlgorithm::getProfile();
-    profile.push_back(std::make_pair(std::string("num_supportive_ssr"),
-                                     supportiveSSRAlgorithms.size()));
+    profile.push_back(std::make_pair(std::string("min_supportive_ssr"),
+                                     min_supportive_vertices));
+    profile.push_back(std::make_pair(std::string("max_supportive_ssr"),
+                                     max_supportive_vertices));
     profile.push_back(std::make_pair(std::string("supportive_ssr_hits"),
                                      supportive_ssr_hits));
     profile.push_back(std::make_pair(std::string("known_unreachable_hits"),
@@ -245,6 +278,8 @@ void SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>
 {
     DynamicAllPairsReachabilityAlgorithm::onDiGraphSet();
 
+    min_supportive_vertices = 0;
+    max_supportive_vertices = 0;
     supportive_ssr_hits = 0;
     known_unreachable_hits = 0;
     ssr_subtree_checks = 0;
@@ -266,16 +301,19 @@ template<typename DynamicSSRAlgorithm>
 bool SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>::query(Vertex *s,
                                                                                         Vertex *t)
 {
+    PRINT_DEBUG("Processing reachability query " << s << " -> " << t << "...");
     if (s == t) {
 #ifdef COLLECT_PR_DATA
         num_trivial_queries++;
 #endif
+        PRINT_DEBUG("Same vertices, trivially true.");
         return true;
     }
     if (diGraph->isSink(s) || diGraph->isSource(t)) {
 #ifdef COLLECT_PR_DATA
         num_trivial_queries++;
 #endif
+        PRINT_DEBUG("Source is sink or target is source, trivially false.");
         return false;
     }
 
@@ -283,6 +321,7 @@ bool SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>
 #ifdef COLLECT_PR_DATA
         num_only_ssr_queries++;
 #endif
+        PRINT_DEBUG("Source is supportive vertex.");
         return supportiveVertexToSSRAlgorithm[s]->query(t);
     }
 
@@ -305,6 +344,7 @@ bool SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>
 #ifdef COLLECT_PR_DATA
         this->forward_bfs_total_steps++;
 #endif
+        PRINT_DEBUG("Forward-looking at " << a);
         if (backwardBfs.vertexDiscovered(a->getHead())) {
             reachable = true;
         }
@@ -314,28 +354,40 @@ bool SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>
 #ifdef COLLECT_PR_DATA
         this->backward_bfs_total_steps++;
 #endif
+        PRINT_DEBUG("Backward-looking at " << a);
         if (forwardBfs.vertexDiscovered(a->getTail())) {
             reachable = true;
         }
         return reachable;
     });
 
-    forwardBfs.onArcDiscover(
-                [&knownUnreachableFrom,&t,&reachable,&suppAlgorithms,this](const Arc *a) {
-        auto head = a->getHead();
+    //forwardBfs.onArcDiscover(
+    forwardBfs.onVertexDiscover(
+                [&knownUnreachableFrom,&t,&reachable,&suppAlgorithms,&forwardBfs,this]
+                //(const Arc *a) {
+                (const Vertex *head) {
+        PRINT_DEBUG("Forward-discovered vertex " << head << ".");
+        //auto head = a->getHead();
         if (head == t) {
+            PRINT_DEBUG("Target found.");
             reachable = true;
             // stop
             return false;
         }
+        //if (forwardBfs.vertexDiscovered(head)) {
+        //    // check for tree arc happens only later in BFS
+        //    return false;
+        //}
         if (knownUnreachableFrom(head)) {
 #ifdef COLLECT_PR_DATA
         this->known_unreachable_hits++;
 #endif
+            PRINT_DEBUG("Known to not be able to reach target.");
             return false;
         }
         auto suppAlg = supportiveVertexToSSRAlgorithm(head);
         if (suppAlg) {
+            PRINT_DEBUG("Is supportive vertex.");
 #ifdef COLLECT_PR_DATA
         this->supportive_ssr_hits++;
 #endif
@@ -354,6 +406,7 @@ bool SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>
         this->ssr_subtree_checks++;
 #endif
             if (alg->query(head)) {
+                PRINT_DEBUG("Is in reachability tree rooted at " << alg->getSource() << ".");
                 // source of alg could not reach t, but head, so head cannot reach t
                 knownUnreachableFrom[head] = true;
                 return false;

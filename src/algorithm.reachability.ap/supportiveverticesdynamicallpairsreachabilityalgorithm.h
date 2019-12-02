@@ -48,6 +48,8 @@ private:
     double supportSizeRatio;
     DiGraph::size_type twoWayStepSize;
 
+    profiling_counter min_supportive_vertices = 0;
+    profiling_counter max_supportive_vertices = 0;
     profiling_counter supportive_ssr_hits = 0;
     profiling_counter known_unreachable_hits = 0;
     profiling_counter ssr_subtree_checks = 0;
