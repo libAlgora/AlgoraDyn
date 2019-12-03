@@ -13,7 +13,7 @@
 
 #include <iostream>
 #ifdef DEBUG_SUPPVAPR
-#define PRINT_DEBUG(msg) std::cerr << msg << std::endl;
+#define PRINT_DEBUG(msg) std::cerr << this->getShortName() << ": " << msg << std::endl;
 #define IF_DEBUG(cmd) cmd;
 #else
 #define PRINT_DEBUG(msg) ((void)0);
@@ -64,7 +64,7 @@ void SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>
         assert(v);
         if (supportiveVertexToSSRAlgorithm(v) == nullptr) {
             createAndInitAlgorithm(v);
-            PRINT_DEBUG("Created supportive SSR algorithm with source " << v);
+            PRINT_DEBUG("  Created supportive SSR algorithm with source " << v);
         }
     }
     min_supportive_vertices = supportiveSSRAlgorithms.size();
@@ -139,7 +139,7 @@ void SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>
 
     if (supportiveSSRAlgorithms.size() < std::round(supportSizeRatio * diGraph->getSize())) {
         createAndInitAlgorithm(v);
-        PRINT_DEBUG("Becomes new supportive vertex.");
+        PRINT_DEBUG("  Becomes new supportive vertex.");
     }
 
     if (max_supportive_vertices < supportiveSSRAlgorithms.size()) {
@@ -167,7 +167,7 @@ void SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>
     auto *ssrAlgorithm = supportiveVertexToSSRAlgorithm(v);
     if (ssrAlgorithm) {
         assert(!supportiveSSRAlgorithms.empty());
-        PRINT_DEBUG("Was a supportive vertex.");
+        PRINT_DEBUG("  Was a supportive vertex.");
 
         if (supportiveSSRAlgorithms.size() == 1) {
             assert(supportiveSSRAlgorithms.back() == ssrAlgorithm);
@@ -301,19 +301,19 @@ template<typename DynamicSSRAlgorithm>
 bool SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>::query(Vertex *s,
                                                                                         Vertex *t)
 {
-    PRINT_DEBUG("Processing reachability query " << s << " -> " << t << "...");
+    PRINT_DEBUG("  Processing reachability query " << s << " -> " << t << "...");
     if (s == t) {
 #ifdef COLLECT_PR_DATA
         num_trivial_queries++;
 #endif
-        PRINT_DEBUG("Same vertices, trivially true.");
+        PRINT_DEBUG("  Same vertices, trivially true.");
         return true;
     }
     if (diGraph->isSink(s) || diGraph->isSource(t)) {
 #ifdef COLLECT_PR_DATA
         num_trivial_queries++;
 #endif
-        PRINT_DEBUG("Source is sink or target is source, trivially false.");
+        PRINT_DEBUG("  Source is sink or target is source, trivially false.");
         return false;
     }
 
@@ -321,7 +321,7 @@ bool SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>
 #ifdef COLLECT_PR_DATA
         num_only_ssr_queries++;
 #endif
-        PRINT_DEBUG("Source is supportive vertex.");
+        PRINT_DEBUG("  Source is supportive vertex.");
         return supportiveVertexToSSRAlgorithm[s]->query(t);
     }
 
@@ -344,7 +344,7 @@ bool SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>
 #ifdef COLLECT_PR_DATA
         this->forward_bfs_total_steps++;
 #endif
-        PRINT_DEBUG("Forward-looking at " << a);
+        PRINT_DEBUG("  Forward-looking at " << a);
         if (backwardBfs.vertexDiscovered(a->getHead())) {
             reachable = true;
         }
@@ -354,7 +354,7 @@ bool SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>
 #ifdef COLLECT_PR_DATA
         this->backward_bfs_total_steps++;
 #endif
-        PRINT_DEBUG("Backward-looking at " << a);
+        PRINT_DEBUG("  Backward-looking at " << a);
         if (forwardBfs.vertexDiscovered(a->getTail())) {
             reachable = true;
         }
@@ -366,10 +366,10 @@ bool SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>
                 [&knownUnreachableFrom,&t,&reachable,&suppAlgorithms,&forwardBfs,this]
                 //(const Arc *a) {
                 (const Vertex *head) {
-        PRINT_DEBUG("Forward-discovered vertex " << head << ".");
+        PRINT_DEBUG("  Forward-discovered vertex " << head << ".");
         //auto head = a->getHead();
         if (head == t) {
-            PRINT_DEBUG("Target found.");
+            PRINT_DEBUG("    Target found.");
             reachable = true;
             // stop
             return false;
@@ -378,16 +378,17 @@ bool SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>
         //    // check for tree arc happens only later in BFS
         //    return false;
         //}
+        assert(forwardBfs.vertexDiscovered(head));
         if (knownUnreachableFrom(head)) {
 #ifdef COLLECT_PR_DATA
         this->known_unreachable_hits++;
 #endif
-            PRINT_DEBUG("Known to not be able to reach target.");
+            PRINT_DEBUG("    Known to not be able to reach target.");
             return false;
         }
         auto suppAlg = supportiveVertexToSSRAlgorithm(head);
         if (suppAlg) {
-            PRINT_DEBUG("Is supportive vertex.");
+            PRINT_DEBUG("    Is supportive vertex.");
 #ifdef COLLECT_PR_DATA
         this->supportive_ssr_hits++;
 #endif
@@ -406,7 +407,7 @@ bool SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>
         this->ssr_subtree_checks++;
 #endif
             if (alg->query(head)) {
-                PRINT_DEBUG("Is in reachability tree rooted at " << alg->getSource() << ".");
+                PRINT_DEBUG("    Is in reachability tree rooted at " << alg->getSource() << ".");
                 // source of alg could not reach t, but head, so head cannot reach t
                 knownUnreachableFrom[head] = true;
                 return false;
