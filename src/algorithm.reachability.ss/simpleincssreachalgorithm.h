@@ -33,8 +33,15 @@ namespace Algora {
 class SimpleIncSSReachAlgorithm : public DynamicSingleSourceReachabilityAlgorithm
 {
 public:
-    explicit SimpleIncSSReachAlgorithm(bool reverse = false, bool searchForward = true, double maxUS = 0.25,
+    // reverse, searchForward, maxUnknownRatio, radicalReset, maxUnknownSqrt, maxUnknownLog,
+    // releateToReachable
+    typedef std::tuple<bool, bool, double, bool, bool, bool, bool> ParameterSet;
+
+    explicit SimpleIncSSReachAlgorithm(bool reverse = false,
+                                       bool searchForward = true,
+                                       double maxUS = 0.25,
                                        bool radicalReset = false);
+    explicit SimpleIncSSReachAlgorithm(const ParameterSet &params);
     virtual ~SimpleIncSSReachAlgorithm() override;
     void setMaxUnknownStateSqrt();
     void setMaxUnknownStateLog();

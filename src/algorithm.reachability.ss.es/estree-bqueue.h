@@ -35,8 +35,11 @@ namespace Algora {
 class OldESTree : public DynamicSingleSourceReachabilityAlgorithm
 {
 public:
+    typedef std::tuple<unsigned int, double> ParameterSet;
+
     explicit OldESTree(unsigned int requeueLimit = 5U, double maxAffectedRatio = 0.5);
-    virtual ~OldESTree();
+    explicit OldESTree(const ParameterSet &params);
+    virtual ~OldESTree() override;
     void setRequeueLimit(unsigned int limit) {
         requeueLimit = limit;
     }

@@ -57,9 +57,14 @@ void printQueue(boost::circular_buffer<ESVertexData*> q) {
 #endif
 
 ESTreeQ::ESTreeQ(unsigned int requeueLimit, double maxAffectedRatio)
+    : ESTreeQ({requeueLimit, maxAffectedRatio})
+{
+}
+
+ESTreeQ::ESTreeQ(const ParameterSet &params)
     : DynamicSingleSourceReachabilityAlgorithm(), root(nullptr),
-      initialized(false), requeueLimit(requeueLimit),
-      maxAffectedRatio(maxAffectedRatio),
+      initialized(false), requeueLimit(std::get<0>(params)),
+      maxAffectedRatio(std::get<1>(params)),
       movesDown(0U), movesUp(0U),
       levelIncrease(0U), levelDecrease(0U),
       maxLevelIncrease(0U), maxLevelDecrease(0U),

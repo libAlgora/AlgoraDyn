@@ -35,8 +35,11 @@ namespace Algora {
 class ESTreeQ : public DynamicSingleSourceReachabilityAlgorithm
 {
 public:
+    typedef std::tuple<unsigned int, double> ParameterSet;
+
     explicit ESTreeQ(unsigned int requeueLimit = 5, double maxAffectedRatio = 0.5);
-    virtual ~ESTreeQ();
+    explicit ESTreeQ(const ParameterSet &params);
+    virtual ~ESTreeQ() override;
     void setRequeueLimit(unsigned int limit) {
         requeueLimit = limit;
     }

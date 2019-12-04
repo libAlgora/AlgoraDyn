@@ -481,7 +481,8 @@ struct SimpleIncSSReachAlgorithm::Reachability {
                     || (reachability(v) == State::REACHABLE && !lr(v))
                     || (reachability(v) == State::UNREACHABLE && lr(v))) {
                 ok = false;
-                PRINT_DEBUG("State mismatch for vertex " << v << ": " << printState(reachability(v)) << " but is "
+                PRINT_DEBUG("State mismatch for vertex " << v << ": "
+                            << printState(reachability(v)) << " but is "
                             << (lr(v) ? "reachable" : "unreachable"));
             } else if (reachability(v) == State::REACHABLE && pred(v) == nullptr && v != source) {
                 ok = false;
@@ -501,12 +502,20 @@ struct SimpleIncSSReachAlgorithm::Reachability {
 };
 
 
-SimpleIncSSReachAlgorithm::SimpleIncSSReachAlgorithm(bool reverse, bool searchForward, double maxUS, bool radicalReset)
-    : DynamicSingleSourceReachabilityAlgorithm(), initialized(false),
-      reverse(reverse), searchForward(searchForward), maxUnknownStateRatio(maxUS),
-      maxUSSqrt(false), maxUSLog(false), relateToReachable(false), radicalReset(radicalReset),
-      data(new Reachability(this, reverse, searchForward, maxUS))
+SimpleIncSSReachAlgorithm::SimpleIncSSReachAlgorithm(bool reverse, bool searchForward,
+                                                     double maxUS, bool radicalReset)
+    : SimpleIncSSReachAlgorithm({reverse, searchForward, maxUS, radicalReset,
+                                                false, false, false})
+{ }
 
+SimpleIncSSReachAlgorithm::SimpleIncSSReachAlgorithm(
+        const SimpleIncSSReachAlgorithm::ParameterSet &params)
+    : DynamicSingleSourceReachabilityAlgorithm(), initialized(false),
+      reverse(std::get<0>(params)), searchForward(std::get<1>(params)),
+      maxUnknownStateRatio(std::get<2>(params)),
+      maxUSSqrt(false), maxUSLog(false), relateToReachable(false),
+      radicalReset(std::get<3>(params)),
+      data(new Reachability(this, reverse, searchForward, maxUnknownStateRatio))
 {
     registerEvents(false, true, true, true);
 }

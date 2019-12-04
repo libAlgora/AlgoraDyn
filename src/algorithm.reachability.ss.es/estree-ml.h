@@ -35,7 +35,10 @@ namespace Algora {
 class ESTreeML : public DynamicSingleSourceReachabilityAlgorithm
 {
 public:
+    typedef std::tuple<unsigned int, double> ParameterSet;
+
     explicit ESTreeML(unsigned int requeueLimit = 5, double maxAffectedRatio = 0.5);
+    explicit ESTreeML(const ParameterSet &params);
     virtual ~ESTreeML() override;
     void setRequeueLimit(unsigned int limit) {
         requeueLimit = limit;
