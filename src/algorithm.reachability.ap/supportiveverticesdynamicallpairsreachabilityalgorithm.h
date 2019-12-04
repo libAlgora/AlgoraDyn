@@ -53,6 +53,7 @@ private:
     profiling_counter supportive_ssr_hits = 0;
     profiling_counter known_unreachable_hits = 0;
     profiling_counter ssr_subtree_checks = 0;
+    profiling_counter ssr_subtree_hits = 0;
     profiling_counter forward_bfs_total_steps = 0;
     profiling_counter backward_bfs_total_steps = 0;
     profiling_counter num_trivial_queries = 0;

@@ -11,13 +11,16 @@
 
 //#define DEBUG_SUPPVAPR
 
-#include <iostream>
+#ifndef DEBUG_SUPPVAR_DEF
+#define DEBUG_SUPPVAR_DEF
 #ifdef DEBUG_SUPPVAPR
+#include <iostream>
 #define PRINT_DEBUG(msg) std::cerr << this->getShortName() << ": " << msg << std::endl;
 #define IF_DEBUG(cmd) cmd;
 #else
 #define PRINT_DEBUG(msg) ((void)0);
 #define IF_DEBUG(cmd)
+#endif
 #endif
 
 namespace Algora {
@@ -111,6 +114,7 @@ const
     ss << "#supportive vertex hits:      " << supportive_ssr_hits << std::endl;
     ss << "#known unreachable hits:      " << known_unreachable_hits << std::endl;
     ss << "#ssr subtree checks:          " << ssr_subtree_checks << std::endl;
+    ss << "#ssr subtree hits:            " << ssr_subtree_hits << std::endl;
     ss << "total #steps forward bfs:     " << forward_bfs_total_steps << std::endl;
     ss << "total #steps backward bfs:    " << backward_bfs_total_steps << std::endl;
     ss << "#query resumes:               " << num_query_resume<< std::endl;
@@ -259,6 +263,8 @@ SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>::get
                                      known_unreachable_hits));
     profile.push_back(std::make_pair(std::string("ssr_subtree_checks"),
                                      ssr_subtree_checks));
+    profile.push_back(std::make_pair(std::string("ssr_subtree_hits"),
+                                     ssr_subtree_hits));
     profile.push_back(std::make_pair(std::string("forward_bfs_total_steps"),
                                      forward_bfs_total_steps));
     profile.push_back(std::make_pair(std::string("backward_bfs_total_steps"),
@@ -283,6 +289,7 @@ void SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>
     supportive_ssr_hits = 0;
     known_unreachable_hits = 0;
     ssr_subtree_checks = 0;
+    ssr_subtree_hits = 0;
     forward_bfs_total_steps = 0;
     backward_bfs_total_steps = 0;
     num_trivial_queries = 0;
@@ -301,7 +308,7 @@ template<typename DynamicSSRAlgorithm>
 bool SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>::query(Vertex *s,
                                                                                         Vertex *t)
 {
-    PRINT_DEBUG("  Processing reachability query " << s << " -> " << t << "...");
+    PRINT_DEBUG("Processing reachability query " << s << " -> " << t << "...");
     if (s == t) {
 #ifdef COLLECT_PR_DATA
         num_trivial_queries++;
@@ -388,7 +395,6 @@ bool SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>
         }
         auto suppAlg = supportiveVertexToSSRAlgorithm(head);
         if (suppAlg) {
-            PRINT_DEBUG("    Is supportive vertex.");
 #ifdef COLLECT_PR_DATA
         this->supportive_ssr_hits++;
 #endif
@@ -396,8 +402,10 @@ bool SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>
             if (!reach) {
                 knownUnreachableFrom[head] = true;
                 suppAlgorithms.push_back(suppAlg);
+                PRINT_DEBUG("    Is supportive vertex, but can't reach target.");
             } else {
                 reachable = true;
+                PRINT_DEBUG("    Is supportive vertex, CAN reach target!");
             }
             // stop anyway
             return false;
@@ -407,6 +415,9 @@ bool SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>
         this->ssr_subtree_checks++;
 #endif
             if (alg->query(head)) {
+#ifdef COLLECT_PR_DATA
+        this->ssr_subtree_hits++;
+#endif
                 PRINT_DEBUG("    Is in reachability tree rooted at " << alg->getSource() << ".");
                 // source of alg could not reach t, but head, so head cannot reach t
                 knownUnreachableFrom[head] = true;
@@ -439,17 +450,27 @@ bool SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>
     forwardBfs.prepare();
     backwardBfs.prepare();
 
+    PRINT_DEBUG(" Running forward search...");
     forwardBfs.run();
-    backwardBfs.run();
+    if (!reachable && !forwardBfs.isExhausted() && forwardBfs.getMaxLevel() < diGraph->getSize()) {
+        PRINT_DEBUG(" Running backward search...");
+        backwardBfs.run();
+    }
 
     while (!reachable && !forwardBfs.isExhausted() && !backwardBfs.isExhausted()
            && forwardBfs.getMaxLevel() + backwardBfs.getMaxLevel() < diGraph->getSize()) {
 #ifdef COLLECT_PR_DATA
         this->num_query_resume++;
 #endif
+        PRINT_DEBUG(" Resuming forward search...");
         forwardBfs.resume();
-        backwardBfs.resume();
+        if (!reachable && !forwardBfs.isExhausted() && !backwardBfs.isExhausted()
+                && forwardBfs.getMaxLevel() + backwardBfs.getMaxLevel() < diGraph->getSize()) {
+            PRINT_DEBUG(" Resuming backward search...");
+            backwardBfs.resume();
+        }
     }
+    PRINT_DEBUG("  Answering query with " << reachable << ".");
     return reachable;
 }
 
