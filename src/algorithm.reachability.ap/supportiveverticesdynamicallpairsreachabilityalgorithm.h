@@ -13,7 +13,13 @@ class SupportiveVerticesDynamicAllPairsReachabilityAlgorithm
         : public DynamicAllPairsReachabilityAlgorithm
 {
 public:
-    explicit SupportiveVerticesDynamicAllPairsReachabilityAlgorithm(double supportSizeRatio);
+    typedef typename DynamicSSRAlgorithm::ParameterSet SSRParameterSet;
+
+    explicit SupportiveVerticesDynamicAllPairsReachabilityAlgorithm(double supportSizeRatio,
+                                                                    bool ssrSubtreeCheck);
+    explicit SupportiveVerticesDynamicAllPairsReachabilityAlgorithm(double supportSizeRatio,
+                                                                    bool ssrSubtreeCheck,
+                                                                    const SSRParameterSet &ssrParams);
     virtual ~SupportiveVerticesDynamicAllPairsReachabilityAlgorithm();
 
     // DiGraphAlgorithm interface
@@ -42,16 +48,17 @@ public:
     virtual std::vector<Arc *> queryPath(Vertex *, Vertex *) override;
 
 private:
+    SSRParameterSet ssrParameters;
     FastPropertyMap<DynamicSSRAlgorithm*> supportiveVertexToSSRAlgorithm;
     std::vector<DynamicSSRAlgorithm*> supportiveSSRAlgorithms;
     bool initialized;
     double supportSizeRatio;
     DiGraph::size_type twoWayStepSize;
+    bool ssrSubtreeCheck;
 
     profiling_counter min_supportive_vertices = 0;
     profiling_counter max_supportive_vertices = 0;
     profiling_counter supportive_ssr_hits = 0;
-    profiling_counter known_unreachable_hits = 0;
     profiling_counter ssr_subtree_checks = 0;
     profiling_counter ssr_subtree_hits = 0;
     profiling_counter forward_bfs_total_steps = 0;
