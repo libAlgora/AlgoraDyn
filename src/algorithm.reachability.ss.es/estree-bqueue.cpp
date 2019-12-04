@@ -56,7 +56,7 @@ void printQueue(PriorityQueue q) {
 #endif
 
 OldESTree::OldESTree(unsigned int requeueLimit, double maxAffectedRatio)
-    : OldESTree({requeueLimit, maxAffectedRatio})
+    : OldESTree(std::make_pair(requeueLimit, maxAffectedRatio))
 {
 }
 

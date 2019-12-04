@@ -56,7 +56,7 @@ void printQueue(boost::circular_buffer<SESVertexData*> q) {
 
 
 SimpleESTree::SimpleESTree(unsigned int requeueLimit, double maxAffectedRatio)
-    : SimpleESTree({requeueLimit, maxAffectedRatio})
+    : SimpleESTree(std::make_pair(requeueLimit, maxAffectedRatio))
 { }
 
 SimpleESTree::SimpleESTree(const SimpleESTree::ParameterSet &params)

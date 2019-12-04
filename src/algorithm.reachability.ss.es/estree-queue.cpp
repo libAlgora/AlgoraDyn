@@ -57,7 +57,7 @@ void printQueue(boost::circular_buffer<ESVertexData*> q) {
 #endif
 
 ESTreeQ::ESTreeQ(unsigned int requeueLimit, double maxAffectedRatio)
-    : ESTreeQ({requeueLimit, maxAffectedRatio})
+    : ESTreeQ(std::make_pair(requeueLimit, maxAffectedRatio))
 {
 }
 
