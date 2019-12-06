@@ -16,7 +16,7 @@
 #define PRINT_DEBUG(msg) std::cerr << this->getShortName() << ": " << msg << std::endl;
 #define IF_DEBUG(cmd) cmd;
 #else
-#define PRINT_DEBUG(msg) ((void)0);
+#define PRINT_DEBUG(msg) ((void)0)
 #define IF_DEBUG(cmd)
 #endif
 
@@ -31,6 +31,9 @@ SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>
       ssrParameters(ssrParams), initialized(false),
       supportSizeRatio(supportSizeRatio), twoWayStepSize(5U), ssrSubtreeCheck(ssrSubtreeCheck)
 {
+    if (supportSizeRatio == 0.0) {
+        ssrSubtreeCheck = false;
+    }
     supportiveVertexToSSRAlgorithm.setDefaultValue(nullptr);
 }
 
@@ -57,25 +60,28 @@ void SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>
     }
 
     PRINT_DEBUG("Initializing...");
-    if (supportiveVertexToSSRAlgorithm.size() < diGraph->getSize()) {
-        supportiveVertexToSSRAlgorithm.resetAll(diGraph->getSize());
-    }
+    if (supportSizeRatio > 0) {
 
-    std::random_device rd;
-    auto seed = rd();
-    std::mt19937_64 gen;
-    gen.seed(seed);
-    std::uniform_int_distribution<DiGraph::size_type> distVertex(
-                0, diGraph->getSize() - 1);
-    auto randomVertex = std::bind(distVertex, std::ref(gen));
-    auto numSupportiveVertices = std::round(supportSizeRatio * diGraph->getSize());
-    IncidenceListGraph *igraph = dynamic_cast<IncidenceListGraph*>(diGraph);
-    while (supportiveSSRAlgorithms.size() < numSupportiveVertices) {
-        auto v = igraph->vertexAt(randomVertex());
-        assert(v);
-        if (supportiveVertexToSSRAlgorithm(v) == nullptr) {
-            createAndInitAlgorithm(v);
-            PRINT_DEBUG("  Created supportive SSR algorithm with source " << v);
+        if (supportiveVertexToSSRAlgorithm.size() < diGraph->getSize()) {
+            supportiveVertexToSSRAlgorithm.resetAll(diGraph->getSize());
+        }
+
+        std::random_device rd;
+        auto seed = rd();
+        std::mt19937_64 gen;
+        gen.seed(seed);
+        std::uniform_int_distribution<DiGraph::size_type> distVertex(
+                    0, diGraph->getSize() - 1);
+        auto randomVertex = std::bind(distVertex, std::ref(gen));
+        auto numSupportiveVertices = std::round(supportSizeRatio * diGraph->getSize());
+        IncidenceListGraph *igraph = dynamic_cast<IncidenceListGraph*>(diGraph);
+        while (supportiveSSRAlgorithms.size() < numSupportiveVertices) {
+            auto v = igraph->vertexAt(randomVertex());
+            assert(v);
+            if (supportiveVertexToSSRAlgorithm(v) == nullptr) {
+                createAndInitAlgorithm(v);
+                PRINT_DEBUG("  Created supportive SSR algorithm with source " << v);
+            }
         }
     }
     min_supportive_vertices = supportiveSSRAlgorithms.size();
@@ -140,7 +146,7 @@ void SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>
     PRINT_DEBUG("A vertex has been added: " << v);
     DynamicDiGraphAlgorithm::onVertexAdd(v);
 
-    if (!initialized) {
+    if (!initialized || supportSizeRatio == 0) {
         return;
     }
 
@@ -167,7 +173,7 @@ void SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>
     PRINT_DEBUG("A vertex is about to be deleted: " << v);
     DynamicDiGraphAlgorithm::onVertexRemove(v);
 
-    if (!initialized) {
+    if (!initialized || supportSizeRatio == 0) {
         return;
     }
 
@@ -229,7 +235,7 @@ void SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>
     PRINT_DEBUG("An arc has been added: " << a);
     DynamicDiGraphAlgorithm::onArcAdd(a);
 
-    if (!initialized) {
+    if (!initialized || supportSizeRatio == 0) {
         return;
     }
 
@@ -241,12 +247,13 @@ void SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>
 }
 
 template<typename DynamicSSRAlgorithm>
-void SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>::onArcRemove(Arc *a)
+void SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>::onArcRemove(
+        Arc *a)
 {
     PRINT_DEBUG("An arc is about to be deleted: " << a);
     DynamicDiGraphAlgorithm::onArcRemove(a);
 
-    if (!initialized) {
+    if (!initialized || supportSizeRatio == 0) {
         return;
     }
 
@@ -373,47 +380,50 @@ bool SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>
         return reachable;
     });
 
-    //forwardBfs.onArcDiscover(
-    forwardBfs.onVertexDiscover(
-                [&t,&reachable,&suppAlgorithms,this]
-                //(const Arc *a) {
-                (const Vertex *head) {
-        PRINT_DEBUG("  Forward-discovered vertex " << head << ".");
-        auto suppAlg = supportiveVertexToSSRAlgorithm(head);
-        if (suppAlg) {
+    if (supportiveSSRAlgorithms.size() > 0) {
+        //forwardBfs.onArcDiscover(
+        forwardBfs.onVertexDiscover(
+                    [&t,&reachable,&suppAlgorithms,this]
+                    //(const Arc *a) {
+                    (const Vertex *head) {
+            PRINT_DEBUG("  Forward-discovered vertex " << head << ".");
+            auto suppAlg = supportiveVertexToSSRAlgorithm(head);
+            if (suppAlg) {
 #ifdef COLLECT_PR_DATA
-        this->supportive_ssr_hits++;
+                this->supportive_ssr_hits++;
 #endif
-            bool reach = suppAlg->query(t);
-            if (!reach) {
-                suppAlgorithms.push_back(suppAlg);
-                PRINT_DEBUG("    Is supportive vertex, but can't reach target.");
-            } else {
-                reachable = true;
-                PRINT_DEBUG("    Is supportive vertex, CAN reach target!");
+                bool reach = suppAlg->query(t);
+                if (!reach) {
+                    if (ssrSubtreeCheck) {
+                        suppAlgorithms.push_back(suppAlg);
+                    }
+                    PRINT_DEBUG("    Is supportive vertex, but can't reach target.");
+                } else {
+                    reachable = true;
+                    PRINT_DEBUG("    Is supportive vertex, CAN reach target!");
+                }
+                // stop anyway
+                return false;
             }
-            // stop anyway
-            return false;
-        }
-        if (ssrSubtreeCheck) {
-            for (auto *alg : suppAlgorithms) {
+            if (ssrSubtreeCheck) {
+                for (auto *alg : suppAlgorithms) {
 #ifdef COLLECT_PR_DATA
-                this->ssr_subtree_checks++;
+                    this->ssr_subtree_checks++;
 #endif
-                if (alg->query(head)) {
+                    if (alg->query(head)) {
 #ifdef COLLECT_PR_DATA
-                    this->ssr_subtree_hits++;
+                        this->ssr_subtree_hits++;
 #endif
-                    PRINT_DEBUG("    Is in reachability tree rooted at " << alg->getSource() << ".");
-                    // source of alg could not reach t, but head, so head cannot reach t
-                    return false;
+                        PRINT_DEBUG("    Is in reachability tree rooted at " << alg->getSource() << ".");
+                        // source of alg could not reach t, but head, so head cannot reach t
+                        return false;
+                    }
                 }
             }
-
-        }
-        // can't say anything about reachability
-        return true;
-    });
+            // can't say anything about reachability
+            return true;
+        });
+    }
 
     auto stepSize = twoWayStepSize;
     forwardBfs.setVertexStopCondition(
