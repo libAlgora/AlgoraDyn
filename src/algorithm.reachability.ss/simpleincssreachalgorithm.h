@@ -30,6 +30,7 @@
 
 namespace Algora {
 
+template<bool reverseArcDirection = false>
 class SimpleIncSSReachAlgorithm : public DynamicSingleSourceReachabilityAlgorithm
 {
 public:

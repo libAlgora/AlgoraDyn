@@ -55,11 +55,13 @@ void printQueue(boost::circular_buffer<SESVertexData*> q) {
 #endif
 
 
-SimpleESTree::SimpleESTree(unsigned int requeueLimit, double maxAffectedRatio)
-    : SimpleESTree(std::make_pair(requeueLimit, maxAffectedRatio))
+template<bool reverseArcDirection>
+SimpleESTree<reverseArcDirection>::SimpleESTree(unsigned int requeueLimit, double maxAffectedRatio)
+    : SimpleESTree<reverseArcDirection>(std::make_pair(requeueLimit, maxAffectedRatio))
 { }
 
-SimpleESTree::SimpleESTree(const SimpleESTree::ParameterSet &params)
+template<bool reverseArcDirection>
+SimpleESTree<reverseArcDirection>::SimpleESTree(const SimpleESTree<reverseArcDirection>::ParameterSet &params)
     : DynamicSingleSourceReachabilityAlgorithm(), root(nullptr),
       initialized(false), requeueLimit(std::get<0>(params)),
       maxAffectedRatio(std::get<1>(params)),
@@ -78,12 +80,14 @@ SimpleESTree::SimpleESTree(const SimpleESTree::ParameterSet &params)
     timesInQueue.setDefaultValue(0U);
 }
 
-SimpleESTree::~SimpleESTree()
+template<bool reverseArcDirection>
+SimpleESTree<reverseArcDirection>::~SimpleESTree()
 {
     cleanup(true);
 }
 
-DiGraph::size_type SimpleESTree::getDepthOfBFSTree() const
+template<bool reverseArcDirection>
+DiGraph::size_type SimpleESTree<reverseArcDirection>::getDepthOfBFSTree() const
 {
 	DiGraph::size_type maxLevel = 0U;
     diGraph->mapVertices([&](Vertex *v) {
@@ -94,7 +98,8 @@ DiGraph::size_type SimpleESTree::getDepthOfBFSTree() const
     return maxLevel;
 }
 
-DiGraph::size_type SimpleESTree::getNumReachable() const
+template<bool reverseArcDirection>
+DiGraph::size_type SimpleESTree<reverseArcDirection>::getNumReachable() const
 {
 	DiGraph::size_type numR = 0U;
     diGraph->mapVertices([&](Vertex *v) {
@@ -105,7 +110,8 @@ DiGraph::size_type SimpleESTree::getNumReachable() const
     return numR;
 }
 
-void SimpleESTree::run()
+template<bool reverseArcDirection>
+void SimpleESTree<reverseArcDirection>::run()
 {
     if (initialized) {
         return;
@@ -119,7 +125,7 @@ void SimpleESTree::run()
         reachable.resetAll();
     }
 
-   BreadthFirstSearch<FastPropertyMap,false> bfs(false);
+   BreadthFirstSearch<FastPropertyMap,false,reverseArcDirection> bfs(false);
    root = source;
    if (root == nullptr) {
        root = diGraph->getAnyVertex();
@@ -136,15 +142,22 @@ void SimpleESTree::run()
         prVertexConsidered();
         prArcConsidered();
 #endif
-        Vertex *t = a->getTail();
-        Vertex *h = a->getHead();
+        Vertex *t;
+        Vertex *h;
+        if (reverseArcDirection) {
+            t = a->getHead();
+            h = a->getTail();
+        } else {
+            t = a->getTail();
+            h = a->getHead();
+        }
         if (data[h] == nullptr) {
             data[h] = new SESVertexData(h, data(t), a);
         } else {
             data[h]->reset(data(t), a);
         }
         reachable[h] = true;
-        PRINT_DEBUG( "(" << t << ", " << h << ")" << " is a tree arc.")
+        PRINT_DEBUG( "(" << a->getTail() << ", " << a->getHead() << ")" << " is a tree arc.")
 #ifdef COLLECT_PR_DATA
         prArcConsidered();
 #endif
@@ -173,7 +186,8 @@ void SimpleESTree::run()
    assert(checkTree());
 }
 
-std::string SimpleESTree::getProfilingInfo() const
+template<bool reverseArcDirection>
+std::string SimpleESTree<reverseArcDirection>::getProfilingInfo() const
 {
     std::stringstream ss;
 #ifdef COLLECT_PR_DATA
@@ -200,7 +214,8 @@ std::string SimpleESTree::getProfilingInfo() const
     return ss.str();
 }
 
-DynamicSingleSourceReachabilityAlgorithm::Profile SimpleESTree::getProfile() const
+template<bool reverseArcDirection>
+DynamicSingleSourceReachabilityAlgorithm::Profile SimpleESTree<reverseArcDirection>::getProfile() const
 {
     auto profile = DynamicSingleSourceReachabilityAlgorithm::getProfile();
     profile.push_back(std::make_pair(std::string("vertices_moved_down"), movesDown));
@@ -224,7 +239,8 @@ DynamicSingleSourceReachabilityAlgorithm::Profile SimpleESTree::getProfile() con
     return profile;
 }
 
-void SimpleESTree::onDiGraphSet()
+template<bool reverseArcDirection>
+void SimpleESTree<reverseArcDirection>::onDiGraphSet()
 {
     DynamicSingleSourceReachabilityAlgorithm::onDiGraphSet();
     cleanup(false);
@@ -246,13 +262,15 @@ void SimpleESTree::onDiGraphSet()
     // called by cleanup
 }
 
-void SimpleESTree::onDiGraphUnset()
+template<bool reverseArcDirection>
+void SimpleESTree<reverseArcDirection>::onDiGraphUnset()
 {
     DynamicSingleSourceReachabilityAlgorithm::onDiGraphUnset();
     cleanup(true);
 }
 
-void SimpleESTree::onVertexAdd(Vertex *v)
+template<bool reverseArcDirection>
+void SimpleESTree<reverseArcDirection>::onVertexAdd(Vertex *v)
 {
     if (!initialized) {
         return;
@@ -263,7 +281,8 @@ void SimpleESTree::onVertexAdd(Vertex *v)
     data[v] = new SESVertexData(v);
 }
 
-void SimpleESTree::onArcAdd(Arc *a)
+template<bool reverseArcDirection>
+void SimpleESTree<reverseArcDirection>::onArcAdd(Arc *a)
 {
     if (!initialized) {
         return;
@@ -276,8 +295,15 @@ void SimpleESTree::onArcAdd(Arc *a)
         return;
     }
 
-    auto tail = a->getTail();
-    auto head = a->getHead();
+    Vertex *tail;
+    Vertex *head;
+    if (reverseArcDirection) {
+        tail = a->getHead();
+        head = a->getTail();
+    } else {
+        tail = a->getTail();
+        head = a->getHead();
+    }
 
     if (head == source) {
         PRINT_DEBUG("Head is source.")
@@ -339,8 +365,15 @@ void SimpleESTree::onArcAdd(Arc *a)
             PRINT_DEBUG( "Loop ignored.");
             return false;
         }
-        auto at = a->getTail();
-        auto ah = a->getHead();
+        Vertex *at;
+        Vertex *ah;
+        if (reverseArcDirection) {
+            at = a->getHead();
+            ah = a->getTail();
+        } else {
+            at = a->getTail();
+            ah = a->getHead();
+        }
         auto atd = data(at);
         auto ahd = data(ah);
 
@@ -362,10 +395,10 @@ void SimpleESTree::onArcAdd(Arc *a)
 #endif
             ahd->setParent(atd, const_cast<Arc*>(a));
             reachable[ah] = true;
-            PRINT_DEBUG( "(" << at << ", " << ah << ")" << " is a new tree arc.");
+            PRINT_DEBUG( "(" << a->getTail() << ", " << a->getHead() << ")" << " is a new tree arc.");
             return true;
         } else {
-            PRINT_DEBUG( "(" << at << ", " << ah << ")" << " is a non-tree arc.")
+            PRINT_DEBUG( "(" << a->getTail() << ", " << a->getHead() << ")" << " is a non-tree arc.")
         }
         return false;
     });
@@ -380,7 +413,8 @@ void SimpleESTree::onArcAdd(Arc *a)
    assert(checkTree());
 }
 
-void SimpleESTree::onVertexRemove(Vertex *v)
+template<bool reverseArcDirection>
+void SimpleESTree<reverseArcDirection>::onVertexRemove(Vertex *v)
 {
     if (!initialized) {
         return;
@@ -394,7 +428,8 @@ void SimpleESTree::onVertexRemove(Vertex *v)
      }
 }
 
-void SimpleESTree::onArcRemove(Arc *a)
+template<bool reverseArcDirection>
+void SimpleESTree<reverseArcDirection>::onArcRemove(Arc *a)
 {
    if (!initialized) {
         return;
@@ -407,7 +442,7 @@ void SimpleESTree::onArcRemove(Arc *a)
         return;
     }
 
-    auto head = a->getHead();
+    auto head = reverseArcDirection ? a->getTail() : a->getHead();
 
     if (head == source) {
         PRINT_DEBUG("Head is source.")
@@ -416,16 +451,24 @@ void SimpleESTree::onArcRemove(Arc *a)
 
 
     PRINT_DEBUG("Stored data of tail: " << data(a->getTail()));
-    PRINT_DEBUG("Stored data of head: " << data(head));
+    PRINT_DEBUG("Stored data of head: " << data(a->getHead()));
 
     auto hd = data(head);
     if (hd == nullptr) {
-        PRINT_DEBUG("Head of arc is unreachable (and never was). Nothing to do.")
+        if (reverseArcDirection) {
+            PRINT_DEBUG("Tail of arc is unreachable (and never was). Nothing to do.")
+        } else {
+            PRINT_DEBUG("Head of arc is unreachable (and never was). Nothing to do.")
+        }
         throw std::logic_error("Should not happen");
     }
 
     if (!hd->isReachable()) {
-        PRINT_DEBUG("Head of arc is already unreachable. Nothing to do.")
+        if (reverseArcDirection) {
+            PRINT_DEBUG("Tail of arc is already unreachable. Nothing to do.")
+        } else {
+            PRINT_DEBUG("Head of arc is already unreachable. Nothing to do.")
+        }
 #ifdef COLLECT_PR_DATA
         decUnreachableHead++;
 #endif
@@ -452,12 +495,14 @@ void SimpleESTree::onArcRemove(Arc *a)
    assert(checkTree());
 }
 
-void SimpleESTree::onSourceSet()
+template<bool reverseArcDirection>
+void SimpleESTree<reverseArcDirection>::onSourceSet()
 {
     cleanup(false);
 }
 
-bool SimpleESTree::query(const Vertex *t)
+template<bool reverseArcDirection>
+bool SimpleESTree<reverseArcDirection>::query(const Vertex *t)
 {
     PRINT_DEBUG("Querying reachability of " << t);
     if (t == source) {
@@ -473,7 +518,8 @@ bool SimpleESTree::query(const Vertex *t)
     return reachable(t);
 }
 
-std::vector<Arc *> SimpleESTree::queryPath(const Vertex *t)
+template<bool reverseArcDirection>
+std::vector<Arc *> SimpleESTree<reverseArcDirection>::queryPath(const Vertex *t)
 {
     std::vector<Arc*> path;
     if (!query(t) || t == source) {
@@ -483,7 +529,7 @@ std::vector<Arc *> SimpleESTree::queryPath(const Vertex *t)
     while (t != source) {
         auto *a = data(t)->getTreeArc();
         path.push_back(a);
-        t = a->getTail();
+        t = reverseArcDirection ? a->getHead() : a->getTail();
     }
     assert(!path.empty());
 
@@ -492,7 +538,8 @@ std::vector<Arc *> SimpleESTree::queryPath(const Vertex *t)
     return path;
 }
 
-void SimpleESTree::dumpData(std::ostream &os) const
+template<bool reverseArcDirection>
+void SimpleESTree<reverseArcDirection>::dumpData(std::ostream &os) const
 {
     if (!initialized) {
         os << "uninitialized" << std::endl;
@@ -513,7 +560,8 @@ void SimpleESTree::dumpData(std::ostream &os) const
     }
 }
 
-void SimpleESTree::dumpTree(std::ostream &os)
+template<bool reverseArcDirection>
+void SimpleESTree<reverseArcDirection>::dumpTree(std::ostream &os)
 {
     if (!initialized) {
         os << "uninitialized" << std::endl;
@@ -526,9 +574,10 @@ void SimpleESTree::dumpTree(std::ostream &os)
     }
 }
 
-bool SimpleESTree::checkTree()
+template<bool reverseArcDirection>
+bool SimpleESTree<reverseArcDirection>::checkTree()
 {
-   BreadthFirstSearch<FastPropertyMap> bfs;
+   BreadthFirstSearch<FastPropertyMap,true,reverseArcDirection> bfs;
    bfs.setStartVertex(source);
    bfs.levelAsValues(true);
    FastPropertyMap<DiGraph::size_type> levels(bfs.INF);
@@ -548,7 +597,8 @@ bool SimpleESTree::checkTree()
    return ok;
 }
 
-void SimpleESTree::rerun()
+template<bool reverseArcDirection>
+void SimpleESTree<reverseArcDirection>::rerun()
 {
 #ifdef COLLECT_PR_DATA
     reruns++;
@@ -560,7 +610,8 @@ void SimpleESTree::rerun()
     run();
 }
 
-DiGraph::size_type SimpleESTree::process(SESVertexData *vd, bool &limitReached) {
+template<bool reverseArcDirection>
+DiGraph::size_type SimpleESTree<reverseArcDirection>::process(SESVertexData *vd, bool &limitReached) {
 
     if (vd->level == 0UL) {
         PRINT_DEBUG("No need to process source vertex " << vd << ".");
@@ -592,7 +643,7 @@ DiGraph::size_type SimpleESTree::process(SESVertexData *vd, bool &limitReached) 
 
     PRINT_DEBUG("Min parent level is " << minParentLevel << ".");
 
-    diGraph->mapIncomingArcsUntil(v, [this,&parent,&minParentLevel,&oldVLevel,&treeArc](Arc *a) {
+    auto findParent = [this,&parent,&minParentLevel,&oldVLevel,&treeArc](Arc *a) {
 #ifdef COLLECT_PR_DATA
             prArcConsidered();
 #endif
@@ -600,7 +651,7 @@ DiGraph::size_type SimpleESTree::process(SESVertexData *vd, bool &limitReached) 
             PRINT_DEBUG( "Loop ignored.");
             return;
         }
-        auto pd = data(a->getTail());
+        auto pd = data(reverseArcDirection ? a->getHead() : a->getTail());
 #ifdef COLLECT_PR_DATA
             prVertexConsidered();
 #endif
@@ -609,12 +660,22 @@ DiGraph::size_type SimpleESTree::process(SESVertexData *vd, bool &limitReached) 
             minParentLevel = pLevel;
             parent = pd;
             treeArc = a;
-            PRINT_DEBUG("Update: Min parent level now is " << minParentLevel << ", parent " << parent);
+            PRINT_DEBUG("Update: Min parent level now is " << minParentLevel
+                        << ", parent " << parent);
             assert (minParentLevel + 1 >= oldVLevel);
         }
-    }, [&oldVLevel, &minParentLevel](const Arc *) { return minParentLevel + 1 == oldVLevel; });
+    };
+    auto abortReparenting = [&oldVLevel, &minParentLevel](const Arc *) {
+        return minParentLevel + 1 == oldVLevel;
+    };
 
-		DiGraph::size_type levelDiff = 0U;
+    if (reverseArcDirection) {
+        diGraph->mapOutgoingArcsUntil(v, findParent, abortReparenting);
+    } else {
+        diGraph->mapIncomingArcsUntil(v, findParent, abortReparenting);
+    }
+
+    DiGraph::size_type levelDiff = 0U;
     auto n = diGraph->getSize();
 
     if ((parent == nullptr || minParentLevel >= n - 1)
@@ -622,7 +683,8 @@ DiGraph::size_type SimpleESTree::process(SESVertexData *vd, bool &limitReached) 
         vd->setUnreachable();
         reachable.resetToDefault(v);
         levelDiff = n - oldVLevel;
-        PRINT_DEBUG("No parent or parent is unreachable. Vertex is unreachable. Level diff " << levelDiff);
+        PRINT_DEBUG("No parent or parent is unreachable. Vertex is unreachable. Level diff "
+                    << levelDiff);
     } else if (parent != oldParent || oldVLevel <= minParentLevel) {
         assert(parent->isReachable());
         assert(minParentLevel != SESVertexData::UNREACHABLE);
@@ -634,15 +696,14 @@ DiGraph::size_type SimpleESTree::process(SESVertexData *vd, bool &limitReached) 
 
     if (levelDiff > 0U) {
         PRINT_DEBUG("Updating children...");
-        //diGraph->mapOutgoingArcsUntil(vd->vertex, [this,&queue,&limitReached](Arc *a) {
-        diGraph->mapOutgoingArcsUntil(vd->vertex, [this,&limitReached](Arc *a) {
+        auto updateChildren = [this,&limitReached](Arc *a) {
 #ifdef COLLECT_PR_DATA
             prArcConsidered();
 #endif
             if (a->isLoop()) {
                 return;
             }
-            Vertex *head = a->getHead();
+            Vertex *head = reverseArcDirection ? a->getTail() : a->getHead();
             auto *hd = data(head);
 #ifdef COLLECT_PR_DATA
             prVertexConsidered();
@@ -661,7 +722,13 @@ DiGraph::size_type SimpleESTree::process(SESVertexData *vd, bool &limitReached) 
                     PRINT_DEBUG("Limit reached for vertex " << head << ".");
                 }
             }
-        }, [&limitReached](const Arc *) { return limitReached; });
+        };
+        auto updateUntil = [&limitReached](const Arc *) { return limitReached; };
+        if (reverseArcDirection) {
+            diGraph->mapIncomingArcsUntil(vd->vertex, updateChildren, updateUntil);
+        } else {
+            diGraph->mapOutgoingArcsUntil(vd->vertex, updateChildren, updateUntil);
+        }
     }
 
 #ifdef COLLECT_PR_DATA
@@ -672,7 +739,8 @@ DiGraph::size_type SimpleESTree::process(SESVertexData *vd, bool &limitReached) 
     return levelDiff;
 }
 
-void SimpleESTree::restoreTree(SESVertexData *rd)
+template<bool reverseArcDirection>
+void SimpleESTree<reverseArcDirection>::restoreTree(SESVertexData *rd)
 {
     auto n = diGraph->getSize();
     DiGraph::size_type affectedLimit = maxAffectedRatio < 1.0 ? floor(maxAffectedRatio * n) : n;
@@ -685,12 +753,12 @@ void SimpleESTree::restoreTree(SESVertexData *rd)
         maxReQueued = 1U;
     }
     PRINT_DEBUG("Initialized queue with " << rd << ".")
-            bool limitReached = false;
+    bool limitReached = false;
     auto processed = 0ULL;
 
     while (!queue.empty()) {
         IF_DEBUG(printQueue(queue))
-                auto vd = queue.front();
+        auto vd = queue.front();
         queue.pop_front();
 #ifdef COLLECT_PR_DATA
         prVertexConsidered();
@@ -729,7 +797,8 @@ void SimpleESTree::restoreTree(SESVertexData *rd)
 #endif
 }
 
-void SimpleESTree::cleanup(bool freeSpace)
+template<bool reverseArcDirection>
+void SimpleESTree<reverseArcDirection>::cleanup(bool freeSpace)
 {
     if (initialized) {
         for (auto i = data.cbegin(); i != data.cend(); i++) {
@@ -754,5 +823,8 @@ void SimpleESTree::cleanup(bool freeSpace)
 
     initialized = false;
 }
+
+template class SimpleESTree<false>;
+template class SimpleESTree<true>;
 
 }

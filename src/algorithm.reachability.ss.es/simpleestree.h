@@ -32,6 +32,7 @@
 
 namespace Algora {
 
+template<bool reverseArcDirection = false>
 class SimpleESTree : public DynamicSingleSourceReachabilityAlgorithm
 {
 public:

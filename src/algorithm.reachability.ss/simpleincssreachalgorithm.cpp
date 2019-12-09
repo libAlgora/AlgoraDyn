@@ -48,10 +48,11 @@
 
 namespace Algora {
 
-struct SimpleIncSSReachAlgorithm::Reachability {
+template<bool reverseArcDirection>
+struct SimpleIncSSReachAlgorithm<reverseArcDirection>::Reachability {
     enum struct State : std::int8_t { REACHABLE, UNREACHABLE, UNKNOWN };
 
-    SimpleIncSSReachAlgorithm *parent;
+    SimpleIncSSReachAlgorithm<reverseArcDirection> *parent;
     FastPropertyMap<State> reachability;
     FastPropertyMap<Arc*> pred;
     DiGraph *diGraph;
@@ -83,7 +84,7 @@ struct SimpleIncSSReachAlgorithm::Reachability {
     profiling_counter decNonTreeArc;
     profiling_counter decUnReachableHead;
 
-    Reachability(SimpleIncSSReachAlgorithm *p, bool r, bool sf, double maxUS)
+    Reachability(SimpleIncSSReachAlgorithm<reverseArcDirection> *p, bool r, bool sf, double maxUS)
         : parent(p), diGraph(nullptr), source(nullptr), reverse(r), searchForward(sf), maxUnknownStateRatio(maxUS),
           maxUSSqrt(false), maxUSLog(false), relateToReachable(false), numReachable(0U),
           numUnreached(0UL), numRereached(0UL), numUnknown(0UL), numReached(0UL), numTracebacks(0UL),
@@ -123,7 +124,7 @@ struct SimpleIncSSReachAlgorithm::Reachability {
     DiGraph::size_type propagate(const Vertex *from, State s, DiGraph::size_type maxSteps = 0U) {
         PRINT_DEBUG("Propagating " << printState(s) << " from " << from << ".");
         DiGraph::size_type steps = 1U;
-        BreadthFirstSearch<FastPropertyMap,false> bfs(false);
+        BreadthFirstSearch<FastPropertyMap,false,reverseArcDirection> bfs(false);
         bfs.setGraph(diGraph);
         bfs.setStartVertex(from);
         if (!setPred) {
@@ -145,9 +146,10 @@ struct SimpleIncSSReachAlgorithm::Reachability {
 #ifdef COLLECT_PR_DATA
             parent->prArcConsidered();
 #endif
-            auto v = a->getHead();
+            auto v = reverseArcDirection ? a->getTail() : a->getHead();
 
-            PRINT_DEBUG("Reaching " << v << " via " << a->getTail() << " with state " << printState(reachability(v))
+            PRINT_DEBUG("Reaching " << v << " via " << (reverseArcDirection ? a->getHead() : a->getTail())
+                        << " with state " << printState(reachability(v))
                         << " and tree arc " << pred(v));
 
             if (pred(v) != nullptr && pred(v) != a) {
@@ -156,7 +158,8 @@ struct SimpleIncSSReachAlgorithm::Reachability {
             }
 
             if ((!force && reachability(v) == s) || (v == source && source != from)) {
-                PRINT_DEBUG(v << " already had this state and update was not forced, no update of successors.");
+                PRINT_DEBUG(v << " already had this state and update was not forced, "
+                                 "no update of successors.");
                 return false;
             }
 
@@ -219,7 +222,7 @@ struct SimpleIncSSReachAlgorithm::Reachability {
     bool checkReachability(const Vertex *u, std::vector<const Vertex*> &visitedUnknown) {
         assert (u != source);
         PRINT_DEBUG("Trying to find reachable predecessor of " << u << ".");
-        BreadthFirstSearch<FastPropertyMap,false,true> bfs(false);
+        BreadthFirstSearch<FastPropertyMap,false,!reverseArcDirection> bfs(false);
         bfs.setGraph(diGraph);
         bfs.setStartVertex(u);
 
@@ -238,14 +241,14 @@ struct SimpleIncSSReachAlgorithm::Reachability {
         bfs.onTreeArcDiscover([this,&visitedUnknown,&succ,&reachableAncestor](const Arc* ca) {
             auto *a = const_cast<Arc*>(ca);
 
-            auto v = a->getTail();
+            auto v = reverseArcDirection ? a->getHead() : a->getTail();
 
 #ifdef COLLECT_PR_DATA
             parent->prVertexConsidered();
 #endif
 
             PRINT_DEBUG("Exploring " << v->getName() << " with state " << printState(reachability(v))
-                        << " via " << a->getTail());
+                        << " via " << (reverseArcDirection ? a->getHead() : a->getTail()));
             switch (reachability(v)) {
             case State::REACHABLE:
                 reachableAncestor = v;
@@ -260,8 +263,12 @@ struct SimpleIncSSReachAlgorithm::Reachability {
             }
             return true;
         });
-        bfs.setArcStopCondition([&reachableAncestor](const Arc*) { return reachableAncestor != nullptr; });
-        bfs.setVertexStopCondition([&reachableAncestor](const Vertex*) { return reachableAncestor != nullptr; });
+        bfs.setArcStopCondition([&reachableAncestor](const Arc*) {
+            return reachableAncestor != nullptr;
+        });
+        bfs.setVertexStopCondition([&reachableAncestor](const Vertex*) {
+            return reachableAncestor != nullptr;
+        });
         if (!bfs.prepare()) {
             throw DiGraphAlgorithmException(nullptr, "Could not prepare BFS algorithm.");
         }
@@ -275,7 +282,7 @@ struct SimpleIncSSReachAlgorithm::Reachability {
             while (t != u) {
                 a = succ[t];
                 assert(a != nullptr);
-                h = a->getHead();
+                h = reverseArcDirection ? a->getTail() : a->getHead();
 #ifdef COLLECT_PR_DATA
                 parent->prVertexConsidered();
 #endif
@@ -324,20 +331,24 @@ struct SimpleIncSSReachAlgorithm::Reachability {
         auto relateTo = relateToReachable ? numReachable : diGraph->getSize();
         auto compareTo = maxUSSqrt ? floor(sqrt(relateTo))
                                    : (maxUSLog ?
-                                          floor(log2(relateTo)) : floor(maxUnknownStateRatio * relateTo));
+                                          floor(log2(relateTo))
+                                        : floor(maxUnknownStateRatio * relateTo));
 
         changedStateVertices.clear();
         auto maxSteps = static_cast<DiGraph::size_type>(compareTo);
 #ifndef NDEBUG
         auto visited =
 #endif
-					radicalReset ? propagate<true, false, false, true>(from, State::UNKNOWN, maxSteps)
+            radicalReset ? propagate<true, false, false, true>(from, State::UNKNOWN, maxSteps)
             : propagate<true, false, false, false>(from, State::UNKNOWN);
 
         auto unknown = changedStateVertices.size();
         numReachable -= unknown;
 #ifdef COLLECT_PR_DATA
-        PRINT_DEBUG( unknown << " vertices have unknown state, " << visited << " were visited by BFS.");
+        PRINT_DEBUG( unknown << " vertices have unknown state.");
+#ifndef NDEBUG
+        PRINT_DEBUG( visited << " were visited by BFS.");
+#endif
 #endif
         assert (unknown == visited || unknown == visited + 1U);
 
@@ -410,9 +421,11 @@ struct SimpleIncSSReachAlgorithm::Reachability {
         };
 
         if (reverse) {
-            std::for_each(changedStateVertices.crbegin(), changedStateVertices.crend(), processUnknowns);
+            std::for_each(changedStateVertices.crbegin(), changedStateVertices.crend(),
+                          processUnknowns);
         } else {
-            std::for_each(changedStateVertices.cbegin(), changedStateVertices.cend(), processUnknowns);
+            std::for_each(changedStateVertices.cbegin(), changedStateVertices.cend(),
+                          processUnknowns);
         }
         changedStateVertices.clear();
 
@@ -452,9 +465,9 @@ struct SimpleIncSSReachAlgorithm::Reachability {
 
     char printState(const State &s) const {
         switch (s) {
-        case SimpleIncSSReachAlgorithm::Reachability::State::REACHABLE:
+        case SimpleIncSSReachAlgorithm<reverseArcDirection>::Reachability::State::REACHABLE:
             return 'R';
-        case SimpleIncSSReachAlgorithm::Reachability::State::UNREACHABLE:
+        case SimpleIncSSReachAlgorithm<reverseArcDirection>::Reachability::State::UNREACHABLE:
             return 'U';
         default:
             return '?';
@@ -463,7 +476,7 @@ struct SimpleIncSSReachAlgorithm::Reachability {
 
     bool verifyReachability() const {
         FastPropertyMap<bool> lr(false);
-        BreadthFirstSearch<FastPropertyMap,false> bfs(false);
+        BreadthFirstSearch<FastPropertyMap,false,reverseArcDirection> bfs(false);
         bfs.setStartVertex(source);
         bfs.onVertexDiscover([&lr](const Vertex *v) {
             lr[v] = true;
@@ -502,14 +515,16 @@ struct SimpleIncSSReachAlgorithm::Reachability {
 };
 
 
-SimpleIncSSReachAlgorithm::SimpleIncSSReachAlgorithm(bool reverse, bool searchForward,
+template<bool reverseArcDirection>
+SimpleIncSSReachAlgorithm<reverseArcDirection>::SimpleIncSSReachAlgorithm(bool reverse, bool searchForward,
                                                      double maxUS, bool radicalReset)
-    : SimpleIncSSReachAlgorithm({reverse, searchForward, maxUS, radicalReset,
+    : SimpleIncSSReachAlgorithm<reverseArcDirection>({reverse, searchForward, maxUS, radicalReset,
                                                 false, false, false})
 { }
 
-SimpleIncSSReachAlgorithm::SimpleIncSSReachAlgorithm(
-        const SimpleIncSSReachAlgorithm::ParameterSet &params)
+template<bool reverseArcDirection>
+SimpleIncSSReachAlgorithm<reverseArcDirection>::SimpleIncSSReachAlgorithm(
+        const SimpleIncSSReachAlgorithm<reverseArcDirection>::ParameterSet &params)
     : DynamicSingleSourceReachabilityAlgorithm(), initialized(false),
       reverse(std::get<0>(params)), searchForward(std::get<1>(params)),
       maxUnknownStateRatio(std::get<2>(params)),
@@ -520,30 +535,35 @@ SimpleIncSSReachAlgorithm::SimpleIncSSReachAlgorithm(
     registerEvents(false, true, true, true);
 }
 
-SimpleIncSSReachAlgorithm::~SimpleIncSSReachAlgorithm()
+template<bool reverseArcDirection>
+SimpleIncSSReachAlgorithm<reverseArcDirection>::~SimpleIncSSReachAlgorithm()
 {
     delete data;
 }
 
-void SimpleIncSSReachAlgorithm::setMaxUnknownStateSqrt()
+template<bool reverseArcDirection>
+void SimpleIncSSReachAlgorithm<reverseArcDirection>::setMaxUnknownStateSqrt()
 {
     maxUSSqrt = true;
     data->maxUSSqrt = true;
 }
 
-void SimpleIncSSReachAlgorithm::setMaxUnknownStateLog()
+template<bool reverseArcDirection>
+void SimpleIncSSReachAlgorithm<reverseArcDirection>::setMaxUnknownStateLog()
 {
     maxUSLog = true;
     data->maxUSLog = true;
 }
 
-void SimpleIncSSReachAlgorithm::relateToReachableVertices(bool relReachable)
+template<bool reverseArcDirection>
+void SimpleIncSSReachAlgorithm<reverseArcDirection>::relateToReachableVertices(bool relReachable)
 {
     relateToReachable = relReachable;
     data->relateToReachable = relReachable;
 }
 
-void SimpleIncSSReachAlgorithm::run()
+template<bool reverseArcDirection>
+void SimpleIncSSReachAlgorithm<reverseArcDirection>::run()
 {
     if (initialized) {
         return;
@@ -554,9 +574,11 @@ void SimpleIncSSReachAlgorithm::run()
     initialized = true;
 }
 
-std::string SimpleIncSSReachAlgorithm::getName() const noexcept {
+template<bool reverseArcDirection>
+std::string SimpleIncSSReachAlgorithm<reverseArcDirection>::getName() const noexcept {
     std::stringstream ss;
-    ss << "Simple Incremental Single-Source Reachability Algorithm ("
+    ss << (reverseArcDirection ? "Simple Incremental Single-Sink Reachability Algorithm ("
+                       : "Simple Incremental Single-Source Reachability Algorithm (")
        << (reverse ? "reverse" : "non-reverse") << "/"
        << (searchForward ? "forward search" : "no forward search") << "/";
     if (maxUSSqrt) {
@@ -571,9 +593,10 @@ std::string SimpleIncSSReachAlgorithm::getName() const noexcept {
     return ss.str();
 }
 
-std::string SimpleIncSSReachAlgorithm::getShortName() const noexcept {
+template<bool reverseArcDirection>
+std::string SimpleIncSSReachAlgorithm<reverseArcDirection>::getShortName() const noexcept {
     std::stringstream ss;
-    ss << "Simple-ISSR("
+    ss << (reverseArcDirection ? "Reverse-Simple-ISSR(" : "Simple-ISSR(")
        << (reverse ? "R" : "NR") << "/"
        << (searchForward ? "SF" : "NSF") << "/";
     if (maxUSSqrt) {
@@ -588,7 +611,8 @@ std::string SimpleIncSSReachAlgorithm::getShortName() const noexcept {
     return ss.str();
 }
 
-std::string SimpleIncSSReachAlgorithm::getProfilingInfo() const
+template<bool reverseArcDirection>
+std::string SimpleIncSSReachAlgorithm<reverseArcDirection>::getProfilingInfo() const
 {
     std::stringstream ss;
 #ifdef COLLECT_PR_DATA
@@ -613,7 +637,8 @@ std::string SimpleIncSSReachAlgorithm::getProfilingInfo() const
     return ss.str();
 }
 
-DynamicSingleSourceReachabilityAlgorithm::Profile SimpleIncSSReachAlgorithm::getProfile() const
+template<bool reverseArcDirection>
+DynamicSingleSourceReachabilityAlgorithm::Profile SimpleIncSSReachAlgorithm<reverseArcDirection>::getProfile() const
 {
     auto profile = DynamicSingleSourceReachabilityAlgorithm::getProfile();
     profile.push_back(std::make_pair(std::string("total_reached"), data->numReached));
@@ -626,34 +651,42 @@ DynamicSingleSourceReachabilityAlgorithm::Profile SimpleIncSSReachAlgorithm::get
     profile.push_back(std::make_pair(std::string("max_unreached"), data->maxUnreached));
     profile.push_back(std::make_pair(std::string("max_rereached"), data->maxRereached));
     profile.push_back(std::make_pair(std::string("max_tracebacks"), data->maxTracebacks));
-    profile.push_back(std::make_pair(std::string("unknown_limit_percent"), data->maxUnknownStateRatio * 100));
-    profile.push_back(std::make_pair(std::string("rereach_from_source"), data->numReReachFromSource));
-    profile.push_back(std::make_pair(std::string("dec_head_unreachable"), data->decUnReachableHead));
+    profile.push_back(std::make_pair(std::string("unknown_limit_percent"),
+                                     data->maxUnknownStateRatio * 100));
+    profile.push_back(std::make_pair(std::string("rereach_from_source"),
+                                     data->numReReachFromSource));
+    profile.push_back(std::make_pair(std::string("dec_head_unreachable"),
+                                     data->decUnReachableHead));
     profile.push_back(std::make_pair(std::string("dec_nontree"), data->decNonTreeArc));
-    profile.push_back(std::make_pair(std::string("inc_tail_unreachable"), data->incUnReachableTail));
+    profile.push_back(std::make_pair(std::string("inc_tail_unreachable"),
+                                     data->incUnReachableTail));
     profile.push_back(std::make_pair(std::string("inc_nontree"), data->incNonTreeArc));
 
     return profile;
 }
 
-void SimpleIncSSReachAlgorithm::onDiGraphSet()
+template<bool reverseArcDirection>
+void SimpleIncSSReachAlgorithm<reverseArcDirection>::onDiGraphSet()
 {
     DynamicSingleSourceReachabilityAlgorithm::onDiGraphSet();
     data->reset();
     data->diGraph = diGraph;
 }
 
-void SimpleIncSSReachAlgorithm::onDiGraphUnset() {
+template<bool reverseArcDirection>
+void SimpleIncSSReachAlgorithm<reverseArcDirection>::onDiGraphUnset() {
     initialized = false;
     DynamicSingleSourceReachabilityAlgorithm::onDiGraphUnset();
 }
 
-void SimpleIncSSReachAlgorithm::onVertexAdd(Vertex *)
+template<bool reverseArcDirection>
+void SimpleIncSSReachAlgorithm<reverseArcDirection>::onVertexAdd(Vertex *)
 {
      // vertex is unreachable
 }
 
-void SimpleIncSSReachAlgorithm::onVertexRemove(Vertex *v)
+template<bool reverseArcDirection>
+void SimpleIncSSReachAlgorithm<reverseArcDirection>::onVertexRemove(Vertex *v)
 {
     if (!initialized) {
         return;
@@ -661,7 +694,8 @@ void SimpleIncSSReachAlgorithm::onVertexRemove(Vertex *v)
     data->removeVertex(v);
 }
 
-void SimpleIncSSReachAlgorithm::onArcAdd(Arc *a)
+template<bool reverseArcDirection>
+void SimpleIncSSReachAlgorithm<reverseArcDirection>::onArcAdd(Arc *a)
 {
     if (!initialized) {
         return;
@@ -673,8 +707,15 @@ void SimpleIncSSReachAlgorithm::onArcAdd(Arc *a)
         PRINT_DEBUG("Arc is a loop.");
         return;
     }
-    Vertex *tail = a->getTail();
-    Vertex *head = a->getHead();
+    Vertex *tail;
+    Vertex *head;
+    if (reverseArcDirection) {
+        tail = a->getHead();
+        head = a->getTail();
+    } else {
+        tail = a->getTail();
+        head = a->getHead();
+    }
 
     if (head == source) {
         PRINT_DEBUG("Head is source.");
@@ -702,7 +743,8 @@ void SimpleIncSSReachAlgorithm::onArcAdd(Arc *a)
     assert(data->verifyReachability());
 }
 
-void SimpleIncSSReachAlgorithm::onArcRemove(Arc *a)
+template<bool reverseArcDirection>
+void SimpleIncSSReachAlgorithm<reverseArcDirection>::onArcRemove(Arc *a)
 {
     if (!initialized) {
         return;
@@ -714,7 +756,7 @@ void SimpleIncSSReachAlgorithm::onArcRemove(Arc *a)
         PRINT_DEBUG("Arc is a loop.");
         return;
     }
-    Vertex *head = a->getHead();
+    Vertex *head = reverseArcDirection ? a->getTail() : a->getHead();
 
     if (head == source) {
         PRINT_DEBUG("Head is source.");
@@ -742,7 +784,8 @@ void SimpleIncSSReachAlgorithm::onArcRemove(Arc *a)
     assert(data->verifyReachability());
 }
 
-bool SimpleIncSSReachAlgorithm::query(const Vertex *t)
+template<bool reverseArcDirection>
+bool SimpleIncSSReachAlgorithm<reverseArcDirection>::query(const Vertex *t)
 {
     if (t == source) {
         return true;
@@ -754,7 +797,8 @@ bool SimpleIncSSReachAlgorithm::query(const Vertex *t)
     return data->reachable(t);
 }
 
-std::vector<Arc *> SimpleIncSSReachAlgorithm::queryPath(const Vertex *t)
+template<bool reverseArcDirection>
+std::vector<Arc *> SimpleIncSSReachAlgorithm<reverseArcDirection>::queryPath(const Vertex *t)
 {
     std::vector<Arc*> path;
     if (!query(t) || t == source) {
@@ -773,7 +817,8 @@ std::vector<Arc *> SimpleIncSSReachAlgorithm::queryPath(const Vertex *t)
     return path;
 }
 
-void SimpleIncSSReachAlgorithm::dumpData(std::ostream &os) const
+template<bool reverseArcDirection>
+void SimpleIncSSReachAlgorithm<reverseArcDirection>::dumpData(std::ostream &os) const
 {
     if (!initialized) {
         os << "uninitialized" << std::endl;
@@ -791,11 +836,15 @@ void SimpleIncSSReachAlgorithm::dumpData(std::ostream &os) const
     }
 }
 
-void SimpleIncSSReachAlgorithm::onSourceSet()
+template<bool reverseArcDirection>
+void SimpleIncSSReachAlgorithm<reverseArcDirection>::onSourceSet()
 {
     DynamicSingleSourceReachabilityAlgorithm::onSourceSet();
     initialized = false;
     data->reset(source);
 }
+
+template class SimpleIncSSReachAlgorithm<false>;
+template class SimpleIncSSReachAlgorithm<true>;
 
 } // namespace
