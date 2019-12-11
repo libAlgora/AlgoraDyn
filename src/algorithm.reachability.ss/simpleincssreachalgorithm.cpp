@@ -85,10 +85,13 @@ struct SimpleIncSSReachAlgorithm<reverseArcDirection>::Reachability {
     profiling_counter decUnReachableHead;
 
     Reachability(SimpleIncSSReachAlgorithm<reverseArcDirection> *p, bool r, bool sf, double maxUS)
-        : parent(p), diGraph(nullptr), source(nullptr), reverse(r), searchForward(sf), maxUnknownStateRatio(maxUS),
+        : parent(p), diGraph(nullptr), source(nullptr), reverse(r), searchForward(sf),
+          maxUnknownStateRatio(maxUS),
           maxUSSqrt(false), maxUSLog(false), relateToReachable(false), numReachable(0U),
-          numUnreached(0UL), numRereached(0UL), numUnknown(0UL), numReached(0UL), numTracebacks(0UL),
-          maxUnreached(0UL), maxRereached(0UL), maxUnknown(0UL), maxReached(0UL), maxTracebacks(0UL),
+          numUnreached(0UL), numRereached(0UL), numUnknown(0UL), numReached(0UL),
+          numTracebacks(0UL),
+          maxUnreached(0UL), maxRereached(0UL), maxUnknown(0UL), maxReached(0UL),
+          maxTracebacks(0UL),
           numReReachFromSource(0U),
           incNonTreeArc(0U), incUnReachableTail(0U), decNonTreeArc(0U), decUnReachableHead(0U) {
         reachability.setDefaultValue(State::UNREACHABLE);
@@ -808,11 +811,13 @@ std::vector<Arc *> SimpleIncSSReachAlgorithm<reverseArcDirection>::queryPath(con
     while (t != source) {
         auto *a = data->pred(t);
         path.push_back(a);
-        t = a->getTail();
+        t = reverseArcDirection ? a->getHead() : a->getTail();
     }
     assert(!path.empty());
 
-    std::reverse(path.begin(), path.end());
+    if (!reverseArcDirection) {
+        std::reverse(path.begin(), path.end());
+    }
 
     return path;
 }

@@ -31,7 +31,8 @@
 
 namespace Algora {
 
-StaticBFSSSReachAlgorithm::StaticBFSSSReachAlgorithm(bool twoWayBFS)
+template<bool reverseArcDirection>
+StaticBFSSSReachAlgorithm<reverseArcDirection>::StaticBFSSSReachAlgorithm(bool twoWayBFS)
     : DynamicSingleSourceReachabilityAlgorithm(), twoWayBFS(twoWayBFS), bfsStepSize(5UL)
 {
     registerEvents(false, false, false, false);
@@ -39,12 +40,14 @@ StaticBFSSSReachAlgorithm::StaticBFSSSReachAlgorithm(bool twoWayBFS)
     fpa.useTwoWaySearch(twoWayBFS);
 }
 
-void StaticBFSSSReachAlgorithm::run()
+template<bool reverseArcDirection>
+void StaticBFSSSReachAlgorithm<reverseArcDirection>::run()
 {
 
 }
 
-void StaticBFSSSReachAlgorithm::onDiGraphSet()
+template<bool reverseArcDirection>
+void StaticBFSSSReachAlgorithm<reverseArcDirection>::onDiGraphSet()
 {
     bfsStepSize = static_cast<DiGraph::size_type>(
                 ceil(diGraph->getNumArcs(true) / diGraph->getSize()));
@@ -55,19 +58,29 @@ void StaticBFSSSReachAlgorithm::onDiGraphSet()
     fpa.setTwoWayStepSize(bfsStepSize);
 }
 
-bool StaticBFSSSReachAlgorithm::query(const Vertex *t)
+template<bool reverseArcDirection>
+bool StaticBFSSSReachAlgorithm<reverseArcDirection>::query(const Vertex *t)
 {
     fpa.setConstructPaths(false, false);
-    fpa.setSourceAndTarget(source, const_cast<Vertex*>(t));
+    if (reverseArcDirection) {
+        fpa.setSourceAndTarget(const_cast<Vertex*>(t), source);
+    } else {
+        fpa.setSourceAndTarget(source, const_cast<Vertex*>(t));
+    }
     // fpa.prepare() omitted for performance reasons
     fpa.run();
     return fpa.deliver();
 }
 
-std::vector<Arc *> StaticBFSSSReachAlgorithm::queryPath(const Vertex *t)
+template<bool reverseArcDirection>
+std::vector<Arc *> StaticBFSSSReachAlgorithm<reverseArcDirection>::queryPath(const Vertex *t)
 {
     fpa.setConstructPaths(false, true);
-    fpa.setSourceAndTarget(source, const_cast<Vertex*>(t));
+    if (reverseArcDirection) {
+        fpa.setSourceAndTarget(const_cast<Vertex*>(t), source);
+    } else {
+        fpa.setSourceAndTarget(source, const_cast<Vertex*>(t));
+    }
     // fpa.prepare() omitted for performance reasons
     fpa.run();
     if (fpa.deliver()) {
@@ -76,4 +89,6 @@ std::vector<Arc *> StaticBFSSSReachAlgorithm::queryPath(const Vertex *t)
     return std::vector<Arc*>();
 }
 
+template class StaticBFSSSReachAlgorithm<false>;
+template class StaticBFSSSReachAlgorithm<true>;
 }

@@ -350,7 +350,7 @@ void SimpleESTree<reverseArcDirection>::onArcAdd(Arc *a)
         reachable[head] = true;
     }
 
-    BreadthFirstSearch<FastPropertyMap,false> bfs(false);
+    BreadthFirstSearch<FastPropertyMap,false,reverseArcDirection> bfs(false);
     bfs.setStartVertex(head);
 #ifdef COLLECT_PR_DATA
     bfs.onArcDiscover([this,n](const Arc *a) {
@@ -533,7 +533,9 @@ std::vector<Arc *> SimpleESTree<reverseArcDirection>::queryPath(const Vertex *t)
     }
     assert(!path.empty());
 
-    std::reverse(path.begin(), path.end());
+    if (!reverseArcDirection) {
+        std::reverse(path.begin(), path.end());
+    }
 
     return path;
 }
@@ -743,7 +745,8 @@ template<bool reverseArcDirection>
 void SimpleESTree<reverseArcDirection>::restoreTree(SESVertexData *rd)
 {
     auto n = diGraph->getSize();
-    DiGraph::size_type affectedLimit = maxAffectedRatio < 1.0 ? floor(maxAffectedRatio * n) : n;
+    DiGraph::size_type affectedLimit = maxAffectedRatio < 1.0
+            ? static_cast<DiGraph::size_type>(floor(maxAffectedRatio * n)) : n;
     queue.set_capacity(affectedLimit);
     timesInQueue.resetAll(n);
     timesInQueue[rd->getVertex()]++;
@@ -824,7 +827,15 @@ void SimpleESTree<reverseArcDirection>::cleanup(bool freeSpace)
     initialized = false;
 }
 
+<<<<<<< Updated upstream
 template class SimpleESTree<false>;
 template class SimpleESTree<true>;
 
+=======
+<<<<<<< Updated upstream
+=======
+template class SimpleESTree<false>;
+template class SimpleESTree<true>;
+>>>>>>> Stashed changes
+>>>>>>> Stashed changes
 }

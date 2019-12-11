@@ -31,12 +31,14 @@ class LazyBFSSSReachAlgorithm : public DynamicSingleSourceReachabilityAlgorithm
 {
 public:
     explicit LazyBFSSSReachAlgorithm();
-    virtual ~LazyBFSSSReachAlgorithm();
+    virtual ~LazyBFSSSReachAlgorithm() override;
 
     // DiGraphAlgorithm interface
 public:
     virtual void run() override;
-    virtual std::string getName() const noexcept override { return "Lazy BFS Single-Source Reachability Algorithm"; }
+    virtual std::string getName() const noexcept override {
+        return "Lazy BFS Single-Source Reachability Algorithm";
+    }
     virtual std::string getShortName() const noexcept override { return "Lazy-BFS-SSReach"; }
 
     // DynamicDiGraphAlgorithm interface

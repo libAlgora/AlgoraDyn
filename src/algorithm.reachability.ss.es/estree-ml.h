@@ -32,6 +32,7 @@
 
 namespace Algora {
 
+template<bool reverseArcDirection = false>
 class ESTreeML : public DynamicSingleSourceReachabilityAlgorithm
 {
 public:
@@ -125,6 +126,9 @@ private:
     DiGraph::size_type process(ESVertexData *vd, bool &limitReached);
 };
 
+// explicit instantiation declaration
+extern template class ESTreeML<false>;
+extern template class ESTreeML<true>;
 }
 
 #endif // ESTREEML_H

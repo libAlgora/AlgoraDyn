@@ -93,6 +93,9 @@ private:
     Reachability *data;
 };
 
+// explicit instantiation declaration
+extern template class SimpleIncSSReachAlgorithm<false>;
+extern template class SimpleIncSSReachAlgorithm<true>;
 }
 
 #endif // SIMPLEINCSSREACHALGORITHM_H

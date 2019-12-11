@@ -28,6 +28,7 @@
 
 namespace Algora {
 
+template<bool reverseArcDirection = false>
 class StaticBFSSSReachAlgorithm : public DynamicSingleSourceReachabilityAlgorithm
 {
 public:
@@ -63,6 +64,9 @@ private:
     FindDiPathAlgorithm<FastPropertyMap> fpa;
 };
 
+// explicit instantiation declaration
+extern template class StaticBFSSSReachAlgorithm<false>;
+extern template class StaticBFSSSReachAlgorithm<true>;
 }
 
 #endif // STATICBFSSSREACHALGORITHM_H

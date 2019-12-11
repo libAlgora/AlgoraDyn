@@ -54,18 +54,26 @@ public:
     // DiGraphAlgorithm interface
 public:
     virtual void run() override;
-    virtual std::string getName() const noexcept override {
-      std::stringstream ss;
-			ss << "Simple ES-Tree Single-Source Reachability Algorithm (";
-      ss << requeueLimit << "/" << maxAffectedRatio << ")";
-      return ss.str();
-		}
-    virtual std::string getShortName() const noexcept override {
-      std::stringstream ss;
-            ss << "Simple-EST-DSSR(";
-      ss << requeueLimit << "/" << maxAffectedRatio << ")";
-      return ss.str();
-		}
+        virtual std::string getName() const noexcept override {
+            std::stringstream ss;
+            if (reverseArcDirection) {
+                ss << "Simple ES-Tree Single-Sink Reachability Algorithm (";
+            } else {
+                ss << "Simple ES-Tree Single-Source Reachability Algorithm (";
+            }
+            ss << requeueLimit << "/" << maxAffectedRatio << ")";
+            return ss.str();
+        }
+        virtual std::string getShortName() const noexcept override {
+            std::stringstream ss;
+            if (reverseArcDirection) {
+                ss << "Reverse-Simple-EST-DSSR(";
+            } else {
+                ss << "Simple-EST-DSSR(";
+            }
+            ss << requeueLimit << "/" << maxAffectedRatio << ")";
+            return ss.str();
+        }
     virtual std::string getProfilingInfo() const override;
     virtual Profile getProfile() const override;
 
@@ -128,6 +136,9 @@ private:
     DiGraph::size_type process(SESVertexData *vd, bool &limitReached);
 };
 
+// explicit instantiation declaration
+extern template class SimpleESTree<false>;
+extern template class SimpleESTree<true>;
 }
 
 #endif // SIMPLEESTREE_H

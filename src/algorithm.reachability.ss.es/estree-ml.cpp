@@ -54,12 +54,14 @@ void printQueue(boost::circular_buffer<ESVertexData*> q) {
 }
 #endif
 
-ESTreeML::ESTreeML(unsigned int requeueLimit, double maxAffectedRatio)
-    : ESTreeML(std::make_pair(requeueLimit, maxAffectedRatio))
+template<bool reverseArcDirection>
+ESTreeML<reverseArcDirection>::ESTreeML(unsigned int requeueLimit, double maxAffectedRatio)
+    : ESTreeML<reverseArcDirection>(std::make_pair(requeueLimit, maxAffectedRatio))
 {
 }
 
-ESTreeML::ESTreeML(const ESTreeML::ParameterSet &params)
+template<bool reverseArcDirection>
+ESTreeML<reverseArcDirection>::ESTreeML(const ESTreeML<reverseArcDirection>::ParameterSet &params)
     : DynamicSingleSourceReachabilityAlgorithm(), root(nullptr),
       initialized(false),
       requeueLimit(std::get<0>(params)),
@@ -80,12 +82,14 @@ ESTreeML::ESTreeML(const ESTreeML::ParameterSet &params)
     timesInQueue.setDefaultValue(0U);
 }
 
-ESTreeML::~ESTreeML()
+template<bool reverseArcDirection>
+ESTreeML<reverseArcDirection>::~ESTreeML()
 {
     cleanup(true);
 }
 
-void ESTreeML::run()
+template<bool reverseArcDirection>
+void ESTreeML<reverseArcDirection>::run()
 {
     if (initialized) {
         return;
@@ -104,7 +108,7 @@ void ESTreeML::run()
        inNeighborIndices.resetAll();
    }
 
-   BreadthFirstSearch<FastPropertyMap,false> bfs(false);
+   BreadthFirstSearch<FastPropertyMap,false,reverseArcDirection> bfs(false);
    root = source;
    if (root == nullptr) {
        root = diGraph->getAnyVertex();
@@ -121,8 +125,15 @@ void ESTreeML::run()
         prVertexConsidered();
         prArcConsidered();
 #endif
-        Vertex *t = a->getTail();
-        Vertex *h = a->getHead();
+        Vertex *t;
+        Vertex *h;
+        if (reverseArcDirection) {
+            t = a->getHead();
+            h = a->getTail();
+        } else {
+            t = a->getTail();
+            h = a->getHead();
+        }
         PRINT_DEBUG( a << " is a tree arc.")
         if (data[h] == nullptr) {
             data[h] = new ESVertexData(&inNeighborIndices, h, data(t), a, 0U);
@@ -132,14 +143,23 @@ void ESTreeML::run()
         reachable[h] = true;
    });
    bfs.onNonTreeArcDiscover([this](Arc *a) {
-        if (a->isLoop() || a->getHead() == source) {
+        if (a->isLoop()
+                || (!reverseArcDirection && a->getHead() == source)
+                || (reverseArcDirection && a->getTail() == source)) {
             return;
         }
 #ifdef COLLECT_PR_DATA
         prArcConsidered();
 #endif
-        Vertex *t = a->getTail();
-        Vertex *h = a->getHead();
+        Vertex *t;
+        Vertex *h;
+        if (reverseArcDirection) {
+            t = a->getHead();
+            h = a->getTail();
+        } else {
+            t = a->getTail();
+            h = a->getHead();
+        }
         ESVertexData *td = data(t);
         ESVertexData *hd = data(h);
         PRINT_DEBUG( a << " is a non-tree arc.")
@@ -151,11 +171,20 @@ void ESTreeML::run()
 #ifdef COLLECT_PR_DATA
         prArcConsidered();
 #endif
-       if (a->isLoop() || a->getHead() == source) {
+       if (a->isLoop()
+                || (!reverseArcDirection && a->getHead() == source)
+                || (reverseArcDirection && a->getTail() == source)) {
            return;
        }
-       Vertex *t = a->getTail();
-       Vertex *h = a->getHead();
+       Vertex *t;
+       Vertex *h;
+       if (reverseArcDirection) {
+           t = a->getHead();
+           h = a->getTail();
+       } else {
+           t = a->getTail();
+           h = a->getHead();
+       }
        ESVertexData *td = data(t);
        ESVertexData *hd = data(h);
 
@@ -195,7 +224,8 @@ void ESTreeML::run()
    assert(checkTree());
 }
 
-std::string ESTreeML::getProfilingInfo() const
+template<bool reverseArcDirection>
+std::string ESTreeML<reverseArcDirection>::getProfilingInfo() const
 {
     std::stringstream ss;
 #ifdef COLLECT_PR_DATA
@@ -222,7 +252,8 @@ std::string ESTreeML::getProfilingInfo() const
     return ss.str();
 }
 
-DynamicSingleSourceReachabilityAlgorithm::Profile ESTreeML::getProfile() const
+template<bool reverseArcDirection>
+DynamicSingleSourceReachabilityAlgorithm::Profile ESTreeML<reverseArcDirection>::getProfile() const
 {
     auto profile = DynamicSingleSourceReachabilityAlgorithm::getProfile();
     profile.push_back(std::make_pair(std::string("vertices_moved_down"), movesDown));
@@ -246,7 +277,8 @@ DynamicSingleSourceReachabilityAlgorithm::Profile ESTreeML::getProfile() const
     return profile;
 }
 
-void ESTreeML::onDiGraphSet()
+template<bool reverseArcDirection>
+void ESTreeML<reverseArcDirection>::onDiGraphSet()
 {
     DynamicSingleSourceReachabilityAlgorithm::onDiGraphSet();
     cleanup(false);
@@ -267,13 +299,15 @@ void ESTreeML::onDiGraphSet()
     rerunNumAffected = 0U;
 }
 
-void ESTreeML::onDiGraphUnset()
+template<bool reverseArcDirection>
+void ESTreeML<reverseArcDirection>::onDiGraphUnset()
 {
     DynamicSingleSourceReachabilityAlgorithm::onDiGraphUnset();
     cleanup(true);
 }
 
-void ESTreeML::onVertexAdd(Vertex *v)
+template<bool reverseArcDirection>
+void ESTreeML<reverseArcDirection>::onVertexAdd(Vertex *v)
 {
     if (!initialized) {
         return;
@@ -281,15 +315,23 @@ void ESTreeML::onVertexAdd(Vertex *v)
     data[v] = new ESVertexData(&inNeighborIndices, v);
 }
 
-void ESTreeML::onArcAdd(Arc *a)
+template<bool reverseArcDirection>
+void ESTreeML<reverseArcDirection>::onArcAdd(Arc *a)
 {
     if (!initialized) {
         return;
     }
     PRINT_DEBUG("An arc has been added: " << a);
 
-    Vertex *tail = a->getTail();
-    Vertex *head = a->getHead();
+    Vertex *tail;
+    Vertex *head;
+    if (reverseArcDirection) {
+        tail = a->getHead();
+        head = a->getTail();
+    } else {
+        tail = a->getTail();
+        head = a->getHead();
+    }
 
     IF_DEBUG(
         std::stringstream ss;
@@ -302,7 +344,11 @@ void ESTreeML::onArcAdd(Arc *a)
     }
 
     if (head == source) {
-        PRINT_DEBUG("Head is source.")
+        if (reverseArcDirection) {
+            PRINT_DEBUG("Tail is source.")
+        } else {
+            PRINT_DEBUG("Head is source.")
+        }
         return;
     }
 
@@ -340,7 +386,7 @@ void ESTreeML::onArcAdd(Arc *a)
         reachable[head] = true;
     }
 
-    BreadthFirstSearch<FastPropertyMap,false> bfs(false);
+    BreadthFirstSearch<FastPropertyMap,false,reverseArcDirection> bfs(false);
     bfs.setStartVertex(head);
     bfs.onArcDiscover([this](const Arc *ca) {
         auto *a = const_cast<Arc*>(ca);
@@ -351,8 +397,15 @@ void ESTreeML::onArcAdd(Arc *a)
         if (a->isLoop()) {
             return false;
         }
-        auto at = a->getTail();
-        auto ah = a->getHead();
+        Vertex *at;
+        Vertex *ah;
+        if (reverseArcDirection) {
+            at = a->getHead();
+            ah = a->getTail();
+        } else {
+            at = a->getTail();
+            ah = a->getHead();
+        }
         auto atd = data(at);
         auto ahd = data(ah);
 
@@ -389,7 +442,8 @@ void ESTreeML::onArcAdd(Arc *a)
    assert(checkTree());
 }
 
-void ESTreeML::onVertexRemove(Vertex *v)
+template<bool reverseArcDirection>
+void ESTreeML<reverseArcDirection>::onVertexRemove(Vertex *v)
 {
     if (!initialized) {
         return;
@@ -403,7 +457,8 @@ void ESTreeML::onVertexRemove(Vertex *v)
      }
 }
 
-void ESTreeML::onArcRemove(Arc *a)
+template<bool reverseArcDirection>
+void ESTreeML<reverseArcDirection>::onArcRemove(Arc *a)
 {
    if (!initialized) {
         return;
@@ -414,11 +469,22 @@ void ESTreeML::onArcRemove(Arc *a)
         return;
     }
 
-    auto tail= a->getTail();
-    auto head = a->getHead();
+    Vertex *tail;
+    Vertex *head;
+    if (reverseArcDirection) {
+        tail = a->getHead();
+        head = a->getTail();
+    } else {
+        tail = a->getTail();
+        head = a->getHead();
+    }
 
     if (head == source) {
-        PRINT_DEBUG("Head is source.")
+        if (reverseArcDirection) {
+            PRINT_DEBUG("Tail is source.")
+        } else {
+            PRINT_DEBUG("Head is source.")
+        }
         return;
     }
 
@@ -434,7 +500,11 @@ void ESTreeML::onArcRemove(Arc *a)
 
     ESVertexData *hd = data(head);
     if (hd == nullptr) {
-        PRINT_DEBUG("Head of arc is unreachable (and never was). Nothing to do.")
+        if (reverseArcDirection) {
+            PRINT_DEBUG("Tail of arc is unreachable (and never was). Nothing to do.")
+        } else {
+            PRINT_DEBUG("Head of arc is unreachable (and never was). Nothing to do.")
+        }
         throw std::logic_error("Should not happen");
     }
 
@@ -443,7 +513,11 @@ void ESTreeML::onArcRemove(Arc *a)
     hd->findAndRemoveInNeighbor(td, a);
 
     if (!hd->isReachable()) {
-        PRINT_DEBUG("Head of arc is already unreachable. Nothing to do.")
+        if (reverseArcDirection) {
+            PRINT_DEBUG("Tail of arc is already unreachable. Nothing to do.")
+        } else {
+            PRINT_DEBUG("Head of arc is already unreachable. Nothing to do.")
+        }
 #ifdef COLLECT_PR_DATA
         decUnreachableHead++;
 #endif
@@ -470,12 +544,14 @@ void ESTreeML::onArcRemove(Arc *a)
    assert(checkTree());
 }
 
-void ESTreeML::onSourceSet()
+template<bool reverseArcDirection>
+void ESTreeML<reverseArcDirection>::onSourceSet()
 {
     cleanup(false);
 }
 
-bool ESTreeML::query(const Vertex *t)
+template<bool reverseArcDirection>
+bool ESTreeML<reverseArcDirection>::query(const Vertex *t)
 {
     if (t == source) {
         return true;
@@ -488,7 +564,8 @@ bool ESTreeML::query(const Vertex *t)
     return reachable(t);
 }
 
-std::vector<Arc *> ESTreeML::queryPath(const Vertex *t)
+template<bool reverseArcDirection>
+std::vector<Arc *> ESTreeML<reverseArcDirection>::queryPath(const Vertex *t)
 {
     std::vector<Arc*> path;
     if (!query(t) || t == source) {
@@ -498,16 +575,19 @@ std::vector<Arc *> ESTreeML::queryPath(const Vertex *t)
     while (t != source) {
         auto *a = data(t)->getTreeArc();
         path.push_back(a);
-        t = a->getTail();
+        t = reverseArcDirection ? a->getHead() : a->getTail();
     }
     assert(!path.empty());
 
-    std::reverse(path.begin(), path.end());
+    if (!reverseArcDirection) {
+        std::reverse(path.begin(), path.end());
+    }
 
     return path;
 }
 
-void ESTreeML::dumpData(std::ostream &os) const
+template<bool reverseArcDirection>
+void ESTreeML<reverseArcDirection>::dumpData(std::ostream &os) const
 {
     if (!initialized) {
         os << "uninitialized" << std::endl;
@@ -528,7 +608,8 @@ void ESTreeML::dumpData(std::ostream &os) const
     }
 }
 
-void ESTreeML::dumpTree(std::ostream &os)
+template<bool reverseArcDirection>
+void ESTreeML<reverseArcDirection>::dumpTree(std::ostream &os)
 {
     if (!initialized) {
         os << "uninitialized" << std::endl;
@@ -540,9 +621,10 @@ void ESTreeML::dumpTree(std::ostream &os)
     }
 }
 
-bool ESTreeML::checkTree()
+template<bool reverseArcDirection>
+bool ESTreeML<reverseArcDirection>::checkTree()
 {
-   BreadthFirstSearch<FastPropertyMap> bfs;
+   BreadthFirstSearch<FastPropertyMap,true,reverseArcDirection> bfs;
    bfs.setStartVertex(source);
    bfs.levelAsValues(true);
    FastPropertyMap<DiGraph::size_type> levels(bfs.INF);
@@ -571,7 +653,8 @@ bool ESTreeML::checkTree()
    return ok;
 }
 
-void ESTreeML::rerun()
+template<bool reverseArcDirection>
+void ESTreeML<reverseArcDirection>::rerun()
 {
 #ifdef COLLECT_PR_DATA
     reruns++;
@@ -583,7 +666,8 @@ void ESTreeML::rerun()
     run();
 }
 
-DiGraph::size_type ESTreeML::process(ESVertexData *vd, bool &limitReached)
+template<bool reverseArcDirection>
+DiGraph::size_type ESTreeML<reverseArcDirection>::process(ESVertexData *vd, bool &limitReached)
 {
     if (vd->getLevel() == 0ULL) {
         PRINT_DEBUG("No need to process source vertex " << vd << ".");
@@ -690,7 +774,7 @@ DiGraph::size_type ESTreeML::process(ESVertexData *vd, bool &limitReached)
     PRINT_DEBUG("Finished search for new parent.")
     if (levelChanged) {
         PRINT_DEBUG("Level has changed, checking children in BFS tree.")
-        diGraph->mapOutgoingArcsUntil(vd->getVertex(), [this,&enqueue,&vd](Arc *a) {
+        auto updateChildren = [this,&enqueue](Arc *a) {
 #ifdef COLLECT_PR_DATA
             prArcConsidered();
 #endif
@@ -698,7 +782,7 @@ DiGraph::size_type ESTreeML::process(ESVertexData *vd, bool &limitReached)
               PRINT_DEBUG("  Ignoring loop.");
               return;
             }
-            Vertex *head = a->getHead();
+            Vertex *head = reverseArcDirection ? a->getTail() : a->getHead();
 #ifdef COLLECT_PR_DATA
             prVertexConsidered();
 #endif
@@ -709,7 +793,13 @@ DiGraph::size_type ESTreeML::process(ESVertexData *vd, bool &limitReached)
             } else {
               PRINT_DEBUG("  NOT adding " << hd << " to queue: not a child of " << vd)
             }
-        }, [&limitReached](const Arc *) { return limitReached; });
+        };
+        auto checkLimit = [&limitReached](const Arc *) { return limitReached; };
+        if (reverseArcDirection) {
+            diGraph->mapIncomingArcsUntil(vd->getVertex(), updateChildren, checkLimit);
+        } else {
+            diGraph->mapOutgoingArcsUntil(vd->getVertex(), updateChildren, checkLimit);
+        }
         PRINT_DEBUG("Done checking children. Limit has " << (limitReached ? "(!)" : "not")
                     << " been reached.")
         if (reachV && !limitReached) {
@@ -738,10 +828,12 @@ DiGraph::size_type ESTreeML::process(ESVertexData *vd, bool &limitReached)
 
 }
 
-void ESTreeML::restoreTree(ESVertexData *rd)
+template<bool reverseArcDirection>
+void ESTreeML<reverseArcDirection>::restoreTree(ESVertexData *rd)
 {
     auto n = diGraph->getSize();
-    DiGraph::size_type affectedLimit = maxAffectedRatio < 1.0 ? floor(maxAffectedRatio * n) : n;
+    DiGraph::size_type affectedLimit = maxAffectedRatio < 1.0
+            ? static_cast<DiGraph::size_type>(floor(maxAffectedRatio * n)) : n;
     queue.set_capacity(affectedLimit);
     timesInQueue.resetAll(n);
     timesInQueue[rd->getVertex()]++;
@@ -774,7 +866,7 @@ void ESTreeML::restoreTree(ESVertexData *rd)
                 rerunNumAffected++;
             }
 #endif
-						queue.clear();
+            queue.clear();
             rerun();
             break;
 #ifdef COLLECT_PR_DATA
@@ -797,7 +889,8 @@ void ESTreeML::restoreTree(ESVertexData *rd)
 #endif
 }
 
-void ESTreeML::cleanup(bool freeSpace)
+template<bool reverseArcDirection>
+void ESTreeML<reverseArcDirection>::cleanup(bool freeSpace)
 {
     if (initialized) {
         for (auto i = data.cbegin(); i != data.cend(); i++) {
@@ -807,13 +900,13 @@ void ESTreeML::cleanup(bool freeSpace)
         }
     }
 
-		queue.clear();
+    queue.clear();
     if (freeSpace || !diGraph) {
         data.resetAll(0);
         reachable.resetAll(0);
         inNeighborIndices.resetAll(0);
         timesInQueue.resetAll(0);
-				queue.set_capacity(0);
+        queue.set_capacity(0);
     } else {
         data.resetAll(diGraph->getSize());
         reachable.resetAll(diGraph->getSize());
@@ -824,4 +917,6 @@ void ESTreeML::cleanup(bool freeSpace)
     initialized = false ;
 }
 
+template class ESTreeML<false>;
+template class ESTreeML<true>;
 }
