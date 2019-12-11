@@ -5,6 +5,7 @@
 #include "graph.incidencelist/incidencelistgraph.h"
 #include "graph.incidencelist/incidencelistvertex.h"
 #include "algorithm.basic.traversal/breadthfirstsearch.h"
+#include "algorithm.basic/finddipathalgorithm.h"
 
 #include <sstream>
 #include <random>
@@ -22,38 +23,43 @@
 
 namespace Algora {
 
-template<typename DynamicSSRAlgorithm>
-SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>
+template<typename DynamicSingleSourceAlgorithm, typename DynamicSingleSinkAlgorithm>
+SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSingleSourceAlgorithm, DynamicSingleSinkAlgorithm>
     ::SupportiveVerticesDynamicAllPairsReachabilityAlgorithm(double supportSizeRatio,
-                                                             bool ssrSubtreeCheck,
-                                                         const SSRParameterSet &ssrParams)
+            bool ssrSubtreeCheck,
+            const SingleSourceParameterSet &ssourceParams,
+            const SingleSinkParameterSet &ssinkParams)
     : DynamicAllPairsReachabilityAlgorithm(),
-      ssrParameters(ssrParams), initialized(false),
+      ssourceParameters(ssourceParams), ssinkParameters(ssinkParams), initialized(false),
       supportSizeRatio(supportSizeRatio), twoWayStepSize(5U), ssrSubtreeCheck(ssrSubtreeCheck)
 {
     if (supportSizeRatio == 0.0) {
         ssrSubtreeCheck = false;
     }
-    supportiveVertexToSSRAlgorithm.setDefaultValue(nullptr);
+    supportiveVertexToSSRAlgorithm.setDefaultValue({nullptr, nullptr});
 }
 
-template<typename DynamicSSRAlgorithm>
-SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>
+template<typename DynamicSingleSourceAlgorithm, typename DynamicSingleSinkAlgorithm>
+SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<
+    DynamicSingleSourceAlgorithm, DynamicSingleSinkAlgorithm>
     ::SupportiveVerticesDynamicAllPairsReachabilityAlgorithm(double supportSizeRatio,
                                                              bool ssrSubtreeCheck)
-    : SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>(
+    : SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<
+        DynamicSingleSourceAlgorithm, DynamicSingleSinkAlgorithm>(
           supportSizeRatio, ssrSubtreeCheck, {})
 { }
 
-template<typename DynamicSSRAlgorithm>
-SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>
+template<typename DynamicSingleSourceAlgorithm, typename DynamicSingleSinkAlgorithm>
+SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<
+    DynamicSingleSourceAlgorithm, DynamicSingleSinkAlgorithm>
     ::~SupportiveVerticesDynamicAllPairsReachabilityAlgorithm()
 {
     reset();
 }
 
-template<typename DynamicSSRAlgorithm>
-void SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>::run()
+template<typename DynamicSingleSourceAlgorithm, typename DynamicSingleSinkAlgorithm>
+void SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<
+    DynamicSingleSourceAlgorithm, DynamicSingleSinkAlgorithm>::run()
 {
     if (initialized) {
         return;
@@ -78,7 +84,8 @@ void SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>
         while (supportiveSSRAlgorithms.size() < numSupportiveVertices) {
             auto v = igraph->vertexAt(randomVertex());
             assert(v);
-            if (supportiveVertexToSSRAlgorithm(v) == nullptr) {
+            if (supportiveVertexToSSRAlgorithm(v)
+                    == supportiveVertexToSSRAlgorithm.getDefaultValue()) {
                 createAndInitAlgorithm(v);
                 PRINT_DEBUG("  Created supportive SSR algorithm with source " << v);
             }
@@ -90,35 +97,39 @@ void SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>
     PRINT_DEBUG("Initialization complete.");
 }
 
-template<typename DynamicSSRAlgorithm>
-std::string SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>::getName()
+template<typename DynamicSingleSourceAlgorithm, typename DynamicSingleSinkAlgorithm>
+std::string SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSingleSourceAlgorithm, DynamicSingleSinkAlgorithm>::getName()
 const noexcept
 {
-    DynamicSSRAlgorithm a(ssrParameters);
+    DynamicSingleSourceAlgorithm ssrc(ssourceParameters);
+    DynamicSingleSinkAlgorithm ssink(ssinkParameters);
     std::stringstream ss;
-    ss << "Single-Source-Supported All-Pairs Reachability Algorithm ("
+    ss << "Single-Source/Sink-Supported All-Pairs Reachability Algorithm ("
        << supportSizeRatio << ", "
        << (ssrSubtreeCheck ? "subtree check" : "no subtree check") << ", "
-       << a.getName() << ")";
+       << ssrc.getName() << ", "
+       << ssink.getName() << ")";
     return ss.str();
 }
 
-template<typename DynamicSSRAlgorithm>
-std::string SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>
+template<typename DynamicSingleSourceAlgorithm, typename DynamicSingleSinkAlgorithm>
+std::string SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSingleSourceAlgorithm, DynamicSingleSinkAlgorithm>
     ::getShortName() const noexcept
 {
-    DynamicSSRAlgorithm a(ssrParameters);
+    DynamicSingleSourceAlgorithm ssrc(ssourceParameters);
+    DynamicSingleSinkAlgorithm ssink(ssinkParameters);
     std::stringstream ss;
     ss << "SSR-Based APR("
        << supportSizeRatio << ", "
        << (ssrSubtreeCheck ? "SSRSUB" : "NSSRSUB") << ", "
-       <<  a.getShortName() << ")";
+       << ssrc.getShortName() << ", "
+       << ssink.getShortName() << ")";
     return ss.str();
 }
 
-template<typename DynamicSSRAlgorithm>
+template<typename DynamicSingleSourceAlgorithm, typename DynamicSingleSinkAlgorithm>
 std::string
-SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>::getProfilingInfo()
+SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSingleSourceAlgorithm, DynamicSingleSinkAlgorithm>::getProfilingInfo()
 const
 {
     std::stringstream ss;
@@ -127,20 +138,21 @@ const
     ss << "#arcs considered:             " << pr_consideredArcs << std::endl;
     ss << "#supportive vertices (min):   " << min_supportive_vertices << std::endl;
     ss << "#supportive vertices (max):   " << max_supportive_vertices << std::endl;
-    ss << "#supportive vertex hits:      " << supportive_ssr_hits << std::endl;
-    ss << "#ssr subtree checks:          " << ssr_subtree_checks << std::endl;
-    ss << "#ssr subtree hits:            " << ssr_subtree_hits << std::endl;
-    ss << "total #steps forward bfs:     " << forward_bfs_total_steps << std::endl;
-    ss << "total #steps backward bfs:    " << backward_bfs_total_steps << std::endl;
-    ss << "#query resumes:               " << num_query_resume<< std::endl;
+    //ss << "#supportive vertex hits:      " << supportive_ssr_hits << std::endl;
+    //ss << "#ssr subtree checks:          " << ssr_subtree_checks << std::endl;
+    //ss << "#ssr subtree hits:            " << ssr_subtree_hits << std::endl;
+    //ss << "total #steps forward bfs:     " << forward_bfs_total_steps << std::endl;
+    //ss << "total #steps backward bfs:    " << backward_bfs_total_steps << std::endl;
+    //ss << "#query resumes:               " << num_query_resume<< std::endl;
     ss << "#trivial queries:             " << num_trivial_queries << std::endl;
     ss << "#SSR-only queries:            " << num_only_ssr_queries << std::endl;
+    ss << "#Support-only queries:        " << num_only_support_queries << std::endl;
 #endif
     return ss.str();
 }
 
-template<typename DynamicSSRAlgorithm>
-void SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>
+template<typename DynamicSingleSourceAlgorithm, typename DynamicSingleSinkAlgorithm>
+void SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSingleSourceAlgorithm, DynamicSingleSinkAlgorithm>
     ::onVertexAdd(Vertex *v)
 {
     PRINT_DEBUG("A vertex has been added: " << v);
@@ -151,8 +163,9 @@ void SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>
     }
 
     if (!doesAutoUpdate()) {
-        for (auto *a : supportiveSSRAlgorithms) {
-            a->onVertexAdd(v);
+        for (auto &[ssrc, ssink] : supportiveSSRAlgorithms) {
+            ssrc->onVertexAdd(v);
+            ssink->onVertexAdd(v);
         }
     }
 
@@ -166,8 +179,8 @@ void SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>
     }
 }
 
-template<typename DynamicSSRAlgorithm>
-void SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>
+template<typename DynamicSingleSourceAlgorithm, typename DynamicSingleSinkAlgorithm>
+void SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSingleSourceAlgorithm, DynamicSingleSinkAlgorithm>
     ::onVertexRemove(Vertex *v)
 {
     PRINT_DEBUG("A vertex is about to be deleted: " << v);
@@ -178,50 +191,57 @@ void SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>
     }
 
     if (!doesAutoUpdate()) {
-        for (auto *a : supportiveSSRAlgorithms) {
-            a->onVertexRemove(v);
+        for (auto &[ssrc, ssink] : supportiveSSRAlgorithms) {
+            ssrc->onVertexRemove(v);
+            ssink->onVertexRemove(v);
         }
     }
 
-    auto *ssrAlgorithm = supportiveVertexToSSRAlgorithm(v);
-    if (ssrAlgorithm) {
+    auto ssrPair = supportiveVertexToSSRAlgorithm(v);
+    if (ssrPair != supportiveVertexToSSRAlgorithm.getDefaultValue()) {
         assert(!supportiveSSRAlgorithms.empty());
         PRINT_DEBUG("  Was a supportive vertex.");
 
         if (supportiveSSRAlgorithms.size() == 1) {
-            assert(supportiveSSRAlgorithms.back() == ssrAlgorithm);
+            assert(supportiveSSRAlgorithms.back() == ssrPair);
             supportiveSSRAlgorithms.clear();
         } else {
-            if (supportiveSSRAlgorithms.back() == ssrAlgorithm) {
+            if (supportiveSSRAlgorithms.back() == ssrPair) {
                 supportiveSSRAlgorithms.pop_back();
             } else {
                 auto pos = std::find(supportiveSSRAlgorithms.begin(),
                                      supportiveSSRAlgorithms.end(),
-                                     ssrAlgorithm);
+                                     ssrPair);
                 assert(pos != supportiveSSRAlgorithms.end());
                 *pos = supportiveSSRAlgorithms.back();
                 supportiveSSRAlgorithms.pop_back();
             }
         }
 
-        delete ssrAlgorithm;
+        delete ssrPair.first;
+        delete ssrPair.second;
         supportiveVertexToSSRAlgorithm.resetToDefault(v);
 
         if (supportiveSSRAlgorithms.size() < std::round(supportSizeRatio * diGraph->getSize())) {
             Vertex *replacementVertex = nullptr;
             diGraph->mapOutgoingArcsUntil(v, [&replacementVertex, this](Arc *a) {
-                if (!a->isLoop() && !supportiveVertexToSSRAlgorithm(a->getHead())) {
+                if (!a->isLoop() && supportiveVertexToSSRAlgorithm(a->getHead())
+                        == supportiveVertexToSSRAlgorithm.getDefaultValue()) {
                     replacementVertex = a->getHead();
                 }
             }, [replacementVertex](const Arc*) { return replacementVertex != nullptr; });
             if (!replacementVertex) {
                 diGraph->mapIncomingArcsUntil(v, [&replacementVertex, this](Arc *a) {
-                    if (!a->isLoop() && !supportiveVertexToSSRAlgorithm(a->getTail())) {
+                    if (!a->isLoop() && supportiveVertexToSSRAlgorithm(a->getTail())
+                            == supportiveVertexToSSRAlgorithm.getDefaultValue()) {
                         replacementVertex = a->getTail();
                     }
                 }, [replacementVertex](const Arc*) { return replacementVertex != nullptr; });
             }
             // TODO: if still no replacement found, try other strategy
+            if (replacementVertex) {
+                createAndInitAlgorithm(replacementVertex);
+            }
         }
     }
     if (min_supportive_vertices > supportiveSSRAlgorithms.size()) {
@@ -229,8 +249,9 @@ void SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>
     }
 }
 
-template<typename DynamicSSRAlgorithm>
-void SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>::onArcAdd(Arc *a)
+template<typename DynamicSingleSourceAlgorithm, typename DynamicSingleSinkAlgorithm>
+void SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<
+    DynamicSingleSourceAlgorithm, DynamicSingleSinkAlgorithm>::onArcAdd(Arc *a)
 {
     PRINT_DEBUG("An arc has been added: " << a);
     DynamicDiGraphAlgorithm::onArcAdd(a);
@@ -240,15 +261,16 @@ void SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>
     }
 
     if (!doesAutoUpdate()) {
-        for (auto *ssrAlgorithm : supportiveSSRAlgorithms) {
-            ssrAlgorithm->onArcAdd(a);
+        for (auto &[ssrc, ssink] : supportiveSSRAlgorithms) {
+            ssrc->onArcAdd(a);
+            ssink->onArcAdd(a);
         }
     }
 }
 
-template<typename DynamicSSRAlgorithm>
-void SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>::onArcRemove(
-        Arc *a)
+template<typename DynamicSingleSourceAlgorithm, typename DynamicSingleSinkAlgorithm>
+void SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<
+    DynamicSingleSourceAlgorithm, DynamicSingleSinkAlgorithm>::onArcRemove(Arc *a)
 {
     PRINT_DEBUG("An arc is about to be deleted: " << a);
     DynamicDiGraphAlgorithm::onArcRemove(a);
@@ -258,15 +280,16 @@ void SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>
     }
 
     if (!doesAutoUpdate()) {
-        for (auto *ssrAlgorithm : supportiveSSRAlgorithms) {
-            ssrAlgorithm->onArcRemove(a);
+        for (auto &[ssrc, ssink] : supportiveSSRAlgorithms) {
+            ssrc->onArcRemove(a);
+            ssink->onArcRemove(a);
         }
     }
 }
 
-template<typename DynamicSSRAlgorithm>
+template<typename DynamicSingleSourceAlgorithm, typename DynamicSingleSinkAlgorithm>
 DynamicDiGraphAlgorithm::Profile
-SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>::getProfile() const
+SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSingleSourceAlgorithm, DynamicSingleSinkAlgorithm>::getProfile() const
 {
     auto profile = DynamicAllPairsReachabilityAlgorithm::getProfile();
     profile.push_back(std::make_pair(std::string("min_supportive_ssr"),
@@ -275,51 +298,54 @@ SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>::get
                                      max_supportive_vertices));
     profile.push_back(std::make_pair(std::string("supportive_ssr_hits"),
                                      supportive_ssr_hits));
-    profile.push_back(std::make_pair(std::string("ssr_subtree_checks"),
-                                     ssr_subtree_checks));
-    profile.push_back(std::make_pair(std::string("ssr_subtree_hits"),
-                                     ssr_subtree_hits));
-    profile.push_back(std::make_pair(std::string("forward_bfs_total_steps"),
-                                     forward_bfs_total_steps));
-    profile.push_back(std::make_pair(std::string("backward_bfs_total_steps"),
-                                     backward_bfs_total_steps));
-    profile.push_back(std::make_pair(std::string("num_query_resume"),
-                                     num_query_resume));
+    //profile.push_back(std::make_pair(std::string("ssr_subtree_checks"),
+    //                                 ssr_subtree_checks));
+    //profile.push_back(std::make_pair(std::string("ssr_subtree_hits"),
+    //                                 ssr_subtree_hits));
+    //profile.push_back(std::make_pair(std::string("forward_bfs_total_steps"),
+    //                                 forward_bfs_total_steps));
+    //profile.push_back(std::make_pair(std::string("backward_bfs_total_steps"),
+    //                                 backward_bfs_total_steps));
+    //profile.push_back(std::make_pair(std::string("num_query_resume"),
+    //                                 num_query_resume));
     profile.push_back(std::make_pair(std::string("num_trivial_queries"),
                                      num_trivial_queries));
     profile.push_back(std::make_pair(std::string("num_ssr_only_queries"),
                                      num_only_ssr_queries));
+    profile.push_back(std::make_pair(std::string("num_support_only_queries"),
+                                     num_only_support_queries));
 
     return profile;
 }
 
-template<typename DynamicSSRAlgorithm>
-void SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>::onDiGraphSet()
+template<typename DynamicSingleSourceAlgorithm, typename DynamicSingleSinkAlgorithm>
+void SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSingleSourceAlgorithm, DynamicSingleSinkAlgorithm>::onDiGraphSet()
 {
     DynamicAllPairsReachabilityAlgorithm::onDiGraphSet();
 
     min_supportive_vertices = 0;
     max_supportive_vertices = 0;
     supportive_ssr_hits = 0;
-    ssr_subtree_checks = 0;
-    ssr_subtree_hits = 0;
-    forward_bfs_total_steps = 0;
-    backward_bfs_total_steps = 0;
+    //ssr_subtree_checks = 0;
+    //ssr_subtree_hits = 0;
+    //forward_bfs_total_steps = 0;
+    //backward_bfs_total_steps = 0;
+    //num_query_resume = 0;
     num_trivial_queries = 0;
     num_only_ssr_queries = 0;
-    num_query_resume = 0;
+    num_only_support_queries = 0;
 }
 
-template<typename DynamicSSRAlgorithm>
-void SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>::onDiGraphUnset()
+template<typename DynamicSingleSourceAlgorithm, typename DynamicSingleSinkAlgorithm>
+void SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSingleSourceAlgorithm, DynamicSingleSinkAlgorithm>::onDiGraphUnset()
 {
     reset();
     DynamicAllPairsReachabilityAlgorithm::onDiGraphUnset();
 }
 
-template<typename DynamicSSRAlgorithm>
-bool SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>::query(Vertex *s,
-                                                                                        Vertex *t)
+template<typename DynamicSingleSourceAlgorithm, typename DynamicSingleSinkAlgorithm>
+bool SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<
+    DynamicSingleSourceAlgorithm, DynamicSingleSinkAlgorithm>::query(Vertex *s, Vertex *t)
 {
     PRINT_DEBUG("Processing reachability query " << s << " -> " << t << "...");
     if (s == t) {
@@ -337,180 +363,249 @@ bool SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>
         return false;
     }
 
-    if (supportiveVertexToSSRAlgorithm[s]) {
+    if (supportiveVertexToSSRAlgorithm[s].first) {
 #ifdef COLLECT_PR_DATA
         num_only_ssr_queries++;
 #endif
         PRINT_DEBUG("  Source is supportive vertex.");
-        return supportiveVertexToSSRAlgorithm[s]->query(t);
+        return supportiveVertexToSSRAlgorithm[s].first->query(t);
     }
 
-    assert(twoWayStepSize > 0);
-    bool reachable = false;
-    std::vector<DynamicSSRAlgorithm*> suppAlgorithms;
-    auto forwardStop = twoWayStepSize;
-    auto backwardStop = twoWayStepSize;
-
-    BreadthFirstSearch<FastPropertyMap,false> forwardBfs(false, false);
-    forwardBfs.setStartVertex(s);
-    forwardBfs.setGraph(diGraph);
-
-    BreadthFirstSearch<FastPropertyMap,false,true> backwardBfs(false, false);
-    backwardBfs.setStartVertex(t);
-    backwardBfs.setGraph(diGraph);
-
-    forwardBfs.setArcStopCondition([&reachable,&backwardBfs,this,t](const Arc *a) {
+    if (supportiveVertexToSSRAlgorithm[t].second) {
 #ifdef COLLECT_PR_DATA
-        this->forward_bfs_total_steps++;
+        num_only_ssr_queries++;
 #endif
-        PRINT_DEBUG("  Forward-looking at " << a);
-        if (backwardBfs.vertexDiscovered(a->getHead()) || a->getHead() == t) {
-            reachable = true;
-        }
-        return reachable;
-    });
-    backwardBfs.setArcStopCondition([&reachable,&forwardBfs,this,s](const Arc *a) {
-#ifdef COLLECT_PR_DATA
-        this->backward_bfs_total_steps++;
-#endif
-        PRINT_DEBUG("  Backward-looking at " << a);
-        if (forwardBfs.vertexDiscovered(a->getTail()) || a->getTail() == s) {
-            reachable = true;
-        }
-        return reachable;
-    });
-
-    if (supportiveSSRAlgorithms.size() > 0) {
-        //forwardBfs.onArcDiscover(
-        forwardBfs.onVertexDiscover(
-                    [&t,&reachable,&suppAlgorithms,this]
-                    //(const Arc *a) {
-                    (const Vertex *head) {
-            PRINT_DEBUG("  Forward-discovered vertex " << head << ".");
-            auto suppAlg = supportiveVertexToSSRAlgorithm(head);
-            if (suppAlg) {
-#ifdef COLLECT_PR_DATA
-                this->supportive_ssr_hits++;
-#endif
-                bool reach = suppAlg->query(t);
-                if (!reach) {
-                    if (ssrSubtreeCheck) {
-                        suppAlgorithms.push_back(suppAlg);
-                    }
-                    PRINT_DEBUG("    Is supportive vertex, but can't reach target.");
-                } else {
-                    reachable = true;
-                    PRINT_DEBUG("    Is supportive vertex, CAN reach target!");
-                }
-                // stop anyway
-                return false;
-            }
-            if (ssrSubtreeCheck) {
-                for (auto *alg : suppAlgorithms) {
-#ifdef COLLECT_PR_DATA
-                    this->ssr_subtree_checks++;
-#endif
-                    if (alg->query(head)) {
-#ifdef COLLECT_PR_DATA
-                        this->ssr_subtree_hits++;
-#endif
-                        PRINT_DEBUG("    Is in reachability tree rooted at " << alg->getSource() << ".");
-                        // source of alg could not reach t, but head, so head cannot reach t
-                        return false;
-                    }
-                }
-            }
-            // can't say anything about reachability
-            return true;
-        });
+        PRINT_DEBUG("  Sink is supportive vertex.");
+        return supportiveVertexToSSRAlgorithm[t].second->query(s);
     }
 
-    auto stepSize = twoWayStepSize;
-    forwardBfs.setVertexStopCondition(
-                [&forwardBfs,&forwardStop,&stepSize](const Vertex *) {
-        if (forwardBfs.getMaxBfsNumber() >= forwardStop) {
-            forwardStop += stepSize;
+    for (const auto &[ssrc, ssink] : supportiveSSRAlgorithms) {
+        if (ssrc->query(t) && ssink->query(s)) {
+#ifdef COLLECT_PR_DATA
+        num_only_support_queries++;
+#endif
+            PRINT_DEBUG("  Reachability established via supportive vertex "
+                        << ssrc->getSource() <<  ".");
             return true;
         }
-        return false;
-    });
-
-    backwardBfs.setVertexStopCondition(
-                [&backwardBfs,&backwardStop,&stepSize](const Vertex *) {
-        if (backwardBfs.getMaxBfsNumber() >= backwardStop) {
-            backwardStop += stepSize;
-            return true;
-        }
-        return false;
-    });
-
-    forwardBfs.prepare();
-    backwardBfs.prepare();
-
-    PRINT_DEBUG(" Running forward search...");
-    forwardBfs.run();
-    if (!reachable && !forwardBfs.isExhausted() && forwardBfs.getMaxLevel() < diGraph->getSize()) {
-        PRINT_DEBUG(" Running backward search...");
-        backwardBfs.run();
     }
 
-    while (!reachable && !forwardBfs.isExhausted() && !backwardBfs.isExhausted()
-           && forwardBfs.getMaxLevel() + backwardBfs.getMaxLevel() < diGraph->getSize()) {
-#ifdef COLLECT_PR_DATA
-        this->num_query_resume++;
-#endif
-        PRINT_DEBUG(" Resuming forward search...");
-        forwardBfs.resume();
-        if (!reachable && !forwardBfs.isExhausted() && !backwardBfs.isExhausted()
-                && forwardBfs.getMaxLevel() + backwardBfs.getMaxLevel() < diGraph->getSize()) {
-            PRINT_DEBUG(" Resuming backward search...");
-            backwardBfs.resume();
-        }
-    }
-    PRINT_DEBUG("  Answering query with " << reachable << ".");
-    return reachable;
+    // start two-way BFS
+    FindDiPathAlgorithm<FastPropertyMap> fpa;
+    fpa.setGraph(diGraph);
+    fpa.setConstructPaths(false, false);
+    fpa.setSourceAndTarget(s, t);
+    // fpa.prepare() omitted for performance reasons
+    fpa.run();
+    return fpa.deliver();
 }
 
-template<typename DynamicSSRAlgorithm>
-std::vector<Arc *> SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>
+//template<typename DynamicSingleSourceAlgorithm, typename DynamicSingleSinkAlgorithm>
+//bool SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<
+//    DynamicSingleSourceAlgorithm, DynamicSingleSinkAlgorithm>::query(Vertex *s, Vertex *t)
+//{
+//    PRINT_DEBUG("Processing reachability query " << s << " -> " << t << "...");
+//    if (s == t) {
+//#ifdef COLLECT_PR_DATA
+//        num_trivial_queries++;
+//#endif
+//        PRINT_DEBUG("  Same vertices, trivially true.");
+//        return true;
+//    }
+//    if (diGraph->isSink(s) || diGraph->isSource(t)) {
+//#ifdef COLLECT_PR_DATA
+//        num_trivial_queries++;
+//#endif
+//        PRINT_DEBUG("  Source is sink or target is source, trivially false.");
+//        return false;
+//    }
+//
+//    if (supportiveVertexToSSRAlgorithm[s]) {
+//#ifdef COLLECT_PR_DATA
+//        num_only_ssr_queries++;
+//#endif
+//        PRINT_DEBUG("  Source is supportive vertex.");
+//        return supportiveVertexToSSRAlgorithm[s]->query(t);
+//    }
+//
+//    assert(twoWayStepSize > 0);
+//    bool reachable = false;
+//    std::vector<DynamicSSRAlgorithm*> suppAlgorithms;
+//    auto forwardStop = twoWayStepSize;
+//    auto backwardStop = twoWayStepSize;
+//
+//    BreadthFirstSearch<FastPropertyMap,false> forwardBfs(false, false);
+//    forwardBfs.setStartVertex(s);
+//    forwardBfs.setGraph(diGraph);
+//
+//    BreadthFirstSearch<FastPropertyMap,false,true> backwardBfs(false, false);
+//    backwardBfs.setStartVertex(t);
+//    backwardBfs.setGraph(diGraph);
+//
+//    forwardBfs.setArcStopCondition([&reachable,&backwardBfs,this,t](const Arc *a) {
+//#ifdef COLLECT_PR_DATA
+//        this->forward_bfs_total_steps++;
+//#endif
+//        PRINT_DEBUG("  Forward-looking at " << a);
+//        if (backwardBfs.vertexDiscovered(a->getHead()) || a->getHead() == t) {
+//            reachable = true;
+//        }
+//        return reachable;
+//    });
+//    backwardBfs.setArcStopCondition([&reachable,&forwardBfs,this,s](const Arc *a) {
+//#ifdef COLLECT_PR_DATA
+//        this->backward_bfs_total_steps++;
+//#endif
+//        PRINT_DEBUG("  Backward-looking at " << a);
+//        if (forwardBfs.vertexDiscovered(a->getTail()) || a->getTail() == s) {
+//            reachable = true;
+//        }
+//        return reachable;
+//    });
+//
+//    if (supportiveSSRAlgorithms.size() > 0) {
+//        //forwardBfs.onArcDiscover(
+//        forwardBfs.onVertexDiscover(
+//                    [&t,&reachable,&suppAlgorithms,this]
+//                    //(const Arc *a) {
+//                    (const Vertex *head) {
+//            PRINT_DEBUG("  Forward-discovered vertex " << head << ".");
+//            auto suppAlg = supportiveVertexToSSRAlgorithm(head);
+//            if (suppAlg) {
+//#ifdef COLLECT_PR_DATA
+//                this->supportive_ssr_hits++;
+//#endif
+//                bool reach = suppAlg->query(t);
+//                if (!reach) {
+//                    if (ssrSubtreeCheck) {
+//                        suppAlgorithms.push_back(suppAlg);
+//                    }
+//                    PRINT_DEBUG("    Is supportive vertex, but can't reach target.");
+//                } else {
+//                    reachable = true;
+//                    PRINT_DEBUG("    Is supportive vertex, CAN reach target!");
+//                }
+//                // stop anyway
+//                return false;
+//            }
+//            if (ssrSubtreeCheck) {
+//                for (auto *alg : suppAlgorithms) {
+//#ifdef COLLECT_PR_DATA
+//                    this->ssr_subtree_checks++;
+//#endif
+//                    if (alg->query(head)) {
+//#ifdef COLLECT_PR_DATA
+//                        this->ssr_subtree_hits++;
+//#endif
+//                        PRINT_DEBUG("    Is in reachability tree rooted at " << alg->getSource() << ".");
+//                        // source of alg could not reach t, but head, so head cannot reach t
+//                        return false;
+//                    }
+//                }
+//            }
+//            // can't say anything about reachability
+//            return true;
+//        });
+//    }
+//
+//    auto stepSize = twoWayStepSize;
+//    forwardBfs.setVertexStopCondition(
+//                [&forwardBfs,&forwardStop,&stepSize](const Vertex *) {
+//        if (forwardBfs.getMaxBfsNumber() >= forwardStop) {
+//            forwardStop += stepSize;
+//            return true;
+//        }
+//        return false;
+//    });
+//
+//    backwardBfs.setVertexStopCondition(
+//                [&backwardBfs,&backwardStop,&stepSize](const Vertex *) {
+//        if (backwardBfs.getMaxBfsNumber() >= backwardStop) {
+//            backwardStop += stepSize;
+//            return true;
+//        }
+//        return false;
+//    });
+//
+//    forwardBfs.prepare();
+//    backwardBfs.prepare();
+//
+//    PRINT_DEBUG(" Running forward search...");
+//    forwardBfs.run();
+//    if (!reachable && !forwardBfs.isExhausted() && forwardBfs.getMaxLevel() < diGraph->getSize()) {
+//        PRINT_DEBUG(" Running backward search...");
+//        backwardBfs.run();
+//    }
+//
+//    while (!reachable && !forwardBfs.isExhausted() && !backwardBfs.isExhausted()
+//           && forwardBfs.getMaxLevel() + backwardBfs.getMaxLevel() < diGraph->getSize()) {
+//#ifdef COLLECT_PR_DATA
+//        this->num_query_resume++;
+//#endif
+//        PRINT_DEBUG(" Resuming forward search...");
+//        forwardBfs.resume();
+//        if (!reachable && !forwardBfs.isExhausted() && !backwardBfs.isExhausted()
+//                && forwardBfs.getMaxLevel() + backwardBfs.getMaxLevel() < diGraph->getSize()) {
+//            PRINT_DEBUG(" Resuming backward search...");
+//            backwardBfs.resume();
+//        }
+//    }
+//    PRINT_DEBUG("  Answering query with " << reachable << ".");
+//    return reachable;
+//}
+
+template<typename DynamicSingleSourceAlgorithm, typename DynamicSingleSinkAlgorithm>
+std::vector<Arc *> SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<
+    DynamicSingleSourceAlgorithm, DynamicSingleSinkAlgorithm>
     ::queryPath(Vertex *, Vertex *)
 {
     return std::vector<Arc*>();
 }
 
-template<typename DynamicSSRAlgorithm>
-void SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>::reset()
+template<typename DynamicSingleSourceAlgorithm, typename DynamicSingleSinkAlgorithm>
+void SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<
+    DynamicSingleSourceAlgorithm, DynamicSingleSinkAlgorithm>::reset()
 {
     if (!initialized) {
         return;
     }
 
-    for (auto *a : supportiveVertexToSSRAlgorithm) {
-        if (a) {
-            delete a;
-        }
+    for (auto &[ssrc, ssink] : supportiveSSRAlgorithms) {
+        delete ssrc;
+        delete ssink;
     }
     supportiveSSRAlgorithms.clear();
     supportiveVertexToSSRAlgorithm.resetAll();
     initialized = false;
 }
 
-template<typename DynamicSSRAlgorithm>
-void SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSSRAlgorithm>
+template<typename DynamicSingleSourceAlgorithm, typename DynamicSingleSinkAlgorithm>
+void SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<
+    DynamicSingleSourceAlgorithm, DynamicSingleSinkAlgorithm>
     ::createAndInitAlgorithm(Vertex *v)
 {
-    assert(!supportiveVertexToSSRAlgorithm(v));
+    assert(supportiveVertexToSSRAlgorithm(v) == supportiveVertexToSSRAlgorithm.getDefaultValue());
 
-    auto *ssrAlgorithm = new DynamicSSRAlgorithm(ssrParameters);
-    ssrAlgorithm->setAutoUpdate(this->doesAutoUpdate());
-    ssrAlgorithm->setGraph(diGraph);
-    ssrAlgorithm->setSource(v);
-    if (!ssrAlgorithm->prepare()) {
-        throw DiGraphAlgorithmException(this, "Could not prepare SSR subalgorithm.");
+    auto *ssrcAlgorithm = new DynamicSingleSourceAlgorithm(ssourceParameters);
+    auto *ssinkAlgorithm = new DynamicSingleSinkAlgorithm(ssinkParameters);
+
+    ssrcAlgorithm->setAutoUpdate(this->doesAutoUpdate());
+    ssrcAlgorithm->setGraph(diGraph);
+    ssrcAlgorithm->setSource(v);
+
+    ssinkAlgorithm->setAutoUpdate(this->doesAutoUpdate());
+    ssinkAlgorithm->setGraph(diGraph);
+    ssinkAlgorithm->setSource(v);
+
+    if (!ssrcAlgorithm->prepare() || !ssinkAlgorithm->prepare()) {
+        throw DiGraphAlgorithmException(this, "Could not prepare SSR subalgorithms.");
     }
-    ssrAlgorithm->run();
-    supportiveVertexToSSRAlgorithm[v] = ssrAlgorithm;
-    supportiveSSRAlgorithms.push_back(ssrAlgorithm);
+    ssrcAlgorithm->run();
+    ssinkAlgorithm->run();
+
+    auto ssrPair = SSRPair(ssrcAlgorithm, ssinkAlgorithm);
+    supportiveVertexToSSRAlgorithm[v] = ssrPair;
+    supportiveSSRAlgorithms.push_back(ssrPair);
 }
 
 }

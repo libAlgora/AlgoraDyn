@@ -8,18 +8,20 @@
 
 namespace Algora {
 
-template<typename DynamicSSRAlgorithm>
+template<typename DynamicSingleSourceAlgorithm, typename DynamicSingleSinkAlgorithm>
 class SupportiveVerticesDynamicAllPairsReachabilityAlgorithm
         : public DynamicAllPairsReachabilityAlgorithm
 {
 public:
-    typedef typename DynamicSSRAlgorithm::ParameterSet SSRParameterSet;
+    typedef typename DynamicSingleSourceAlgorithm::ParameterSet SingleSourceParameterSet;
+    typedef typename DynamicSingleSinkAlgorithm::ParameterSet SingleSinkParameterSet;
 
     explicit SupportiveVerticesDynamicAllPairsReachabilityAlgorithm(double supportSizeRatio,
                                                                     bool ssrSubtreeCheck);
     explicit SupportiveVerticesDynamicAllPairsReachabilityAlgorithm(double supportSizeRatio,
-                                                                    bool ssrSubtreeCheck,
-                                                                    const SSRParameterSet &ssrParams);
+            bool ssrSubtreeCheck,
+            const SingleSourceParameterSet &ssourceParams,
+            const SingleSinkParameterSet &ssinkParams);
     virtual ~SupportiveVerticesDynamicAllPairsReachabilityAlgorithm();
 
     // DiGraphAlgorithm interface
@@ -48,9 +50,11 @@ public:
     virtual std::vector<Arc *> queryPath(Vertex *, Vertex *) override;
 
 private:
-    SSRParameterSet ssrParameters;
-    FastPropertyMap<DynamicSSRAlgorithm*> supportiveVertexToSSRAlgorithm;
-    std::vector<DynamicSSRAlgorithm*> supportiveSSRAlgorithms;
+    typedef std::pair<DynamicSingleSourceAlgorithm*,DynamicSingleSinkAlgorithm*> SSRPair;
+    SingleSourceParameterSet ssourceParameters;
+    SingleSinkParameterSet ssinkParameters;
+    FastPropertyMap<SSRPair> supportiveVertexToSSRAlgorithm;
+    std::vector<SSRPair> supportiveSSRAlgorithms;
     bool initialized;
     double supportSizeRatio;
     DiGraph::size_type twoWayStepSize;
@@ -59,13 +63,14 @@ private:
     profiling_counter min_supportive_vertices = 0;
     profiling_counter max_supportive_vertices = 0;
     profiling_counter supportive_ssr_hits = 0;
-    profiling_counter ssr_subtree_checks = 0;
-    profiling_counter ssr_subtree_hits = 0;
-    profiling_counter forward_bfs_total_steps = 0;
-    profiling_counter backward_bfs_total_steps = 0;
+//    profiling_counter ssr_subtree_checks = 0;
+//    profiling_counter ssr_subtree_hits = 0;
+//    profiling_counter forward_bfs_total_steps = 0;
+//    profiling_counter backward_bfs_total_steps = 0;
+//    profiling_counter num_query_resume = 0;
     profiling_counter num_trivial_queries = 0;
     profiling_counter num_only_ssr_queries = 0;
-    profiling_counter num_query_resume = 0;
+    profiling_counter num_only_support_queries = 0;
 
     void reset();
     void createAndInitAlgorithm(Vertex *v);
