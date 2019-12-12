@@ -499,14 +499,15 @@ void ESTreeML<reverseArcDirection>::onArcRemove(Arc *a)
     );
 
     ESVertexData *hd = data(head);
-    if (hd == nullptr) {
-        if (reverseArcDirection) {
-            PRINT_DEBUG("Tail of arc is unreachable (and never was). Nothing to do.")
-        } else {
-            PRINT_DEBUG("Head of arc is unreachable (and never was). Nothing to do.")
-        }
-        throw std::logic_error("Should not happen");
-    }
+    assert(hd != nullptr);
+    //if (hd == nullptr) {
+    //    if (reverseArcDirection) {
+    //        PRINT_DEBUG("Tail of arc is unreachable (and never was). Nothing to do.")
+    //    } else {
+    //        PRINT_DEBUG("Head of arc is unreachable (and never was). Nothing to do.")
+    //    }
+    //    throw std::logic_error("Should not happen");
+    //}
 
     ESVertexData *td = data(tail);
     bool isParent = hd->isTreeArc(a);
