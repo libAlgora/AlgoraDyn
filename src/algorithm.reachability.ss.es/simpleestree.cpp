@@ -827,15 +827,6 @@ void SimpleESTree<reverseArcDirection>::cleanup(bool freeSpace)
     initialized = false;
 }
 
-<<<<<<< Updated upstream
 template class SimpleESTree<false>;
 template class SimpleESTree<true>;
-
-=======
-<<<<<<< Updated upstream
-=======
-template class SimpleESTree<false>;
-template class SimpleESTree<true>;
->>>>>>> Stashed changes
->>>>>>> Stashed changes
 }
