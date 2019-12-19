@@ -49,7 +49,7 @@ bool RandomDynamicDiGraphGenerator::provideDynamicDiGraph(DynamicDiGraph *dyGrap
     };
 
     std::vector<std::pair<DiGraph::size_type, DiGraph::size_type>> arcs;
-		DynamicDiGraph::DynamicTime timestamp = 0U;
+    DynamicDiGraph::DynamicTime timestamp = 0U;
     dyGraph->clear();
     numAdditions = 0U;
     numDeletions = 0U;
@@ -57,7 +57,7 @@ bool RandomDynamicDiGraphGenerator::provideDynamicDiGraph(DynamicDiGraph *dyGrap
 
     auto addRandomArc = [&](unsigned int mult) {
         for (auto i = 0U; i < mult; i++) {
-					DiGraph::size_type r1, r2;
+            DiGraph::size_type r1, r2;
             if (multiArcs) {
                 r1 = randomVertex();
                 r2 = randomSecondVertex(r1);
