@@ -66,6 +66,7 @@ public:
 private:
     double supportSize;
     unsigned long adjustAfter;
+    unsigned long adjustmentCountUp;
     SingleSourceParameterSet ssourceParameters;
     SingleSinkParameterSet ssinkParameters;
     unsigned long long seed;
@@ -83,6 +84,7 @@ private:
     profiling_counter num_trivial_queries = 0;
     profiling_counter num_only_ssr_queries = 0;
     profiling_counter num_only_support_queries = 0;
+    profiling_counter num_adjustments = 0;
 
     void reset();
     void pickSupportVertices(bool adjust);
