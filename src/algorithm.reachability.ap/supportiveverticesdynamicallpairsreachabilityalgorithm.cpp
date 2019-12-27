@@ -180,10 +180,7 @@ void SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSingleSourceA
         }
     }
 
-    if (supportiveSSRAlgorithms.size() < std::round(supportSize * diGraph->getSize())) {
-        createAndInitAlgorithm(v);
-        PRINT_DEBUG("  Becomes new supportive vertex.");
-    }
+    pickSupportVertices(false);
 
     if (max_supportive_vertices < supportiveSSRAlgorithms.size()) {
         max_supportive_vertices = supportiveSSRAlgorithms.size();
