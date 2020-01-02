@@ -448,23 +448,35 @@ void SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<
         return;
     }
 
-    auto numSupportiveVertices = static_cast<DiGraph::size_type>(std::floor(
-               supportSize > 1.0 ?  supportSize : supportSize * diGraph->getSize() ));
+    auto numSupportiveVertices =
+               supportSize > 1.0
+                    ? std::min(static_cast<DiGraph::size_type>(std::floor(supportSize)), diGraph->getSize())
+                    : static_cast<DiGraph::size_type>(std::floor(supportSize * diGraph->getSize()));
 
     auto pickVertices = [&](auto num) {
         std::uniform_int_distribution<DiGraph::size_type> distVertex(0, diGraph->getSize() - 1);
         auto randomVertex = std::bind(distVertex, std::ref(gen));
         IncidenceListGraph *igraph = dynamic_cast<IncidenceListGraph*>(diGraph);
 
-        decltype(num) i = 0;
-        while (i < num) {
-            auto v = igraph->vertexAt(randomVertex());
-            assert(v);
-            if (supportiveVertexToSSRAlgorithm(v)
-                     == supportiveVertexToSSRAlgorithm.getDefaultValue()) {
-                createAndInitAlgorithm(v);
-                PRINT_DEBUG("  Created supportive SSR algorithm with source " << v);
-                i++;
+        if (num >= diGraph->getSize()) {
+            diGraph->mapVertices([&](Vertex *v) {
+                if (supportiveVertexToSSRAlgorithm(v)
+                        == supportiveVertexToSSRAlgorithm.getDefaultValue()) {
+                    createAndInitAlgorithm(v);
+                    PRINT_DEBUG("  Created supportive SSR algorithm with source " << v);
+                }
+            });
+        } else {
+            decltype(num) i = 0;
+            while (i < num) {
+                auto v = igraph->vertexAt(randomVertex());
+                assert(v);
+                if (supportiveVertexToSSRAlgorithm(v)
+                        == supportiveVertexToSSRAlgorithm.getDefaultValue()) {
+                    createAndInitAlgorithm(v);
+                    PRINT_DEBUG("  Created supportive SSR algorithm with source " << v);
+                    i++;
+                }
             }
         }
     };
