@@ -178,20 +178,24 @@ void SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSingleSourceA
         return;
     }
 
-    if (!doesAutoUpdate()) {
+    bool readjusted = false;
+    if (reAdjust) {
+        adjustmentCountUp++;
+        if (adjustmentCountUp >= adjustAfter) {
+            pickSupportVertices(true);
+            adjustmentCountUp = 0;
+            readjusted = true;
+        }
+    }
+
+    if (!doesAutoUpdate() && !readjusted) {
         for (auto &[ssrc, ssink] : supportiveSSRAlgorithms) {
             ssrc->onVertexAdd(v);
             ssink->onVertexAdd(v);
         }
     }
 
-    if (reAdjust) {
-        adjustmentCountUp++;
-        if (adjustmentCountUp >= adjustAfter) {
-            pickSupportVertices(true);
-            adjustmentCountUp = 0;
-        }
-    } else {
+    if (!reAdjust) {
         pickSupportVertices(false);
     }
 
@@ -212,47 +216,53 @@ void SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<
         return;
     }
 
-    if (!doesAutoUpdate()) {
-        for (auto &[ssrc, ssink] : supportiveSSRAlgorithms) {
-            ssrc->onVertexRemove(v);
-            ssink->onVertexRemove(v);
-        }
-    }
-
+    bool readjusted = false;
     if (reAdjust) {
         adjustmentCountUp++;
         if (adjustmentCountUp >= adjustAfter) {
             pickSupportVertices(true);
             adjustmentCountUp = 0;
+            readjusted = true;
         }
-    } else {
-        if (!supportiveVertexToSSRAlgorithm.hasDefaultValue(v)) {
-            PRINT_DEBUG("  Was a supportive vertex.");
-            auto ssrPair = supportiveVertexToSSRAlgorithm(v);
-            assert(!supportiveSSRAlgorithms.empty());
+    }
 
-            if (supportiveSSRAlgorithms.size() == 1) {
-                assert(supportiveSSRAlgorithms.back() == ssrPair);
-                supportiveSSRAlgorithms.clear();
+    bool pickSupport = false;
+    if (!readjusted && !supportiveVertexToSSRAlgorithm.hasDefaultValue(v)) {
+        PRINT_DEBUG("  Was a supportive vertex.");
+        auto ssrPair = supportiveVertexToSSRAlgorithm(v);
+        assert(!supportiveSSRAlgorithms.empty());
+
+        if (supportiveSSRAlgorithms.size() == 1) {
+            assert(supportiveSSRAlgorithms.back() == ssrPair);
+            supportiveSSRAlgorithms.clear();
+        } else {
+            if (supportiveSSRAlgorithms.back() == ssrPair) {
+                supportiveSSRAlgorithms.pop_back();
             } else {
-                if (supportiveSSRAlgorithms.back() == ssrPair) {
-                    supportiveSSRAlgorithms.pop_back();
-                } else {
-                    auto pos = std::find(supportiveSSRAlgorithms.begin(),
-                                         supportiveSSRAlgorithms.end(),
-                                         ssrPair);
-                    assert(pos != supportiveSSRAlgorithms.end());
-                    *pos = supportiveSSRAlgorithms.back();
-                    supportiveSSRAlgorithms.pop_back();
-                }
+                auto pos = std::find(supportiveSSRAlgorithms.begin(),
+                                     supportiveSSRAlgorithms.end(),
+                                     ssrPair);
+                assert(pos != supportiveSSRAlgorithms.end());
+                *pos = supportiveSSRAlgorithms.back();
+                supportiveSSRAlgorithms.pop_back();
             }
-
-            delete ssrPair.first;
-            delete ssrPair.second;
-            supportiveVertexToSSRAlgorithm.resetToDefault(v);
-
-            pickSupportVertices(false);
         }
+
+        delete ssrPair.first;
+        delete ssrPair.second;
+        supportiveVertexToSSRAlgorithm.resetToDefault(v);
+
+        pickSupport = true;
+    }
+
+    if (!doesAutoUpdate() && !readjusted) {
+        for (auto &[ssrc, ssink] : supportiveSSRAlgorithms) {
+            ssrc->onVertexRemove(v);
+            ssink->onVertexRemove(v);
+        }
+    }
+    if (pickSupport) {
+        pickSupportVertices(false);
     }
 }
 
@@ -267,20 +277,23 @@ void SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<
         return;
     }
 
-    if (!doesAutoUpdate()) {
+    bool readjusted = false;
+    if (reAdjust) {
+        adjustmentCountUp++;
+        if (adjustmentCountUp >= adjustAfter) {
+            pickSupportVertices(true);
+            adjustmentCountUp = 0;
+            readjusted = true;
+        }
+    }
+
+    if (!doesAutoUpdate() && !readjusted) {
         for (auto &[ssrc, ssink] : supportiveSSRAlgorithms) {
             ssrc->onArcAdd(a);
             ssink->onArcAdd(a);
         }
     }
 
-    if (reAdjust) {
-        adjustmentCountUp++;
-        if (adjustmentCountUp >= adjustAfter) {
-            pickSupportVertices(true);
-            adjustmentCountUp = 0;
-        }
-    }
 }
 
 template<typename DynamicSingleSourceAlgorithm, typename DynamicSingleSinkAlgorithm, bool reAdjust>
@@ -294,18 +307,21 @@ void SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<
         return;
     }
 
-    if (!doesAutoUpdate()) {
-        for (auto &[ssrc, ssink] : supportiveSSRAlgorithms) {
-            ssrc->onArcRemove(a);
-            ssink->onArcRemove(a);
-        }
-    }
 
+    bool readjusted = false;
     if (reAdjust) {
         adjustmentCountUp++;
         if (adjustmentCountUp >= adjustAfter) {
             pickSupportVertices(true);
             adjustmentCountUp = 0;
+            readjusted = true;
+        }
+    }
+
+    if (!doesAutoUpdate() && !readjusted) {
+        for (auto &[ssrc, ssink] : supportiveSSRAlgorithms) {
+            ssrc->onArcRemove(a);
+            ssink->onArcRemove(a);
         }
     }
 }
@@ -393,13 +409,34 @@ bool SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<
     }
 
     for (const auto &[ssrc, ssink] : supportiveSSRAlgorithms) {
-        if (ssrc->query(t) && ssink->query(s)) {
+        auto vt = ssrc->query(t);
+        auto sv = ssink->query(s);
+        if (sv) {
+            if (vt) {
 #ifdef COLLECT_PR_DATA
-        num_only_support_queries++;
+                num_only_support_queries++;
 #endif
-            PRINT_DEBUG("  Reachability established via supportive vertex "
-                        << ssrc->getSource() <<  ".");
-            return true;
+                PRINT_DEBUG("  Reachability established via supportive vertex "
+                            << ssrc->getSource() <<  ".");
+                return true;
+            }
+        } else if (ssink->query(t)) {
+            // no path from s to v, but from t to v
+#ifdef COLLECT_PR_DATA
+                num_only_support_queries++;
+#endif
+                PRINT_DEBUG("  Non-reachability established via supportive vertex "
+                            << ssrc->getSource() <<  ".");
+                return false;
+        }
+        if (!vt && ssrc->query(s)) {
+            // no path from v to t, but from v to s
+#ifdef COLLECT_PR_DATA
+                num_only_support_queries++;
+#endif
+                PRINT_DEBUG("  Non-reachability established via supportive vertex "
+                            << ssrc->getSource() <<  ".");
+                return false;
         }
     }
 
@@ -494,6 +531,7 @@ void SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<
             supportiveVertexToSSRAlgorithm.resetAll(diGraph->getSize());
         }
         for (auto &[ssrc, ssink] : supportiveSSRAlgorithms) {
+            supportiveVertexToSSRAlgorithm.resetToDefault(ssrc->getSource());
             delete ssrc;
             delete ssink;
         }
