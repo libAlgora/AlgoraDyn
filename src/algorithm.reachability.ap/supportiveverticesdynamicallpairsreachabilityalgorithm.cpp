@@ -13,11 +13,17 @@
 
 #ifdef DEBUG_SUPPVAPR
 #include <iostream>
+#undef PRINT_DEBUG
 #define PRINT_DEBUG(msg) std::cerr << this->getShortName() << ": " << msg << std::endl;
+#undef IF_DEBUG
 #define IF_DEBUG(cmd) cmd;
 #else
+#ifndef PRINT_DEBUG
 #define PRINT_DEBUG(msg) ((void)0)
+#endif
+#ifndef IF_DEBUG
 #define IF_DEBUG(cmd)
+#endif
 #endif
 
 namespace Algora {
@@ -154,6 +160,7 @@ SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSingleSourceAlgori
 const
 {
     std::stringstream ss;
+    ss << "Seed:                         " << seed << std::endl;
 #ifdef COLLECT_PR_DATA
     ss << "#vertices considered:         " << pr_consideredVertices << std::endl;
     ss << "#arcs considered:             " << pr_consideredArcs << std::endl;
@@ -161,14 +168,18 @@ const
     ss << "#supportive vertices (max):   " << max_supportive_vertices << std::endl;
     ss << "#trivial queries:             " << num_trivial_queries << std::endl;
     ss << "#SSR-only queries:            " << num_only_ssr_queries << std::endl;
-    ss << "#Support-only queries:        " << num_only_support_queries << std::endl;
+    ss << "#Support-only queries (svt):  " << num_only_support_queries_svt << std::endl;
+    ss << "#Support-only queries (vs):   " << num_only_support_queries_vs << std::endl;
+    ss << "#Support-only queries (tv):   " << num_only_support_queries_tv << std::endl;
+    ss << "#Expensive queries:           " << num_expensive_queries << std::endl;
     ss << "#Adjustments:                 " << num_adjustments << std::endl;
 #endif
     return ss.str();
 }
 
 template<typename DynamicSingleSourceAlgorithm, typename DynamicSingleSinkAlgorithm, bool reAdjust>
-void SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSingleSourceAlgorithm, DynamicSingleSinkAlgorithm, reAdjust>
+void SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSingleSourceAlgorithm,
+                                                            DynamicSingleSinkAlgorithm, reAdjust>
     ::onVertexAdd(Vertex *v)
 {
     PRINT_DEBUG("A vertex has been added: " << v);
@@ -332,18 +343,24 @@ SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<
         DynamicSingleSourceAlgorithm, DynamicSingleSinkAlgorithm, reAdjust>::getProfile() const
 {
     auto profile = DynamicAllPairsReachabilityAlgorithm::getProfile();
+    profile.push_back(std::make_pair(std::string("seed"),
+                                     seed));
     profile.push_back(std::make_pair(std::string("min_supportive_ssr"),
                                      min_supportive_vertices));
     profile.push_back(std::make_pair(std::string("max_supportive_ssr"),
                                      max_supportive_vertices));
-    profile.push_back(std::make_pair(std::string("supportive_ssr_hits"),
-                                     supportive_ssr_hits));
     profile.push_back(std::make_pair(std::string("num_trivial_queries"),
                                      num_trivial_queries));
     profile.push_back(std::make_pair(std::string("num_ssr_only_queries"),
                                      num_only_ssr_queries));
-    profile.push_back(std::make_pair(std::string("num_support_only_queries"),
-                                     num_only_support_queries));
+    profile.push_back(std::make_pair(std::string("num_support_only_queries_svt"),
+                                     num_only_support_queries_svt));
+    profile.push_back(std::make_pair(std::string("num_support_only_queries_vs"),
+                                     num_only_support_queries_vs));
+    profile.push_back(std::make_pair(std::string("num_support_only_queries_tv"),
+                                     num_only_support_queries_tv));
+    profile.push_back(std::make_pair(std::string("num_expensive_queries"),
+                                     num_expensive_queries));
     profile.push_back(std::make_pair(std::string("num_adjustments"),
                                      num_adjustments));
 
@@ -358,10 +375,12 @@ void SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<
 
     min_supportive_vertices = 0;
     max_supportive_vertices = 0;
-    supportive_ssr_hits = 0;
     num_trivial_queries = 0;
     num_only_ssr_queries = 0;
-    num_only_support_queries = 0;
+    num_only_support_queries_svt = 0;
+    num_only_support_queries_vs = 0;
+    num_only_support_queries_tv = 0;
+    num_expensive_queries = 0;
 }
 
 template<typename DynamicSingleSourceAlgorithm, typename DynamicSingleSinkAlgorithm, bool reAdjust>
@@ -414,7 +433,7 @@ bool SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<
         if (sv) {
             if (vt) {
 #ifdef COLLECT_PR_DATA
-                num_only_support_queries++;
+                num_only_support_queries_svt++;
 #endif
                 PRINT_DEBUG("  Reachability established via supportive vertex "
                             << ssrc->getSource() <<  ".");
@@ -423,7 +442,7 @@ bool SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<
         } else if (ssink->query(t)) {
             // no path from s to v, but from t to v
 #ifdef COLLECT_PR_DATA
-                num_only_support_queries++;
+                num_only_support_queries_tv++;
 #endif
                 PRINT_DEBUG("  Non-reachability established via supportive vertex "
                             << ssrc->getSource() <<  ".");
@@ -432,7 +451,7 @@ bool SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<
         if (!vt && ssrc->query(s)) {
             // no path from v to t, but from v to s
 #ifdef COLLECT_PR_DATA
-                num_only_support_queries++;
+                num_only_support_queries_vs++;
 #endif
                 PRINT_DEBUG("  Non-reachability established via supportive vertex "
                             << ssrc->getSource() <<  ".");
@@ -440,6 +459,9 @@ bool SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<
         }
     }
 
+#ifdef COLLECT_PR_DATA
+                num_expensive_queries++;
+#endif
     // start two-way BFS
     FindDiPathAlgorithm<FastPropertyMap> fpa;
     fpa.setGraph(diGraph);

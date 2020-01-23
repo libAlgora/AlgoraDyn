@@ -53,17 +53,18 @@ public:
     virtual void onArcRemove(Arc *a) override;
     virtual Profile getProfile() const override;
 
-    // DiGraphAlgorithm interface
-protected:
-    virtual void onDiGraphSet() override;
-    virtual void onDiGraphUnset() override;
-
     // DynamicAllPairsReachabilityAlgorithm interface
 public:
     virtual bool query(Vertex *s, Vertex *t) override;
     virtual std::vector<Arc *> queryPath(Vertex *, Vertex *) override;
 
-private:
+    // DiGraphAlgorithm interface
+protected:
+    virtual void onDiGraphSet() override;
+    virtual void onDiGraphUnset() override;
+
+    // own
+protected:
     double supportSize;
     unsigned long adjustAfter;
     unsigned long adjustmentCountUp;
@@ -80,15 +81,19 @@ private:
 
     profiling_counter min_supportive_vertices = 0;
     profiling_counter max_supportive_vertices = 0;
-    profiling_counter supportive_ssr_hits = 0;
     profiling_counter num_trivial_queries = 0;
     profiling_counter num_only_ssr_queries = 0;
-    profiling_counter num_only_support_queries = 0;
+    profiling_counter num_only_support_queries_svt = 0;
+    profiling_counter num_only_support_queries_vs = 0;
+    profiling_counter num_only_support_queries_tv = 0;
+    profiling_counter num_expensive_queries = 0;
     profiling_counter num_adjustments = 0;
 
-    void reset();
-    void pickSupportVertices(bool adjust);
     void createAndInitAlgorithm(Vertex *v);
+    void reset();
+
+private:
+    void pickSupportVertices(bool adjust);
 };
 
 }
