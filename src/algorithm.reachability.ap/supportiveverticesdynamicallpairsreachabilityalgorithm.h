@@ -91,6 +91,7 @@ protected:
 
     void createAndInitAlgorithm(Vertex *v);
     void reset();
+    void removeSupportiveVertex(Vertex *v);
 
 private:
     void pickSupportVertices(bool adjust);

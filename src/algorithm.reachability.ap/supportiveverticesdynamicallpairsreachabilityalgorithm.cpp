@@ -240,29 +240,7 @@ void SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<
     bool pickSupport = false;
     if (!readjusted && !supportiveVertexToSSRAlgorithm.hasDefaultValue(v)) {
         PRINT_DEBUG("  Was a supportive vertex.");
-        auto ssrPair = supportiveVertexToSSRAlgorithm(v);
-        assert(!supportiveSSRAlgorithms.empty());
-
-        if (supportiveSSRAlgorithms.size() == 1) {
-            assert(supportiveSSRAlgorithms.back() == ssrPair);
-            supportiveSSRAlgorithms.clear();
-        } else {
-            if (supportiveSSRAlgorithms.back() == ssrPair) {
-                supportiveSSRAlgorithms.pop_back();
-            } else {
-                auto pos = std::find(supportiveSSRAlgorithms.begin(),
-                                     supportiveSSRAlgorithms.end(),
-                                     ssrPair);
-                assert(pos != supportiveSSRAlgorithms.end());
-                *pos = supportiveSSRAlgorithms.back();
-                supportiveSSRAlgorithms.pop_back();
-            }
-        }
-
-        delete ssrPair.first;
-        delete ssrPair.second;
-        supportiveVertexToSSRAlgorithm.resetToDefault(v);
-
+        removeSupportiveVertex(v);
         pickSupport = true;
     }
 
@@ -495,6 +473,36 @@ void SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<
     supportiveSSRAlgorithms.clear();
     supportiveVertexToSSRAlgorithm.resetAll();
     initialized = false;
+}
+
+template<typename DynamicSingleSourceAlgorithm, typename DynamicSingleSinkAlgorithm, bool reAdjust>
+void
+SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<
+    DynamicSingleSourceAlgorithm, DynamicSingleSinkAlgorithm, reAdjust>
+    ::removeSupportiveVertex(Vertex *v)
+{
+    auto ssrPair = supportiveVertexToSSRAlgorithm(v);
+    assert(!supportiveSSRAlgorithms.empty());
+
+    if (supportiveSSRAlgorithms.size() == 1) {
+        assert(supportiveSSRAlgorithms.back() == ssrPair);
+        supportiveSSRAlgorithms.clear();
+    } else {
+        if (supportiveSSRAlgorithms.back() == ssrPair) {
+            supportiveSSRAlgorithms.pop_back();
+        } else {
+            auto pos = std::find(supportiveSSRAlgorithms.begin(),
+                                 supportiveSSRAlgorithms.end(),
+                                 ssrPair);
+            assert(pos != supportiveSSRAlgorithms.end());
+            *pos = supportiveSSRAlgorithms.back();
+            supportiveSSRAlgorithms.pop_back();
+        }
+    }
+
+    delete ssrPair.first;
+    delete ssrPair.second;
+    supportiveVertexToSSRAlgorithm.resetToDefault(v);
 }
 
 template<typename DynamicSingleSourceAlgorithm, typename DynamicSingleSinkAlgorithm, bool reAdjust>
