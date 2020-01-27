@@ -34,22 +34,39 @@ public:
 
         // DiGraphAlgorithm interface
 public:
-        virtual void run() override;
-        virtual std::string getName() const noexcept override;
-        virtual std::string getShortName() const noexcept override;
+    virtual void run() override;
+    virtual std::string getName() const noexcept override;
+    virtual std::string getShortName() const noexcept override;
+    virtual std::string getProfilingInfo() const override;
 
         // DynamicDiGraphAlgorithm interface
 public:
-        virtual void onVertexAdd(Vertex *v) override;
-        virtual void onVertexRemove(Vertex *v) override;
-        virtual void onArcAdd(Arc *a) override;
-        virtual void onArcRemove(Arc *a) override;
+    virtual void onVertexAdd(Vertex *v) override;
+    virtual void onVertexRemove(Vertex *v) override;
+    virtual void onArcAdd(Arc *a) override;
+    virtual void onArcRemove(Arc *a) override;
+    virtual typename Super::Profile getProfile() const override;
+
+    // DynamicAllPairsReachabilityAlgorithm interface
+public:
+    virtual bool query(Vertex *s, Vertex *t) override;
+    virtual std::vector<Arc *> queryPath(Vertex *, Vertex *) override;
+
+    // DiGraphAlgorithm interface
+protected:
+    virtual void onDiGraphSet() override;
 
 private:
-        FastPropertyMap<Vertex*> vertexToSCCRepresentative;
-        DiGraph::size_type minSccSize = 5;
-        void checkSCCs();
-        void createSupportVertex(Vertex *v);
+    FastPropertyMap<Vertex*> vertexToSCCRepresentative;
+    DiGraph::size_type minSccSize = 5;
+
+    typename Super::profiling_counter num_same_scc_queries = 0;
+    typename Super::profiling_counter num_scc_via_srep_queries = 0;
+    typename Super::profiling_counter num_scc_via_trep_queries = 0;
+
+    void checkSCCs();
+    void createSupportVertex(Vertex *v);
+
 };
 
 
