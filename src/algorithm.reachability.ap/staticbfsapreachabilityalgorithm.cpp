@@ -19,8 +19,13 @@ bool StaticBFSAPReachabilityAlgorithm::query(Vertex *s, Vertex *t)
 {
     fpa.setConstructPaths(false, false);
     fpa.setSourceAndTarget(s, t);
-    // fpa.prepare() omitted for performance reasons
+    fpa.prepare();
     fpa.run();
+
+#ifdef COLLECT_PR_DATA
+    this->prVerticesConsidered(fpa.getNumVerticesSeen());
+#endif
+
     return fpa.deliver();
 }
 
@@ -28,8 +33,13 @@ std::vector<Arc *> StaticBFSAPReachabilityAlgorithm::queryPath(Vertex *s, Vertex
 {
     fpa.setConstructPaths(false, true);
     fpa.setSourceAndTarget(s, t);
-    // fpa.prepare() omitted for performance reasons
+    fpa.prepare();
     fpa.run();
+
+#ifdef COLLECT_PR_DATA
+    this->prVerticesConsidered(fpa.getNumVerticesSeen());
+#endif
+
     if (fpa.deliver()) {
         return fpa.deliverArcsOnPath();
     }
