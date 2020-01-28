@@ -60,7 +60,6 @@ private:
     FastPropertyMap<Vertex*> vertexToSCCRepresentative;
     DiGraph::size_type minSccSize = 5;
 
-    typename Super::profiling_counter num_same_scc_queries = 0;
     typename Super::profiling_counter num_scc_via_srep_queries = 0;
     typename Super::profiling_counter num_scc_via_trep_queries = 0;
 

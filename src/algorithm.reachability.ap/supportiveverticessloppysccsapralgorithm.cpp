@@ -65,10 +65,10 @@ SupportiveVerticesSloppySCCsAPRAlgorithm<
         return;
     }
 
-    PRINT_DEBUG("Initializing...");
+    PRINT_DEBUG("Initializing...")
     checkSCCs();
     this->initialized = true;
-    PRINT_DEBUG("Initialization complete.");
+    PRINT_DEBUG("Initialization complete.")
 
     if (reAdjust) {
         this->adjustmentCountUp = 0;
@@ -132,7 +132,6 @@ SupportiveVerticesSloppySCCsAPRAlgorithm<
     ss << "#supportive vertices (max):   " << this->max_supportive_vertices << std::endl;
     ss << "#trivial queries:             " << this->num_trivial_queries << std::endl;
     ss << "#SSR-only queries:            " << this->num_only_ssr_queries << std::endl;
-    ss << "#SCC queries (same):          " << this->num_same_scc_queries << std::endl;
     ss << "#SCC queries (via s-rep):     " << this->num_scc_via_srep_queries << std::endl;
     ss << "#SCC queries (via t-rep):     " << this->num_scc_via_trep_queries << std::endl;
     ss << "#Support-only queries (svt):  " << this->num_only_support_queries_svt << std::endl;
@@ -151,7 +150,7 @@ SupportiveVerticesSloppySCCsAPRAlgorithm<
                 DynamicSingleSourceAlgorithm, DynamicSingleSinkAlgorithm, reAdjust>
     ::onVertexAdd(Vertex *v)
 {
-    PRINT_DEBUG("A vertex has been added: " << v);
+    PRINT_DEBUG("A vertex has been added: " << v)
     DynamicDiGraphAlgorithm::onVertexAdd(v);
 
     if (!this->initialized) {
@@ -183,7 +182,7 @@ SupportiveVerticesSloppySCCsAPRAlgorithm<
                 DynamicSingleSourceAlgorithm, DynamicSingleSinkAlgorithm, reAdjust>
     ::onVertexRemove(Vertex *v)
 {
-    PRINT_DEBUG("A vertex is about to be deleted: " << v);
+    PRINT_DEBUG("A vertex is about to be deleted: " << v)
     DynamicDiGraphAlgorithm::onVertexRemove(v);
 
     if (!this->initialized) {
@@ -216,7 +215,7 @@ SupportiveVerticesSloppySCCsAPRAlgorithm<
                 DynamicSingleSourceAlgorithm, DynamicSingleSinkAlgorithm, reAdjust>
     ::onArcAdd(Arc *a)
 {
-    PRINT_DEBUG("An arc has been added: " << a);
+    PRINT_DEBUG("An arc has been added: " << a)
     DynamicDiGraphAlgorithm::onArcAdd(a);
 
     if (!this->initialized) {
@@ -245,7 +244,7 @@ SupportiveVerticesSloppySCCsAPRAlgorithm<
                 DynamicSingleSourceAlgorithm, DynamicSingleSinkAlgorithm, reAdjust>
     ::onArcRemove(Arc *a)
 {
-    PRINT_DEBUG("An arc is about to be deleted: " << a);
+    PRINT_DEBUG("An arc is about to be deleted: " << a)
     DynamicDiGraphAlgorithm::onArcRemove(a);
 
     if (!this->initialized) {
@@ -277,8 +276,6 @@ SupportiveVerticesSloppySCCsAPRAlgorithm<
 {
     auto profile = Super::getProfile();
 
-    profile.push_back(std::make_pair(std::string("num_same_scc_queries"),
-                                     num_same_scc_queries));
     profile.push_back(std::make_pair(std::string("num_scc_via_srep_queries"),
                                      num_scc_via_srep_queries));
     profile.push_back(std::make_pair(std::string("num_scc_via_trep_queries"),
@@ -292,19 +289,19 @@ SupportiveVerticesSloppySCCsAPRAlgorithm<
                 DynamicSingleSourceAlgorithm, DynamicSingleSinkAlgorithm, reAdjust>
     ::query(Vertex *s, Vertex *t)
 {
-    PRINT_DEBUG("Processing reachability query " << s << " -> " << t << "...");
+    PRINT_DEBUG("Processing reachability query " << s << " -> " << t << "...")
     if (s == t) {
 #ifdef COLLECT_PR_DATA
         this->num_trivial_queries++;
 #endif
-        PRINT_DEBUG("  Same vertices, trivially true.");
+        PRINT_DEBUG("  Same vertices, trivially true.")
         return true;
     }
     if (this->diGraph->isSink(s) || this->diGraph->isSource(t)) {
 #ifdef COLLECT_PR_DATA
         this->num_trivial_queries++;
 #endif
-        PRINT_DEBUG("  Source is sink or target is source, trivially false.");
+        PRINT_DEBUG("  Source is sink or target is source, trivially false.")
         return false;
     }
 
@@ -312,7 +309,7 @@ SupportiveVerticesSloppySCCsAPRAlgorithm<
 #ifdef COLLECT_PR_DATA
         this->num_only_ssr_queries++;
 #endif
-        PRINT_DEBUG("  Source is supportive vertex.");
+        PRINT_DEBUG("  Source is supportive vertex.")
         return this->supportiveVertexToSSRAlgorithm[s].first->query(t);
     }
 
@@ -320,13 +317,16 @@ SupportiveVerticesSloppySCCsAPRAlgorithm<
 #ifdef COLLECT_PR_DATA
         this->num_only_ssr_queries++;
 #endif
-        PRINT_DEBUG("  Sink is supportive vertex.");
+        PRINT_DEBUG("  Sink is supportive vertex.")
         return this->supportiveVertexToSSRAlgorithm[t].second->query(s);
     }
 
+    PRINT_DEBUG("  Trying to use SCC information...")
     // use SCC info
     auto getRep = [this](Vertex *v) -> Vertex* {
+        PRINT_DEBUG("  Looking up representative for " << v << "...")
         auto rep = this->vertexToSCCRepresentative(v);
+        PRINT_DEBUG("    v2r map yields " << rep)
         if (!rep) {
             return nullptr;
         }
@@ -334,35 +334,37 @@ SupportiveVerticesSloppySCCsAPRAlgorithm<
         assert(rSrc);
         assert(rSink);
         // check!
+        PRINT_DEBUG("    Checking whether information is up-to-date...")
         if (rSrc->query(v) && rSink->query(v)) {
+            PRINT_DEBUG("      OK.")
             return rep;
         }
+        PRINT_DEBUG("      FAILED.")
         this->vertexToSCCRepresentative[v] = nullptr;
         return nullptr;
     };
 
     auto sRep = getRep(s);
-    auto tRep = getRep(t);
-    if (sRep && sRep == tRep) {
-#ifdef COLLECT_PR_DATA
-        num_same_scc_queries++;
-#endif
-            return true;
-    }
+    PRINT_DEBUG("  Source has representative " << sRep)
     if (sRep) {
         // either s ->* sRep ->* t  => TRUE
         // or sRep ->* s, but sRep -/>* t  => FALSE
 #ifdef COLLECT_PR_DATA
         num_scc_via_srep_queries++;
 #endif
+        PRINT_DEBUG("  Answering query via source rep.")
         return this->supportiveVertexToSSRAlgorithm(sRep).first->query(t);
     }
+
+    auto tRep = getRep(t);
+    PRINT_DEBUG("  Target has representative " << tRep)
     if (tRep) {
         // either s ->* tRep ->* t  => TRUE
         // or t ->* tRep, but s -/>* tRep  => FALSE
 #ifdef COLLECT_PR_DATA
         num_scc_via_trep_queries++;
 #endif
+        PRINT_DEBUG("  Answering query via target rep.")
         return this->supportiveVertexToSSRAlgorithm(tRep).second->query(s);
     }
 
@@ -376,7 +378,7 @@ SupportiveVerticesSloppySCCsAPRAlgorithm<
                 this->num_only_support_queries_svt++;
 #endif
                 PRINT_DEBUG("  Reachability established via supportive vertex "
-                            << ssrc->getSource() <<  ".");
+                            << ssrc->getSource() <<  ".")
                 return true;
             }
         } else if (ssink->query(t)) {
@@ -385,7 +387,7 @@ SupportiveVerticesSloppySCCsAPRAlgorithm<
                 this->num_only_support_queries_tv++;
 #endif
                 PRINT_DEBUG("  Non-reachability established via supportive vertex "
-                            << ssrc->getSource() <<  ".");
+                            << ssrc->getSource() <<  ".")
                 return false;
         }
         if (!vt && ssrc->query(s)) {
@@ -394,7 +396,7 @@ SupportiveVerticesSloppySCCsAPRAlgorithm<
                 this->num_only_support_queries_vs++;
 #endif
                 PRINT_DEBUG("  Non-reachability established via supportive vertex "
-                            << ssrc->getSource() <<  ".");
+                            << ssrc->getSource() <<  ".")
                 return false;
         }
     }
@@ -402,6 +404,7 @@ SupportiveVerticesSloppySCCsAPRAlgorithm<
 #ifdef COLLECT_PR_DATA
                 this->num_expensive_queries++;
 #endif
+    PRINT_DEBUG("  Running 2-way BFS...")
     // start two-way BFS
     FindDiPathAlgorithm<FastPropertyMap> fpa;
     fpa.setGraph(this->diGraph);
@@ -429,7 +432,6 @@ SupportiveVerticesSloppySCCsAPRAlgorithm<
 {
     Super::onDiGraphSet();
 
-    num_same_scc_queries = 0;
     num_scc_via_srep_queries = 0;
     num_scc_via_trep_queries = 0;
 }
@@ -440,6 +442,7 @@ SupportiveVerticesSloppySCCsAPRAlgorithm<
                 DynamicSingleSourceAlgorithm, DynamicSingleSinkAlgorithm, reAdjust>
     ::checkSCCs()
 {
+    PRINT_DEBUG("Checking SCCs...")
     TarjanSCCAlgorithm<FastPropertyMap> tarjan;
     tarjan.setGraph(this->diGraph);
     FastPropertyMap<DiGraph::size_type> sccs(this->diGraph->getSize() + 1);
@@ -450,18 +453,22 @@ SupportiveVerticesSloppySCCsAPRAlgorithm<
     }
     tarjan.run();
     auto numSccs = tarjan.deliver();
+    PRINT_DEBUG("  Found " << numSccs << " SCCs.")
 
     if (numSccs > 1) {
         std::vector<Vertex*> sccIdToRepresentative(numSccs, nullptr);
         std::vector<Vertex*> repsToClear;
         for (auto &p : this->supportiveSSRAlgorithms) {
             auto rep = p.first->getSource();
+            PRINT_DEBUG("  Checking old SV " << rep << "...")
             auto sccId = sccs(rep);
             assert(sccId < numSccs);
             if (!sccIdToRepresentative[sccId]) {
                 sccIdToRepresentative[sccId] = rep;
+                PRINT_DEBUG("    Keeping it." )
             } else {
                 repsToClear.push_back(rep);
+                PRINT_DEBUG("    Will be removed." )
             }
         }
         for (auto *v : repsToClear) {
@@ -469,37 +476,64 @@ SupportiveVerticesSloppySCCsAPRAlgorithm<
         }
         //if (this->supportiveSSRAlgorithms.size() < numSccs) {
             std::vector<std::vector<Vertex*>> verticesInScc(numSccs);
-            std::vector<Vertex*> candidateReps;
+            //std::vector<Vertex*> candidateReps;
             std::vector<DiGraph::size_type> uncoveredSccs;
+            Vertex *source = nullptr;
+            Vertex *sink = nullptr;
             this->diGraph->mapVertices(
-                        [&sccIdToRepresentative,&sccs,&verticesInScc,&candidateReps,
-                         &uncoveredSccs,this](Vertex *v) {
+                        [&sccIdToRepresentative,&sccs,&verticesInScc,
+                         //&candidateReps,
+                         &uncoveredSccs,
+                         &source,&sink,
+                        this](Vertex *v) {
                 auto sccId = sccs(v);
                 assert(sccId < sccIdToRepresentative.size());
+                PRINT_DEBUG("  Checking vertex " << v << " in SCC " << sccId << "...")
                 if (sccIdToRepresentative[sccId]) {
                     vertexToSCCRepresentative[v] = sccIdToRepresentative[sccId];
+                    PRINT_DEBUG("    Representative for " << v << " is "
+                                << sccIdToRepresentative[sccId])
                 } else {
+                    vertexToSCCRepresentative[v] = nullptr;
                     if (verticesInScc[sccId].empty()) {
-                        // remember first vertex as potential representative
+                        PRINT_DEBUG("    No old representative, but first of this SCC.")
                         verticesInScc[sccId].push_back(v);
-                        candidateReps.push_back(v);
                         uncoveredSccs.push_back(sccId);
                     } else {
+                        PRINT_DEBUG("    No old representative.")
                         verticesInScc[sccId].push_back(v);
+                    }
+                    if (!source && !this->diGraph->isIsolated(v) && this->diGraph->isSource(v)) {
+                        source = v;
+                    } else if (!sink && !this->diGraph->isIsolated(v) && this->diGraph->isSink(v)) {
+                        sink = v;
                     }
                 }
             });
-            // allows to use back() and pop_back()
-            std::reverse(candidateReps.begin(), candidateReps.end());
+            PRINT_DEBUG("  Updating v2r map...")
             for (auto sccId : uncoveredSccs) {
                 if (verticesInScc[sccId].size() >= this->supportSize) {
-                    auto rep = candidateReps.back();
+                    auto rep = verticesInScc[sccId].front();
+                    PRINT_DEBUG("    " << rep << " becomes representative for SCC " << sccId)
                     createSupportVertex(rep);
                     for (auto *v : verticesInScc[sccId]) {
                         vertexToSCCRepresentative[v] = rep;
                     }
+                } else {
+                    PRINT_DEBUG("    SCC " << sccId << " has only size "
+                                << verticesInScc[sccId].size()
+                                << ", no representative selected.")
                 }
-                candidateReps.pop_back();
+            }
+            if (this->supportiveSSRAlgorithms.empty()) {
+                if (source) {
+                    PRINT_DEBUG("    Source " << source << " becomes SV.")
+                    createSupportVertex(source);
+                }
+                if (sink) {
+                    PRINT_DEBUG("    Sink " << sink << " becomes SV.")
+                    createSupportVertex(sink);
+                }
             }
         //}
     } else {
@@ -511,6 +545,8 @@ SupportiveVerticesSloppySCCsAPRAlgorithm<
                             this->supportiveSSRAlgorithms.back().first->getSource());
             }
         }
+        PRINT_DEBUG("  Just one SCC, setting all entries in v2r map to "
+                    << this->supportiveSSRAlgorithms.back().first->getSource())
         // set representative vertex
         this->vertexToSCCRepresentative.setDefaultValue(
                     this->supportiveSSRAlgorithms.back().first->getSource());
@@ -525,8 +561,8 @@ SupportiveVerticesSloppySCCsAPRAlgorithm<
                 DynamicSingleSourceAlgorithm, DynamicSingleSinkAlgorithm, reAdjust>
     ::createSupportVertex(Vertex *v)
 {
+    PRINT_DEBUG("  Creating SV " << v)
     this->createAndInitAlgorithm(v);
-
 }
 
 }
