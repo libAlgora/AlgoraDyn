@@ -478,13 +478,10 @@ SupportiveVerticesSloppySCCsAPRAlgorithm<
             std::vector<std::vector<Vertex*>> verticesInScc(numSccs);
             //std::vector<Vertex*> candidateReps;
             std::vector<DiGraph::size_type> uncoveredSccs;
-            Vertex *source = nullptr;
-            Vertex *sink = nullptr;
             this->diGraph->mapVertices(
                         [&sccIdToRepresentative,&sccs,&verticesInScc,
                          //&candidateReps,
                          &uncoveredSccs,
-                         &source,&sink,
                         this](Vertex *v) {
                 auto sccId = sccs(v);
                 assert(sccId < sccIdToRepresentative.size());
@@ -503,16 +500,13 @@ SupportiveVerticesSloppySCCsAPRAlgorithm<
                         PRINT_DEBUG("    No old representative.")
                         verticesInScc[sccId].push_back(v);
                     }
-                    if (!source && !this->diGraph->isIsolated(v) && this->diGraph->isSource(v)) {
-                        source = v;
-                    } else if (!sink && !this->diGraph->isIsolated(v) && this->diGraph->isSink(v)) {
-                        sink = v;
-                    }
                 }
             });
             PRINT_DEBUG("  Updating v2r map...")
+            DiGraph::size_type emergencySccId = numSccs;
             for (auto sccId : uncoveredSccs) {
-                if (verticesInScc[sccId].size() >= this->supportSize) {
+                auto sccSize = verticesInScc[sccId].size();
+                if (sccSize >= this->supportSize) {
                     auto rep = verticesInScc[sccId].front();
                     PRINT_DEBUG("    " << rep << " becomes representative for SCC " << sccId)
                     createSupportVertex(rep);
@@ -523,16 +517,21 @@ SupportiveVerticesSloppySCCsAPRAlgorithm<
                     PRINT_DEBUG("    SCC " << sccId << " has only size "
                                 << verticesInScc[sccId].size()
                                 << ", no representative selected.")
+                    if (emergencySccId >= numSccs
+                        || verticesInScc[emergencySccId].size() < sccSize) {
+                        auto rep = verticesInScc[sccId].front();
+                        if (!this->diGraph->isSource(rep) && !this->diGraph->isSink(rep)) {
+                            emergencySccId = sccId;
+                        }
+                    }
                 }
             }
-            if (this->supportiveSSRAlgorithms.empty()) {
-                if (source) {
-                    PRINT_DEBUG("    Source " << source << " becomes SV.")
-                    createSupportVertex(source);
-                }
-                if (sink) {
-                    PRINT_DEBUG("    Sink " << sink << " becomes SV.")
-                    createSupportVertex(sink);
+            if (this->supportiveSSRAlgorithms.empty() && emergencySccId < numSccs) {
+                auto rep = verticesInScc[emergencySccId].front();
+                PRINT_DEBUG("    " << rep << " becomes representative for emergency SCC " << sccId)
+                        createSupportVertex(rep);
+                for (auto *v : verticesInScc[emergencySccId]) {
+                    vertexToSCCRepresentative[v] = rep;
                 }
             }
         //}
