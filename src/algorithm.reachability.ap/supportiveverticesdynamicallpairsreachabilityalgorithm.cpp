@@ -189,29 +189,13 @@ void SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<DynamicSingleSourceA
         return;
     }
 
-    bool readjusted = false;
-    if (reAdjust) {
-        adjustmentCountUp++;
-        if (adjustmentCountUp >= adjustAfter) {
-            pickSupportVertices(true);
-            adjustmentCountUp = 0;
-            readjusted = true;
-        }
-    }
+    // vertex is isolated
 
-    if (!doesAutoUpdate() && !readjusted) {
+    if (!doesAutoUpdate()) {
         for (auto &[ssrc, ssink] : supportiveSSRAlgorithms) {
             ssrc->onVertexAdd(v);
             ssink->onVertexAdd(v);
         }
-    }
-
-    if (!reAdjust) {
-        pickSupportVertices(false);
-    }
-
-    if (max_supportive_vertices < supportiveSSRAlgorithms.size()) {
-        max_supportive_vertices = supportiveSSRAlgorithms.size();
     }
 }
 
@@ -227,29 +211,22 @@ void SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<
         return;
     }
 
-    bool readjusted = false;
-    if (reAdjust) {
-        adjustmentCountUp++;
-        if (adjustmentCountUp >= adjustAfter) {
-            pickSupportVertices(true);
-            adjustmentCountUp = 0;
-            readjusted = true;
-        }
-    }
+    // vertex is isolated
 
     bool pickSupport = false;
-    if (!readjusted && !supportiveVertexToSSRAlgorithm.hasDefaultValue(v)) {
+    if (!supportiveVertexToSSRAlgorithm.hasDefaultValue(v)) {
         PRINT_DEBUG("  Was a supportive vertex.");
         removeSupportiveVertex(v);
         pickSupport = true;
     }
 
-    if (!doesAutoUpdate() && !readjusted) {
+    if (!doesAutoUpdate()) {
         for (auto &[ssrc, ssink] : supportiveSSRAlgorithms) {
             ssrc->onVertexRemove(v);
             ssink->onVertexRemove(v);
         }
     }
+
     if (pickSupport) {
         pickSupportVertices(false);
     }

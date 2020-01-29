@@ -166,14 +166,6 @@ SupportiveVerticesSloppySCCsAPRAlgorithm<
             ssink->onVertexAdd(v);
         }
     }
-
-    if (reAdjust && this->adjustAfter > 0) {
-        this->adjustmentCountUp++;
-        if (this->adjustmentCountUp >= this->adjustAfter) {
-            checkSCCs();
-            this->adjustmentCountUp = 0;
-        }
-    }
 }
 
 template<typename DynamicSingleSourceAlgorithm, typename DynamicSingleSinkAlgorithm, bool reAdjust>
@@ -197,14 +189,6 @@ SupportiveVerticesSloppySCCsAPRAlgorithm<
         for (auto &[ssrc, ssink] : this->supportiveSSRAlgorithms) {
             ssrc->onVertexRemove(v);
             ssink->onVertexRemove(v);
-        }
-    }
-
-    if (reAdjust && this->adjustAfter > 0) {
-        this->adjustmentCountUp++;
-        if (this->adjustmentCountUp >= this->adjustAfter) {
-            checkSCCs();
-            this->adjustmentCountUp = 0;
         }
     }
 }
@@ -331,9 +315,13 @@ SupportiveVerticesSloppySCCsAPRAlgorithm<
             return nullptr;
         }
         const auto &[rSrc, rSink] = this->supportiveVertexToSSRAlgorithm(rep);
-        assert(rSrc);
-        assert(rSink);
         // check!
+        if (!rSrc || !rSink)  {
+            // rep might have been deleted since last update
+            this->vertexToSCCRepresentative[v] = nullptr;
+            return nullptr;
+        }
+
         PRINT_DEBUG("    Checking whether information is up-to-date...")
         if (rSrc->query(v) && rSink->query(v)) {
             PRINT_DEBUG("      OK.")
