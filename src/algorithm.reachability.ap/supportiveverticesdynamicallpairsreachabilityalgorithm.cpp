@@ -430,9 +430,91 @@ bool SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<
 template<typename DynamicSingleSourceAlgorithm, typename DynamicSingleSinkAlgorithm, bool reAdjust>
 std::vector<Arc *> SupportiveVerticesDynamicAllPairsReachabilityAlgorithm<
     DynamicSingleSourceAlgorithm, DynamicSingleSinkAlgorithm, reAdjust>
-    ::queryPath(Vertex *, Vertex *)
+    ::queryPath(Vertex *s, Vertex *t)
 {
-    return std::vector<Arc*>();
+    auto emptyPath = std::vector<Arc*>();
+
+    PRINT_DEBUG("Processing reachability path query " << s << " -> " << t << "...");
+    if (s == t) {
+#ifdef COLLECT_PR_DATA
+        num_trivial_queries++;
+#endif
+        PRINT_DEBUG("  Same vertices, return empty path.");
+        return emptyPath;
+    }
+    if (diGraph->isSink(s) || diGraph->isSource(t)) {
+#ifdef COLLECT_PR_DATA
+        num_trivial_queries++;
+#endif
+        PRINT_DEBUG("  Source is sink or target is source, trivially no path, return empty path.");
+        return emptyPath;
+    }
+
+    if (supportiveVertexToSSRAlgorithm[s].first) {
+#ifdef COLLECT_PR_DATA
+        num_only_ssr_queries++;
+#endif
+        PRINT_DEBUG("  Source is supportive vertex.");
+        return supportiveVertexToSSRAlgorithm[s].first->queryPath(t);
+    }
+
+    if (supportiveVertexToSSRAlgorithm[t].second) {
+#ifdef COLLECT_PR_DATA
+        num_only_ssr_queries++;
+#endif
+        PRINT_DEBUG("  Sink is supportive vertex.");
+        return supportiveVertexToSSRAlgorithm[t].second->queryPath(s);
+    }
+
+    for (const auto &[ssrc, ssink] : supportiveSSRAlgorithms) {
+        auto vt = ssrc->query(t);
+        auto sv = ssink->query(s);
+        if (sv) {
+            if (vt) {
+#ifdef COLLECT_PR_DATA
+                num_only_support_queries_svt++;
+#endif
+                PRINT_DEBUG("  Reachability established via supportive vertex "
+                            << ssrc->getSource() <<  ".");
+                auto svPath = ssink->queryPath(s);
+                auto vtPath = ssrc->queryPath(t);
+                svPath.insert(svPath.end(), vtPath.begin(), vtPath.end());
+                return svPath;
+            }
+        } else if (ssink->query(t)) {
+            // no path from s to v, but from t to v
+#ifdef COLLECT_PR_DATA
+                num_only_support_queries_tv++;
+#endif
+                PRINT_DEBUG("  Non-reachability established via supportive vertex "
+                            << ssrc->getSource() <<  ".");
+                return emptyPath;
+        }
+        if (!vt && ssrc->query(s)) {
+            // no path from v to t, but from v to s
+#ifdef COLLECT_PR_DATA
+                num_only_support_queries_vs++;
+#endif
+                PRINT_DEBUG("  Non-reachability established via supportive vertex "
+                            << ssrc->getSource() <<  ".");
+                return emptyPath;
+        }
+    }
+
+#ifdef COLLECT_PR_DATA
+                num_expensive_queries++;
+#endif
+    // start two-way BFS
+    FindDiPathAlgorithm<FastPropertyMap> fpa;
+    fpa.setGraph(diGraph);
+    fpa.setConstructPaths(false, true);
+    fpa.setSourceAndTarget(s, t);
+    // fpa.prepare() omitted for performance reasons
+    fpa.run();
+    if (fpa.deliver()) {
+        return fpa.deliverArcsOnPath();
+    }
+    return emptyPath;
 }
 
 template<typename DynamicSingleSourceAlgorithm, typename DynamicSingleSinkAlgorithm, bool reAdjust>

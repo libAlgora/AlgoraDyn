@@ -407,9 +407,157 @@ template<typename DynamicSingleSourceAlgorithm, typename DynamicSingleSinkAlgori
 std::vector<Arc *>
 SupportiveVerticesSloppySCCsAPRAlgorithm<
                 DynamicSingleSourceAlgorithm, DynamicSingleSinkAlgorithm, reAdjust>
-    ::queryPath(Vertex *, Vertex *)
+    ::queryPath(Vertex *s, Vertex *t)
 {
-    return std::vector<Arc*>();
+    auto emptyPath = std::vector<Arc*>();
+    PRINT_DEBUG("Processing reachability query " << s << " -> " << t << "...")
+    if (s == t) {
+#ifdef COLLECT_PR_DATA
+        this->num_trivial_queries++;
+#endif
+        PRINT_DEBUG("  Same vertices, trivially true, return empty path.")
+        return emptyPath;
+    }
+    if (this->diGraph->isSink(s) || this->diGraph->isSource(t)) {
+#ifdef COLLECT_PR_DATA
+        this->num_trivial_queries++;
+#endif
+        PRINT_DEBUG("  Source is sink or target is source, trivially false, return empty path.")
+        return emptyPath;
+    }
+
+    if (this->supportiveVertexToSSRAlgorithm[s].first) {
+#ifdef COLLECT_PR_DATA
+        this->num_only_ssr_queries++;
+#endif
+        PRINT_DEBUG("  Source is supportive vertex.")
+        return this->supportiveVertexToSSRAlgorithm[s].first->queryPath(t);
+    }
+
+    if (this->supportiveVertexToSSRAlgorithm[t].second) {
+#ifdef COLLECT_PR_DATA
+        this->num_only_ssr_queries++;
+#endif
+        PRINT_DEBUG("  Sink is supportive vertex.")
+        return this->supportiveVertexToSSRAlgorithm[t].second->queryPath(s);
+    }
+
+    PRINT_DEBUG("  Trying to use SCC information...")
+    // use SCC info
+    auto getRep = [this](Vertex *v) -> Vertex* {
+        PRINT_DEBUG("  Looking up representative for " << v << "...")
+        auto rep = this->vertexToSCCRepresentative(v);
+        PRINT_DEBUG("    v2r map yields " << rep)
+        if (!rep) {
+            return nullptr;
+        }
+        const auto &[rSrc, rSink] = this->supportiveVertexToSSRAlgorithm(rep);
+        // check!
+        if (!rSrc || !rSink)  {
+            // rep might have been deleted since last update
+            this->vertexToSCCRepresentative[v] = nullptr;
+            return nullptr;
+        }
+
+        PRINT_DEBUG("    Checking whether information is up-to-date...")
+        if (rSrc->query(v) && rSink->query(v)) {
+            PRINT_DEBUG("      OK.")
+            return rep;
+        }
+        PRINT_DEBUG("      FAILED.")
+        this->vertexToSCCRepresentative[v] = nullptr;
+        return nullptr;
+    };
+
+    auto sRep = getRep(s);
+    PRINT_DEBUG("  Source has representative " << sRep)
+    if (sRep) {
+        // either s ->* sRep ->* t  => TRUE
+        // or sRep ->* s, but sRep -/>* t  => FALSE
+#ifdef COLLECT_PR_DATA
+        num_scc_via_srep_queries++;
+#endif
+        PRINT_DEBUG("  Answering query via source rep.")
+        auto ssrc = this->supportiveVertexToSSRAlgorithm(sRep).first;
+        if (ssrc->query(t)) {
+            auto svPath = this->supportiveVertexToSSRAlgorithm(sRep).second->queryPath(s);
+            auto vtPath = ssrc->queryPath(t);
+            svPath.insert(svPath.end(), vtPath.begin(), vtPath.end());
+            return svPath;
+        }
+        return emptyPath;
+    }
+
+    auto tRep = getRep(t);
+    PRINT_DEBUG("  Target has representative " << tRep)
+    if (tRep) {
+        // either s ->* tRep ->* t  => TRUE
+        // or t ->* tRep, but s -/>* tRep  => FALSE
+#ifdef COLLECT_PR_DATA
+        num_scc_via_trep_queries++;
+#endif
+        PRINT_DEBUG("  Answering query via target rep.")
+        auto ssink = this->supportiveVertexToSSRAlgorithm(tRep).second;
+        if (ssink->query(s)) {
+            auto svPath = ssink->queryPath(s);
+            auto vtPath = this->supportiveVertexToSSRAlgorithm(tRep).first->queryPath(t);
+            svPath.insert(svPath.end(), vtPath.begin(), vtPath.end());
+            return svPath;
+        }
+        return emptyPath;
+    }
+
+    // fall back to standard SV algorithm
+    for (const auto &[ssrc, ssink] : this->supportiveSSRAlgorithms) {
+        auto vt = ssrc->query(t);
+        auto sv = ssink->query(s);
+        if (sv) {
+            if (vt) {
+#ifdef COLLECT_PR_DATA
+                this->num_only_support_queries_svt++;
+#endif
+                PRINT_DEBUG("  Reachability established via supportive vertex "
+                            << ssrc->getSource() <<  ".")
+                auto svPath = ssink->queryPath(s);
+                auto vtPath = ssrc->queryPath(t);
+                svPath.insert(svPath.end(), vtPath.begin(), vtPath.end());
+                return svPath;
+            }
+        } else if (ssink->query(t)) {
+            // no path from s to v, but from t to v
+#ifdef COLLECT_PR_DATA
+                this->num_only_support_queries_tv++;
+#endif
+                PRINT_DEBUG("  Non-reachability established via supportive vertex "
+                            << ssrc->getSource() <<  ".")
+                return emptyPath;
+        }
+        if (!vt && ssrc->query(s)) {
+            // no path from v to t, but from v to s
+#ifdef COLLECT_PR_DATA
+                this->num_only_support_queries_vs++;
+#endif
+                PRINT_DEBUG("  Non-reachability established via supportive vertex "
+                            << ssrc->getSource() <<  ".")
+                return emptyPath;
+        }
+    }
+
+#ifdef COLLECT_PR_DATA
+                this->num_expensive_queries++;
+#endif
+    PRINT_DEBUG("  Running 2-way BFS...")
+    // start two-way BFS
+    FindDiPathAlgorithm<FastPropertyMap> fpa;
+    fpa.setGraph(this->diGraph);
+    fpa.setConstructPaths(false, true);
+    fpa.setSourceAndTarget(s, t);
+    // fpa.prepare() omitted for performance reasons
+    fpa.run();
+    if (fpa.deliver()) {
+        return fpa.deliverArcsOnPath();
+    }
+    return emptyPath;
 }
 
 template<typename DynamicSingleSourceAlgorithm, typename DynamicSingleSinkAlgorithm, bool reAdjust>
