@@ -38,7 +38,6 @@ protected:
 
 private:
     bool twoWayBFS;
-    DiGraph::size_type bfsStepSize;
     FindDiPathAlgorithm<FastPropertyMap> fpa;
 };
 

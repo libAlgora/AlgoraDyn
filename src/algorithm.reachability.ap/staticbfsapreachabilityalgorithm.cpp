@@ -38,13 +38,7 @@ std::vector<Arc *> StaticBFSAPReachabilityAlgorithm::queryPath(Vertex *s, Vertex
 
 void StaticBFSAPReachabilityAlgorithm::onDiGraphSet()
 {
-    bfsStepSize = static_cast<DiGraph::size_type>(
-                ceil(diGraph->getNumArcs(true) / diGraph->getSize()));
-    if (bfsStepSize < 5) {
-        bfsStepSize = 5;
-    }
     fpa.setGraph(diGraph);
-    fpa.setTwoWayStepSize(bfsStepSize);
 }
 
 }
