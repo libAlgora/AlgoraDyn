@@ -33,7 +33,7 @@ namespace Algora {
 
 template<bool reverseArcDirection>
 StaticBFSSSReachAlgorithm<reverseArcDirection>::StaticBFSSSReachAlgorithm(bool twoWayBFS)
-    : DynamicSingleSourceReachabilityAlgorithm(), twoWayBFS(twoWayBFS), bfsStepSize(5UL)
+    : DynamicSingleSourceReachabilityAlgorithm(), twoWayBFS(twoWayBFS)
 {
     registerEvents(false, false, false, false);
     fpa.setConstructPaths(false, false);
@@ -49,13 +49,7 @@ void StaticBFSSSReachAlgorithm<reverseArcDirection>::run()
 template<bool reverseArcDirection>
 void StaticBFSSSReachAlgorithm<reverseArcDirection>::onDiGraphSet()
 {
-    bfsStepSize = static_cast<DiGraph::size_type>(
-                ceil(diGraph->getNumArcs(true) / diGraph->getSize()));
-    if (bfsStepSize < 5) {
-        bfsStepSize = 5;
-    }
     fpa.setGraph(diGraph);
-    fpa.setTwoWayStepSize(bfsStepSize);
 }
 
 template<bool reverseArcDirection>
