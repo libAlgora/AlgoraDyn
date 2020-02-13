@@ -80,10 +80,13 @@ struct SimpleIncSSReachAlgorithm::Reachability {
     profiling_counter numReReachFromSource;
 
     Reachability(SimpleIncSSReachAlgorithm *p, bool r, bool sf, double maxUS)
-        : parent(p), diGraph(nullptr), source(nullptr), reverse(r), searchForward(sf), maxUnknownStateRatio(maxUS),
+        : parent(p), diGraph(nullptr), source(nullptr), reverse(r), searchForward(sf),
+          maxUnknownStateRatio(maxUS),
           maxUSSqrt(false), maxUSLog(false), relateToReachable(false), numReachable(0U),
-          numUnreached(0UL), numRereached(0UL), numUnknown(0UL), numReached(0UL), numTracebacks(0UL),
-          maxUnreached(0UL), maxRereached(0UL), maxUnknown(0UL), maxReached(0UL), maxTracebacks(0UL),
+          numUnreached(0UL), numRereached(0UL), numUnknown(0UL), numReached(0UL),
+          numTracebacks(0UL),
+          maxUnreached(0UL), maxRereached(0UL), maxUnknown(0UL), maxReached(0UL),
+          maxTracebacks(0UL),
           numReReachFromSource(0U) {
         reachability.setDefaultValue(State::UNREACHABLE);
         pred.setDefaultValue(nullptr);
@@ -138,7 +141,8 @@ struct SimpleIncSSReachAlgorithm::Reachability {
 #endif
             auto v = a->getHead();
 
-            PRINT_DEBUG("Reaching " << v << " via " << p << " with state " << printState(reachability(v))
+            PRINT_DEBUG("Reaching " << v << " via " << a->getTail()
+                        << " with state " << printState(reachability(v))
                         << " and tree arc " << pred(v));
 
             if (pred(v) != nullptr && pred(v) != a) {
@@ -147,7 +151,8 @@ struct SimpleIncSSReachAlgorithm::Reachability {
             }
 
             if ((!force && reachability(v) == s) || (v == source && source != from)) {
-                PRINT_DEBUG(v << " already had this state and update was not forced, no update of successors.");
+                PRINT_DEBUG(v << " already had this state and update was not forced,"
+                                 "no update of successors.");
                 return false;
             }
 
@@ -236,8 +241,8 @@ struct SimpleIncSSReachAlgorithm::Reachability {
             parent->prVertexConsidered();
 #endif
 
-            PRINT_DEBUG("Exploring " << v->getName() << " with state " << printState(reachability(v))
-                        << " via " << head);
+            PRINT_DEBUG("Exploring " << v->getName() << " with state "
+                        << printState(reachability(v)) << " via " << a->getHead());
             switch (reachability(v)) {
             case State::REACHABLE:
                 reachableAncestor = v;
@@ -252,8 +257,12 @@ struct SimpleIncSSReachAlgorithm::Reachability {
             }
             return true;
         });
-        bfs.setArcStopCondition([&reachableAncestor](const Arc*) { return reachableAncestor != nullptr; });
-        bfs.setVertexStopCondition([&reachableAncestor](const Vertex*) { return reachableAncestor != nullptr; });
+        bfs.setArcStopCondition([&reachableAncestor](const Arc*) {
+            return reachableAncestor != nullptr;
+        });
+        bfs.setVertexStopCondition([&reachableAncestor](const Vertex*) {
+            return reachableAncestor != nullptr;
+        });
         if (!bfs.prepare()) {
             throw DiGraphAlgorithmException(nullptr, "Could not prepare BFS algorithm.");
         }
@@ -316,20 +325,22 @@ struct SimpleIncSSReachAlgorithm::Reachability {
         auto relateTo = relateToReachable ? numReachable : diGraph->getSize();
         auto compareTo = maxUSSqrt ? floor(sqrt(relateTo))
                                    : (maxUSLog ?
-                                          floor(log2(relateTo)) : floor(maxUnknownStateRatio * relateTo));
+                                          floor(log2(relateTo))
+                                        : floor(maxUnknownStateRatio * relateTo));
 
         changedStateVertices.clear();
         auto maxSteps = static_cast<DiGraph::size_type>(compareTo);
 #ifndef NDEBUG
         auto visited =
 #endif
-					radicalReset ? propagate<true, false, false, true>(from, State::UNKNOWN, maxSteps)
+        radicalReset ? propagate<true, false, false, true>(from, State::UNKNOWN, maxSteps)
             : propagate<true, false, false, false>(from, State::UNKNOWN);
 
         auto unknown = changedStateVertices.size();
 #ifdef COLLECT_PR_DATA
         numReachable -= unknown;
-        PRINT_DEBUG( unknown << " vertices have unknown state, " << visited << " were visited by BFS.");
+        PRINT_DEBUG( unknown << " vertices have unknown state, "
+                     << visited << " were visited by BFS.");
 #endif
         assert (unknown == visited || unknown == visited + 1U);
 
@@ -353,8 +364,10 @@ struct SimpleIncSSReachAlgorithm::Reachability {
                     parent->prVertexConsidered();
 #endif
                     if (reachability(v) != State::REACHABLE) {
-                        PRINT_DEBUG("Setting remaining vertex " << v << " with unknown state unreachable.");
+                        PRINT_DEBUG("Setting remaining vertex " << v
+                                    << " with unknown state unreachable.");
                         reachability[v] = State::UNREACHABLE;
+                        numReachable--;
                     }
                 }
             }
@@ -402,9 +415,11 @@ struct SimpleIncSSReachAlgorithm::Reachability {
         };
 
         if (reverse) {
-            std::for_each(changedStateVertices.crbegin(), changedStateVertices.crend(), processUnknowns);
+            std::for_each(changedStateVertices.crbegin(), changedStateVertices.crend(),
+                          processUnknowns);
         } else {
-            std::for_each(changedStateVertices.cbegin(), changedStateVertices.cend(), processUnknowns);
+            std::for_each(changedStateVertices.cbegin(), changedStateVertices.cend(),
+                          processUnknowns);
         }
         changedStateVertices.clear();
 
@@ -473,7 +488,8 @@ struct SimpleIncSSReachAlgorithm::Reachability {
                     || (reachability(v) == State::REACHABLE && !lr(v))
                     || (reachability(v) == State::UNREACHABLE && lr(v))) {
                 ok = false;
-                PRINT_DEBUG("State mismatch for vertex " << v << ": " << printState(reachability(v)) << " but is "
+                PRINT_DEBUG("State mismatch for vertex " << v << ": " << printState(reachability(v))
+                            << " but is "
                             << (lr(v) ? "reachable" : "unreachable"));
             } else if (reachability(v) == State::REACHABLE && pred(v) == nullptr && v != source) {
                 ok = false;
@@ -486,14 +502,16 @@ struct SimpleIncSSReachAlgorithm::Reachability {
 
         if (ok && countReachable != numReachable) {
             ok = false;
-            PRINT_DEBUG("Wrong #reachable: stored " << numReachable << ", real " << countReachable );
+            PRINT_DEBUG("Wrong #reachable: stored " << numReachable << ", real "
+                        << countReachable );
         }
         return ok;
     }
 };
 
 
-SimpleIncSSReachAlgorithm::SimpleIncSSReachAlgorithm(bool reverse, bool searchForward, double maxUS, bool radicalReset)
+SimpleIncSSReachAlgorithm::SimpleIncSSReachAlgorithm(bool reverse, bool searchForward, double maxUS,
+                                                     bool radicalReset)
     : DynamicSSReachAlgorithm(), initialized(false),
       reverse(reverse), searchForward(searchForward), maxUnknownStateRatio(maxUS),
       maxUSSqrt(false), maxUSLog(false), relateToReachable(false), radicalReset(radicalReset),
@@ -605,8 +623,10 @@ DynamicSSReachAlgorithm::Profile SimpleIncSSReachAlgorithm::getProfile() const
     profile.push_back(std::make_pair(std::string("max_unreached"), data->maxUnreached));
     profile.push_back(std::make_pair(std::string("max_rereached"), data->maxRereached));
     profile.push_back(std::make_pair(std::string("max_tracebacks"), data->maxTracebacks));
-    profile.push_back(std::make_pair(std::string("unknown_limit_percent"), data->maxUnknownStateRatio * 100));
-    profile.push_back(std::make_pair(std::string("rereach_from_source"), data->numReReachFromSource));
+    profile.push_back(std::make_pair(std::string("unknown_limit_percent"),
+                                     data->maxUnknownStateRatio * 100));
+    profile.push_back(std::make_pair(std::string("rereach_from_source"),
+                                     data->numReReachFromSource));
 
     return profile;
 }
