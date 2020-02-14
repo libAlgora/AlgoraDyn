@@ -337,8 +337,8 @@ struct SimpleIncSSReachAlgorithm::Reachability {
             : propagate<true, false, false, false>(from, State::UNKNOWN);
 
         auto unknown = changedStateVertices.size();
-#ifdef COLLECT_PR_DATA
         numReachable -= unknown;
+#ifdef COLLECT_PR_DATA
         PRINT_DEBUG( unknown << " vertices have unknown state, "
                      << visited << " were visited by BFS.");
 #endif
@@ -367,7 +367,6 @@ struct SimpleIncSSReachAlgorithm::Reachability {
                         PRINT_DEBUG("Setting remaining vertex " << v
                                     << " with unknown state unreachable.");
                         reachability[v] = State::UNREACHABLE;
-                        numReachable--;
                     }
                 }
             }
