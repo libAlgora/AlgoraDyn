@@ -41,6 +41,7 @@ public:
 
     std::string getErrors() const { return lastError; }
     void clearErrors() { lastError.clear(); }
+    void setStrict(bool strict) { this->strict = strict; }
 
     // DiGraphProvider interface
 public:
@@ -52,6 +53,7 @@ private:
     bool antedateVertexAdditions;
     bool removeIsolatedEndVertices;
     DiGraph::size_type limitNumTimestamps;
+    bool strict;
 };
 
 }

@@ -63,7 +63,8 @@ KonectNetworkReader::KonectNetworkReader(bool antedateVertexAdditions,
                                          GraphArtifact::size_type limitNumTimestamps)
     : antedateVertexAdditions(antedateVertexAdditions),
       removeIsolatedEndVertices(removeIsolatedEndVertices),
-      limitNumTimestamps(limitNumTimestamps)
+      limitNumTimestamps(limitNumTimestamps),
+      strict(false)
 {
 
 }
@@ -79,7 +80,7 @@ bool KonectNetworkReader::provideDynamicDiGraph(DynamicDiGraph *dynGraph)
         lastError.append("No input stream.\n");
         return false;
     }
-    const char comment = '%';
+    const std::vector<char> comment = { '%', '#' };
     using namespace std;
     istream &inputStream = *(StreamDiGraphReader::inputStream);
     bool errorsOccurred = false;
@@ -94,22 +95,26 @@ bool KonectNetworkReader::provideDynamicDiGraph(DynamicDiGraph *dynGraph)
         vector<string> tokens { istream_iterator<string>{iss},
                               istream_iterator<string>{}};
 
-        if (tokens.empty() || tokens.front().front() == comment) {
+        if (tokens.empty()
+                || std::find(comment.cbegin(), comment.cend(), tokens.front().front())
+                        != comment.cend()) {
             continue;
         }
-        if (tokens.size() != 4) {
+
+        if (tokens.size() < 2 || (strict && tokens.size() != 4)) {
             lastError.append(line);
             lastError.append(": Each line must contain exactly four entries.\n");
             errorsOccurred = true;
             continue;
         }
+
         try {
             //PRINT_DEBUG("Trying to parse tokens: " << tokens[0] << "; " << tokens[1] << "; "
             // << tokens[2] << "; " << tokens[3])
             auto tail = std::stoull(tokens[0]);
             auto head = std::stoull(tokens[1]);
-            int plusMinus = std::stoi(tokens[2]);
-            auto timestamp = std::stoull(tokens[3]);
+            int plusMinus = tokens.size() > 2 ? std::stoi(tokens[2]) : 1;
+            auto timestamp = tokens.size() > 3 ? std::stoull(tokens[3]) : 0;
             if (plusMinus > 0) {
                 entries.emplace_back(tail, head, true, timestamp);
             } else if (plusMinus < 0) {

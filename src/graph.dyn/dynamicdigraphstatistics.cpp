@@ -105,26 +105,28 @@ void DynamicDiGraphStatistics::analyzeDynamicDiGraph(DynamicDiGraph *dyGraph)
             / densities.size();
     fDensity = densities.back();
 
-    auto pd = std::minmax_element(std::begin(arcAdditions), std::end(arcAdditions));
-    minArcAdditions = *(pd.first);
-    maxArcAdditions = *(pd.second);
-    medArcAdditions = medianOf(arcAdditions);
-    sumArcAdditions = std::accumulate(std::begin(arcAdditions), std::end(arcAdditions), 0ULL);
-    avgArcAdditions = (1.0 * sumArcAdditions) / arcAdditions.size();
+    if (!arcAdditions.empty()) {
+        auto pd = std::minmax_element(std::begin(arcAdditions), std::end(arcAdditions));
+        minArcAdditions = *(pd.first);
+        maxArcAdditions = *(pd.second);
+        medArcAdditions = medianOf(arcAdditions);
+        sumArcAdditions = std::accumulate(std::begin(arcAdditions), std::end(arcAdditions), 0ULL);
+        avgArcAdditions = (1.0 * sumArcAdditions) / arcAdditions.size();
 
-    pd = std::minmax_element(std::begin(arcRemovals), std::end(arcRemovals));
-    minArcRemovals = *(pd.first);
-    maxArcRemovals = *(pd.second);
-    medArcRemovals = medianOf(arcRemovals);
-    sumArcRemovals = std::accumulate(std::begin(arcRemovals), std::end(arcRemovals), 0ULL);
-    avgArcRemovals = (1.0 * sumArcRemovals) / arcRemovals.size();
+        pd = std::minmax_element(std::begin(arcRemovals), std::end(arcRemovals));
+        minArcRemovals = *(pd.first);
+        maxArcRemovals = *(pd.second);
+        medArcRemovals = medianOf(arcRemovals);
+        sumArcRemovals = std::accumulate(std::begin(arcRemovals), std::end(arcRemovals), 0ULL);
+        avgArcRemovals = (1.0 * sumArcRemovals) / arcRemovals.size();
 
-    auto q = std::minmax_element(std::begin(timeDeltas), std::end(timeDeltas));
-    minTimeDelta = *(q.first);
-    maxTimeDelta = *(q.second);
-    medTimeDelta = medianOf(timeDeltas);
-    sumTimeDelta = std::accumulate(std::begin(timeDeltas), std::end(timeDeltas), 0ULL);
-    avgTimeDelta = (1.0 * sumTimeDelta) / timeDeltas.size();
+        auto q = std::minmax_element(std::begin(timeDeltas), std::end(timeDeltas));
+        minTimeDelta = *(q.first);
+        maxTimeDelta = *(q.second);
+        medTimeDelta = medianOf(timeDeltas);
+        sumTimeDelta = std::accumulate(std::begin(timeDeltas), std::end(timeDeltas), 0ULL);
+        avgTimeDelta = (1.0 * sumTimeDelta) / timeDeltas.size();
+    }
 
     timestamps = dyGraph->getTimestamps();
 }

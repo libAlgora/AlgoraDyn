@@ -523,8 +523,9 @@ struct DynamicDiGraph::CheshireCat {
         return false;
     }
 
-    DynamicDiGraph::size_type countOperations(DynamicTime timeFrom, DynamicTime timeUntil, Operation::Type type) const {
-        if (timeUntil < timeFrom) {
+    DynamicDiGraph::size_type countOperations(DynamicTime timeFrom, DynamicTime timeUntil,
+                                              Operation::Type type) const {
+        if (timeUntil < timeFrom || timeFrom > timestamps.back()) {
             return 0U;
         }
         auto tIndexFrom = findTimeIndex(timeFrom);
