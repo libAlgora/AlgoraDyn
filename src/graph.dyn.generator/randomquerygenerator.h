@@ -44,7 +44,7 @@ private:
     bool initialized;
 
     void init();
-		DynamicDiGraph::size_type computeNumQueries(const DynamicDiGraph *dyGraph) const;
+    DynamicDiGraph::size_type computeNumQueries(const DynamicDiGraph *dyGraph) const;
 };
 
 }
