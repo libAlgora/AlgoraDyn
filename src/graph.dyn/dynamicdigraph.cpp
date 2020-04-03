@@ -378,11 +378,19 @@ struct DynamicDiGraph::CheshireCat {
         Vertex *ct = avoTail->constructionVertex;
         Vertex *ch = avoHead->constructionVertex;
         Arc *ca = nullptr;
-        constructionGraph.mapOutgoingArcsUntil(ct, [&](Arc *a) {
-            if (a->getHead() == ch) {
-                ca = a;
-            }
-        }, [&](const Arc*) { return ca != nullptr; });
+        if (constructionGraph.getOutDegree(ct, true) <= constructionGraph.getInDegree(ch, true)) {
+            constructionGraph.mapOutgoingArcsUntil(ct, [&ch,&ca](Arc *a) {
+                if (a->getHead() == ch) {
+                    ca = a;
+                }
+            }, [&ca](const Arc*) { return ca != nullptr; });
+        } else {
+            constructionGraph.mapIncomingArcsUntil(ch, [&ct,&ca](Arc *a) {
+                if (a->getTail() == ct) {
+                    ca = a;
+                }
+            }, [&ca](const Arc*) { return ca != nullptr; });
+        }
 
         return ca;
     }
