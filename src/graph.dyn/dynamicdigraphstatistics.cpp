@@ -76,6 +76,10 @@ void DynamicDiGraphStatistics::analyzeDynamicDiGraph(DynamicDiGraph *dyGraph)
         arcAge.resetToDefault(a);
     });
 
+    //graph->mapArcs([this,&arcAge](Arc *a) {
+    //    arcAge[a] = graphSizes.size(); // ~ #delta
+    //});
+
     while (next) {
         auto n = graph->getSize();
         auto m = graph->getNumArcs(true);
@@ -95,9 +99,9 @@ void DynamicDiGraphStatistics::analyzeDynamicDiGraph(DynamicDiGraph *dyGraph)
     graph->removeOnArcAdd(this);
     graph->removeOnArcRemove(this);
 
-    graph->mapArcs([this,&arcAge](Arc *a) {
-        arcAges.push_back(graphSizes.size() + 1 - arcAge(a));
-    });
+    //graph->mapArcs([this,&arcAge](Arc *a) {
+    //    arcAges.push_back(graphSizes.size() + 1 - arcAge(a));
+    //});
 
     assert(graphSizes.size() == arcSizes.size());
     assert(graphSizes.size() == densities.size());
