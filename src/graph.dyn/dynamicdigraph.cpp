@@ -523,8 +523,9 @@ struct DynamicDiGraph::CheshireCat {
         return false;
     }
 
-    DynamicDiGraph::size_type countOperations(DynamicTime timeFrom, DynamicTime timeUntil, Operation::Type type) const {
-        if (timeUntil < timeFrom) {
+    DynamicDiGraph::size_type countOperations(DynamicTime timeFrom, DynamicTime timeUntil,
+                                              Operation::Type type) const {
+        if (timeUntil < timeFrom || timeFrom > timestamps.back()) {
             return 0U;
         }
         auto tIndexFrom = findTimeIndex(timeFrom);
@@ -697,7 +698,8 @@ void DynamicDiGraph::removeVertex(VertexIdentifier vertexId, DynamicTime timesta
     grin->removeVertex(vertexId, timestamp);
 }
 
-void DynamicDiGraph::addArc(VertexIdentifier tailId, VertexIdentifier headId, DynamicTime timestamp, bool antedateVertexAdditions)
+void DynamicDiGraph::addArc(VertexIdentifier tailId, VertexIdentifier headId,
+                            DynamicTime timestamp, bool antedateVertexAdditions)
 {
     if (grin->doubleArcIsRemoval && hasArc(tailId, headId)) {
         grin->removeArc(tailId, headId, timestamp, antedateVertexAdditions);
@@ -706,7 +708,8 @@ void DynamicDiGraph::addArc(VertexIdentifier tailId, VertexIdentifier headId, Dy
     }
 }
 
-void DynamicDiGraph::removeArc(VertexIdentifier tailId, VertexIdentifier headId, DynamicTime timestamp, bool removeIsolatedEnds)
+void DynamicDiGraph::removeArc(VertexIdentifier tailId, VertexIdentifier headId,
+                               DynamicTime timestamp, bool removeIsolatedEnds)
 {
     grin->removeArc(tailId, headId, timestamp, removeIsolatedEnds);
 }
@@ -788,7 +791,6 @@ Vertex *DynamicDiGraph::getCurrentVertexForId(VertexIdentifier vertexId) const
 
 DynamicDiGraph::VertexIdentifier DynamicDiGraph::idOfIthVertex(DynamicDiGraph::size_type i)
 {
-    //return stoull(grin->dynGraph.vertexAt(i)->getName());
     return grin->idOfIthVertex(i);
 }
 
@@ -802,27 +804,32 @@ DynamicDiGraph::size_type DynamicDiGraph::getSizeOfFinalDelta() const
     return grin->getSizeOfFinalDelta();
 }
 
-DynamicDiGraph::size_type DynamicDiGraph::countVertexAdditions(DynamicTime timeFrom, DynamicTime timeUntil) const
+DynamicDiGraph::size_type DynamicDiGraph::countVertexAdditions(DynamicTime timeFrom,
+                                                               DynamicTime timeUntil) const
 {
     return grin->countOperations(timeFrom, timeUntil, Operation::Type::VERTEX_ADDITION);
 }
 
-DynamicDiGraph::size_type DynamicDiGraph::countVertexRemovals(DynamicTime timeFrom, DynamicTime timeUntil) const
+DynamicDiGraph::size_type DynamicDiGraph::countVertexRemovals(DynamicTime timeFrom,
+                                                              DynamicTime timeUntil) const
 {
     return grin->countOperations(timeFrom, timeUntil, Operation::Type::VERTEX_REMOVAL);
 }
 
-DynamicDiGraph::size_type DynamicDiGraph::countArcAdditions(DynamicTime timeFrom, DynamicTime timeUntil) const
+DynamicDiGraph::size_type DynamicDiGraph::countArcAdditions(DynamicTime timeFrom,
+                                                            DynamicTime timeUntil) const
 {
     return grin->countOperations(timeFrom, timeUntil, Operation::Type::ARC_ADDITION);
 }
 
-DynamicDiGraph::size_type DynamicDiGraph::countArcRemovals(DynamicTime timeFrom, DynamicTime timeUntil) const
+DynamicDiGraph::size_type DynamicDiGraph::countArcRemovals(DynamicTime timeFrom,
+                                                           DynamicTime timeUntil) const
 {
     return grin->countOperations(timeFrom, timeUntil, Operation::Type::ARC_REMOVAL);
 }
 
-DynamicDiGraph::size_type DynamicDiGraph::countNoops(DynamicDiGraph::DynamicTime timeFrom, DynamicDiGraph::DynamicTime timeUntil) const
+DynamicDiGraph::size_type DynamicDiGraph::countNoops(DynamicDiGraph::DynamicTime timeFrom,
+                                                     DynamicDiGraph::DynamicTime timeUntil) const
 {
     return grin->countOperations(timeFrom, timeUntil, Operation::Type::NONE);
 }

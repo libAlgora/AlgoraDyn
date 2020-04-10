@@ -20,29 +20,30 @@
  *   http://algora.xaikal.org
  */
 
-#ifndef DYNAMICDIGRAPHPROVIDER_H
-#define DYNAMICDIGRAPHPROVIDER_H
-
-#include <string>
+#include "sesvertexdata.h"
+#include "graph/vertex.h"
+#include "graph/arc.h"
 
 namespace Algora {
 
-class DynamicDiGraph;
-
-class DynamicDiGraphProvider
+std::ostream &operator<<(std::ostream &os, const SESVertexData *vd)
 {
-public:
-    DynamicDiGraphProvider() { }
-    virtual ~DynamicDiGraphProvider() { }
+    if (vd == nullptr) {
+        os << " null ";
+        return os;
+    }
 
-    virtual bool isGraphAvailable() = 0;
-    virtual bool provideDynamicDiGraph(DynamicDiGraph *dyGraph) = 0;
-
-    virtual std::string getConfiguration() const;
-    virtual std::ostream &toJson(std::ostream &out, const std::string &/*newline*/) const;
-    virtual std::string getName() const noexcept { return "Dynamic Digraph Provider"; }
-};
-
+    os << vd->vertex << ": ";
+    //os << "parent: [" << vd->parent << "] ; level: " << vd->level;
+    os << "parent: [";
+    if (vd->parent) {
+      os << vd->parent->vertex << ", tree arc: " << vd->parent->treeArc
+         << ", level: " << vd->parent->level;
+    } else {
+        os << "null";
+    }
+    os << "] ; level: " << vd->level;
+    return os;
 }
 
-#endif // DYNAMICDIGRAPHPROVIDER_H
+}

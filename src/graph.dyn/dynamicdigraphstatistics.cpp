@@ -32,62 +32,22 @@
 namespace Algora {
 
 template<typename C>
-typename C::value_type medianOf(const C &container, const typename C::value_type &emptyValue = typename C::value_type()) {
+typename C::value_type medianOf(const C &container,
+                             const typename C::value_type &emptyValue = typename C::value_type()) {
     auto v(container);
     if (v.empty()) {
         return emptyValue;
     }
     auto half = v.size() / 2;
-    std::nth_element(v.begin(), v.begin() + static_cast<typename C::difference_type>(half), v.end());
+    std::nth_element(v.begin(),
+                     v.begin() + static_cast<typename C::difference_type>(half),
+                     v.end());
     return v[half];
 }
 
 void DynamicDiGraphStatistics::analyzeDynamicDiGraph(DynamicDiGraph *dyGraph)
 {
-    iGraphSize = 0U;
-    maxGraphSize = 0U;
-    minGraphSize = 0U;
-    medGraphSize = 0U;
-    avgGraphSize = 0.0;
-    fGraphSize = 0U;
-    std::vector<DiGraph::size_type> graphSizes;
-
-    iArcSize = 0U;
-    maxArcSize = 0U;
-    minArcSize = 0U;
-    medArcSize = 0U;
-    avgArcSize = 0.0;
-    fArcSize = 0U;
-    std::vector<DiGraph::size_type> arcSizes;
-
-    iDensity = 0.0;
-    maxDensity = 0.0;
-    minDensity = 0.0;
-    medDensity = 0.0;
-    avgDensity = 0.0;
-    fDensity = 0.0;
-    std::vector<double> densities;
-
-    minArcAdditions = 0U;
-    maxArcAdditions = 0U;
-    medArcAdditions = 0U;
-    sumArcAdditions = 0U;
-    avgArcAdditions = 0.0;
-    std::vector<DynamicDiGraph::size_type> arcAdditions;
-
-    minArcRemovals = 0U;
-    maxArcRemovals = 0U;
-    medArcRemovals = 0U;
-    sumArcRemovals = 0U;
-    avgArcRemovals = 0.0;
-    std::vector<DynamicDiGraph::size_type> arcRemovals;
-
-    minTimeDelta = 0U;
-    maxTimeDelta = 0U;
-    medTimeDelta = 0U;
-    sumTimeDelta = 0U;
-    avgTimeDelta = 0.0;
-    std::vector<DynamicDiGraph::DynamicTime> timeDeltas;
+    clear();
 
     dyGraph->resetToBigBang();
     auto graph = dyGraph->getDiGraph();
@@ -125,43 +85,98 @@ void DynamicDiGraphStatistics::analyzeDynamicDiGraph(DynamicDiGraph *dyGraph)
     minGraphSize = *(p.first);
     maxGraphSize = *(p.second);
     medGraphSize = medianOf(graphSizes);
-    avgGraphSize = (1.0 * std::accumulate(std::begin(graphSizes), std::end(graphSizes), 0ULL)) / graphSizes.size();
+    avgGraphSize = (1.0 * std::accumulate(std::begin(graphSizes), std::end(graphSizes), 0ULL))
+            / graphSizes.size();
     fGraphSize = graphSizes.back();
 
     p = std::minmax_element(std::begin(arcSizes), std::end(arcSizes));
     minArcSize = *(p.first);
     maxArcSize = *(p.second);
     medArcSize = medianOf(arcSizes);
-    avgArcSize = (1.0 * std::accumulate(std::begin(arcSizes), std::end(arcSizes), 0ULL)) / arcSizes.size();
+    avgArcSize = (1.0 * std::accumulate(std::begin(arcSizes), std::end(arcSizes), 0ULL))
+            / arcSizes.size();
     fArcSize = arcSizes.back();
 
     auto d = std::minmax_element(std::begin(densities), std::end(densities));
     minDensity = *(d.first);
     maxDensity = *(d.second);
     medDensity = medianOf(densities);
-    avgDensity = (1.0 * std::accumulate(std::begin(densities), std::end(densities), 0ULL)) / densities.size();
+    avgDensity = (1.0 * std::accumulate(std::begin(densities), std::end(densities), 0ULL))
+            / densities.size();
     fDensity = densities.back();
 
-    p = std::minmax_element(std::begin(arcAdditions), std::end(arcAdditions));
-    minArcAdditions = *(p.first);
-    maxArcAdditions = *(p.second);
-    medArcAdditions = medianOf(arcAdditions);
-    sumArcAdditions = std::accumulate(std::begin(arcAdditions), std::end(arcAdditions), 0ULL);
-    avgArcAdditions = (1.0 * sumArcAdditions) / arcAdditions.size();
+    if (!arcAdditions.empty()) {
+        auto pd = std::minmax_element(std::begin(arcAdditions), std::end(arcAdditions));
+        minArcAdditions = *(pd.first);
+        maxArcAdditions = *(pd.second);
+        medArcAdditions = medianOf(arcAdditions);
+        sumArcAdditions = std::accumulate(std::begin(arcAdditions), std::end(arcAdditions), 0ULL);
+        avgArcAdditions = (1.0 * sumArcAdditions) / arcAdditions.size();
 
-    p = std::minmax_element(std::begin(arcRemovals), std::end(arcRemovals));
-    minArcRemovals = *(p.first);
-    maxArcRemovals = *(p.second);
-    medArcRemovals = medianOf(arcRemovals);
-    sumArcRemovals = std::accumulate(std::begin(arcRemovals), std::end(arcRemovals), 0ULL);
-    avgArcRemovals = (1.0 * sumArcRemovals) / arcRemovals.size();
+        pd = std::minmax_element(std::begin(arcRemovals), std::end(arcRemovals));
+        minArcRemovals = *(pd.first);
+        maxArcRemovals = *(pd.second);
+        medArcRemovals = medianOf(arcRemovals);
+        sumArcRemovals = std::accumulate(std::begin(arcRemovals), std::end(arcRemovals), 0ULL);
+        avgArcRemovals = (1.0 * sumArcRemovals) / arcRemovals.size();
 
-    auto q = std::minmax_element(std::begin(timeDeltas), std::end(timeDeltas));
-    minTimeDelta = *(q.first);
-    maxTimeDelta = *(q.second);
-    medTimeDelta = medianOf(timeDeltas);
-    sumTimeDelta = std::accumulate(std::begin(timeDeltas), std::end(timeDeltas), 0ULL);
-    avgTimeDelta = (1.0 * sumTimeDelta) / timeDeltas.size();
+        auto q = std::minmax_element(std::begin(timeDeltas), std::end(timeDeltas));
+        minTimeDelta = *(q.first);
+        maxTimeDelta = *(q.second);
+        medTimeDelta = medianOf(timeDeltas);
+        sumTimeDelta = std::accumulate(std::begin(timeDeltas), std::end(timeDeltas), 0ULL);
+        avgTimeDelta = (1.0 * sumTimeDelta) / timeDeltas.size();
+    }
+
+    timestamps = dyGraph->getTimestamps();
+}
+
+void DynamicDiGraphStatistics::clear()
+{
+    iGraphSize = 0U;
+    maxGraphSize = 0U;
+    minGraphSize = 0U;
+    medGraphSize = 0U;
+    avgGraphSize = 0.0;
+    fGraphSize = 0U;
+    graphSizes.clear();
+
+    iArcSize = 0U;
+    maxArcSize = 0U;
+    minArcSize = 0U;
+    medArcSize = 0U;
+    avgArcSize = 0.0;
+    fArcSize = 0U;
+    arcSizes.clear();
+
+    iDensity = 0.0;
+    maxDensity = 0.0;
+    minDensity = 0.0;
+    medDensity = 0.0;
+    avgDensity = 0.0;
+    fDensity = 0.0;
+    densities.clear();
+
+    minArcAdditions = 0U;
+    maxArcAdditions = 0U;
+    medArcAdditions = 0U;
+    sumArcAdditions = 0U;
+    avgArcAdditions = 0.0;
+    arcAdditions.clear();
+
+    minArcRemovals = 0U;
+    maxArcRemovals = 0U;
+    medArcRemovals = 0U;
+    sumArcRemovals = 0U;
+    avgArcRemovals = 0.0;
+    arcRemovals.clear();
+
+    minTimeDelta = 0U;
+    maxTimeDelta = 0U;
+    medTimeDelta = 0U;
+    sumTimeDelta = 0U;
+    avgTimeDelta = 0.0;
+    timeDeltas.clear();
 }
 
 

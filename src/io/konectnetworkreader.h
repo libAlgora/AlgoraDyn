@@ -24,6 +24,7 @@
 #define KONECTNETWORKREADER_H
 
 #include "io/streamdigraphreader.h"
+#include "graph/digraph.h"
 #include <string>
 
 namespace Algora {
@@ -34,11 +35,13 @@ class KonectNetworkReader : public StreamDiGraphReader
 {
 public:
     explicit KonectNetworkReader(bool antedateVertexAdditions = false,
-                                 bool removeIsolatedEndVertices = false);
+                                 bool removeIsolatedEndVertices = false,
+                                 DiGraph::size_type limitNumTimestamps = 0);
     virtual ~KonectNetworkReader() override;
 
     std::string getErrors() const { return lastError; }
     void clearErrors() { lastError.clear(); }
+    void setStrict(bool strict) { this->strict = strict; }
 
     // DiGraphProvider interface
 public:
@@ -49,6 +52,8 @@ private:
     std::string lastError;
     bool antedateVertexAdditions;
     bool removeIsolatedEndVertices;
+    DiGraph::size_type limitNumTimestamps;
+    bool strict;
 };
 
 }

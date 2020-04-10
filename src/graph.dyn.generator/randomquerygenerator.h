@@ -19,7 +19,7 @@ public:
     RandomQueryGenerator();
 
     void setSeed(unsigned long long s) { seed = s; initialized = false; }
-    void setAbsoluteNumberOfQueries(unsigned int n) { absoluteQueries = n; relativeQueries = 0.0; }
+    void setAbsoluteNumberOfQueries(unsigned long n) { absoluteQueries = n; relativeQueries = 0.0; }
     void setRelativeNumberOfQueries(double n, const NUM_QUERY_RELATION &r) {
         relativeQueries = n;
         relateTo = r;
@@ -27,7 +27,7 @@ public:
     }
     unsigned long long getSeed() const { return seed; }
 
-    VertexQueryList generateVertexQueries(const DynamicDiGraph *dyGraph);
+    VertexQueryList generateVertexQueries(DynamicDiGraph *dyGraph);
     std::vector<VertexQueryList> provideVertexQueries(DynamicDiGraph *dyGraph) override;
 
     // DynamicDiGraphQueryProvider interface
@@ -44,7 +44,7 @@ private:
     bool initialized;
 
     void init();
-		DynamicDiGraph::size_type computeNumQueries(const DynamicDiGraph *dyGraph) const;
+    DynamicDiGraph::size_type computeNumQueries(const DynamicDiGraph *dyGraph) const;
 };
 
 }

@@ -20,29 +20,31 @@
  *   http://algora.xaikal.org
  */
 
-#ifndef DYNAMICDIGRAPHPROVIDER_H
-#define DYNAMICDIGRAPHPROVIDER_H
+#ifndef STATICDFSSSREACHALGORITHM_H
+#define STATICDFSSSREACHALGORITHM_H
 
-#include <string>
+#include "dynamicsinglesourcereachabilityalgorithm.h"
 
 namespace Algora {
 
-class DynamicDiGraph;
-
-class DynamicDiGraphProvider
+class StaticDFSSSReachAlgorithm : public DynamicSingleSourceReachabilityAlgorithm
 {
 public:
-    DynamicDiGraphProvider() { }
-    virtual ~DynamicDiGraphProvider() { }
+    explicit StaticDFSSSReachAlgorithm();
+    virtual ~StaticDFSSSReachAlgorithm();
 
-    virtual bool isGraphAvailable() = 0;
-    virtual bool provideDynamicDiGraph(DynamicDiGraph *dyGraph) = 0;
+    // DiGraphAlgorithm interface
+public:
+    virtual void run() override;
+    virtual std::string getName() const noexcept override { return "Static DFS Single-Source Reachability Algorithm"; }
+    virtual std::string getShortName() const noexcept override { return "Static-DFS-SSReach"; }
 
-    virtual std::string getConfiguration() const;
-    virtual std::ostream &toJson(std::ostream &out, const std::string &/*newline*/) const;
-    virtual std::string getName() const noexcept { return "Dynamic Digraph Provider"; }
+    // DynamicSSReachAlgorithm interface
+public:
+    virtual bool query(const Vertex *t) override;
+    virtual std::vector<Arc*> queryPath(const Vertex *t) override;
 };
 
 }
 
-#endif // DYNAMICDIGRAPHPROVIDER_H
+#endif // STATICDFSSSREACHALGORITHM_H

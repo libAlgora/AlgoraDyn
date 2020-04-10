@@ -25,6 +25,8 @@
 
 #include "algorithm/digraphalgorithm.h"
 
+#include <vector>
+
 namespace Algora {
 
 class Vertex;
@@ -34,12 +36,18 @@ class DynamicDiGraphAlgorithm
         : public DiGraphAlgorithm
 {
 public:
-    explicit DynamicDiGraphAlgorithm() : DiGraphAlgorithm(), autoUpdate(true), registered(false),
-        registerOnVertexAdd(true), registerOnVertexRemove(true), registerOnArcAdd(true), registerOnArcRemove(true)
-    {}
-    virtual ~DynamicDiGraphAlgorithm() override { deregister(); }
+    typedef unsigned long long profiling_counter;
+    typedef std::vector<std::pair<std::string, profiling_counter>> Profile;
+
+    explicit DynamicDiGraphAlgorithm();
+    virtual ~DynamicDiGraphAlgorithm() override;
 
     void setAutoUpdate(bool au) {
+        if (!au && registered) {
+            deregisterAsObserver();
+        } else if (au && !registered) {
+            registerAsObserver();
+        }
         this->autoUpdate = au;
     }
 
@@ -52,7 +60,20 @@ public:
     virtual void onArcAdd(Arc *) { }
     virtual void onArcRemove(Arc *) { }
 
+    virtual void dumpData(std::ostream&) const { }
+    virtual Profile getProfile() const;
+
+    virtual void ping() { }
+
+    // DiGraphAlgorithm interface
+public:
+    virtual std::string getProfilingInfo() const override;
+
 protected:
+    profiling_counter pr_consideredVertices;
+    profiling_counter pr_consideredArcs;
+    profiling_counter pr_numResets;
+
     virtual void onDiGraphSet() override;
     virtual void onDiGraphUnset() override;
 
@@ -63,11 +84,22 @@ protected:
         registerOnArcRemove = arcRemove;
     }
 
+    //inline
+    void prVertexConsidered() { pr_consideredVertices++; }
+    void prVerticesConsidered(const profiling_counter &n) { pr_consideredVertices += n; }
+    void prArcConsidered() { pr_consideredArcs++; }
+    void prArcsConsidered(const profiling_counter &m) { pr_consideredArcs += m; }
+    void prReset() { pr_numResets++; }
+    void resetProfileData() {
+        pr_consideredVertices = 0UL; pr_consideredArcs = 0UL; pr_numResets = 0UL;
+    }
+
 private:
     bool autoUpdate;
     bool registered;
 
-    void deregister();
+    void registerAsObserver();
+    void deregisterAsObserver();
 
     bool registerOnVertexAdd;
     bool registerOnVertexRemove;

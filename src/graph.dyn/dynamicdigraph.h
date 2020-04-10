@@ -44,14 +44,16 @@ public:
     DynamicTime getMaxTime() const;
     const std::vector<DynamicTime> &getTimestamps() const;
     size_type getNumberOfDeltas() const;
-        DiGraph::size_type getConstructedGraphSize() const;
+    DiGraph::size_type getConstructedGraphSize() const;
     DiGraph::size_type getConstructedArcSize() const;
 
     VertexIdentifier addVertex(DynamicTime timestamp);
     void addVertex(VertexIdentifier vertexId, DynamicTime timestamp);
     void removeVertex(VertexIdentifier vertexId, DynamicTime timestamp);
-    void addArc(VertexIdentifier tailId, VertexIdentifier headId, DynamicTime timestamp, bool antedateVertexAdditions = false);
-    void removeArc(VertexIdentifier tailId, VertexIdentifier headId, DynamicTime timestamp, bool removeIsolatedEnds = false);
+    void addArc(VertexIdentifier tailId, VertexIdentifier headId,
+                DynamicTime timestamp, bool antedateVertexAdditions = false);
+    void removeArc(VertexIdentifier tailId, VertexIdentifier headId,
+                   DynamicTime timestamp, bool removeIsolatedEnds = false);
     void noop(DynamicTime timestamp);
     bool hasArc(VertexIdentifier tailId, VertexIdentifier headId);
     void clear();
