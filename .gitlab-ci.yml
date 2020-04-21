@@ -1,0 +1,15 @@
+image: gcc
+
+build:
+  stage: build
+  before_script:
+    - cd .. && git clone --depth 1 https://gitlab.com/libalgora/AlgoraCore.git
+    - cd AlgoraCore && curl --output artifact.zip -L https://gitlab.com/libalgora/AlgoraCore/-/jobs/artifacts/master/download?job=build && unzip artifact.zip
+    - cd ../AlgoraDyn
+    - apt update && apt-get -y install qt5-qmake libboost-dev
+  script:
+    - ./easyCompile -c -g
+  artifacts:
+    paths:
+      - build/Debug/libAlgoraDyn.a
+      - build/Release/libAlgoraDyn.a

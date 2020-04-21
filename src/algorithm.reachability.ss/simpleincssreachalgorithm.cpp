@@ -375,7 +375,8 @@ struct SimpleIncSSReachAlgorithm<reverseArcDirection>::Reachability {
                     parent->prVertexConsidered();
 #endif
                     if (reachability(v) != State::REACHABLE) {
-                        PRINT_DEBUG("Setting remaining vertex " << v << " with unknown state unreachable.");
+                        PRINT_DEBUG("Setting remaining vertex " << v
+                                    << " with unknown state unreachable.");
                         reachability[v] = State::UNREACHABLE;
                     }
                 }
@@ -511,7 +512,8 @@ struct SimpleIncSSReachAlgorithm<reverseArcDirection>::Reachability {
 
         if (ok && countReachable != numReachable) {
             ok = false;
-            PRINT_DEBUG("Wrong #reachable: stored " << numReachable << ", real " << countReachable );
+            PRINT_DEBUG("Wrong #reachable: stored " << numReachable << ", real "
+                        << countReachable );
         }
         return ok;
     }
