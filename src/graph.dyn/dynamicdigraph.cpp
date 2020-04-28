@@ -27,6 +27,7 @@
 
 #include <vector>
 #include "property/fastpropertymap.h"
+#include "datastructure/circularbucketlist.h"
 
 #include <stdexcept>
 #include <cassert>
@@ -153,6 +154,10 @@ struct DynamicDiGraph::CheshireCat {
     //DiGraph::size_type numVertices;
 
     bool doubleArcIsRemoval;
+    bool removeIsolatedEnds;
+
+    size_type defaultArcAge;
+    CircularBucketList<AddArcOperation*> autoArcRemovals;
 
     std::vector<AddVertexOperation*> vertices;
     FastPropertyMap<AddArcOperation*> constructionArcMap;
@@ -168,7 +173,11 @@ struct DynamicDiGraph::CheshireCat {
 
     bool graphChangedSinceLastReset;
 
+
     CheshireCat() : timeIndex(0U), opIndex(0U), doubleArcIsRemoval(false),
+        removeIsolatedEnds(false),
+        defaultArcAge(1U),
+        autoArcRemovals(defaultArcAge),
         vertexToIdMapNextOpIndex(0ULL), numResets(0U),
         curVertexSize(0ULL), curArcSize(0ULL), maxVertexSize(0ULL), maxArcSize(0ULL),
         graphChangedSinceLastReset(false) {
@@ -241,6 +250,13 @@ struct DynamicDiGraph::CheshireCat {
             //            << (timestamps.empty() ? 0U : timestamps.back()) << " to " << timestamp )
             timestamps.push_back(timestamp);
             offset.push_back(operations.size());
+
+            // run before all other operations
+            for (auto *aao : autoArcRemovals.front()) {
+                removeArc(aao, this->removeIsolatedEnds);
+            }
+            autoArcRemovals.front().clear();
+            autoArcRemovals.shift();
         }
     }
 
@@ -298,7 +314,7 @@ struct DynamicDiGraph::CheshireCat {
         graphChangedSinceLastReset = true;
     }
 
-    void addArc(VertexIdentifier tailId, VertexIdentifier headId, DynamicTime timestamp, bool antedateVertexAddition)
+    AddArcOperation *addArc(VertexIdentifier tailId, VertexIdentifier headId, DynamicTime timestamp, bool antedateVertexAddition)
     {
         checkTimestamp(timestamp);
 
@@ -359,6 +375,21 @@ struct DynamicDiGraph::CheshireCat {
         }
 
         graphChangedSinceLastReset = true;
+        return aao;
+    }
+
+    void addArcAndRemoveIn(VertexIdentifier tailId, VertexIdentifier headId, DynamicTime timestamp,
+                           size_type arcAge,
+                           bool antedateVertexAddition)
+    {
+        if (arcAge < 1) {
+            arcAge = defaultArcAge;
+        }
+        auto *aao = addArc(tailId, headId, timestamp, antedateVertexAddition);
+        if (arcAge > autoArcRemovals.size()) {
+            autoArcRemovals.resize(arcAge);
+        }
+        autoArcRemovals[arcAge - 1].push_back(aao);
     }
 
     void noop(DynamicTime timestamp) {
@@ -396,6 +427,7 @@ struct DynamicDiGraph::CheshireCat {
         return ca;
     }
 
+
     void removeArc(VertexIdentifier tailId, VertexIdentifier headId, DynamicTime timestamp, bool removeIsolatedEnds) {
         Arc *ca = findArc(tailId, headId);
         if (!ca) {
@@ -406,13 +438,18 @@ struct DynamicDiGraph::CheshireCat {
 
         AddArcOperation *aao = constructionArcMap[ca];
         assert(ca == aao->constructionArc);
+        removeArc(aao, removeIsolatedEnds);
+    }
+
+    void removeArc(AddArcOperation *aao, bool removeIsolatedEnds) {
         RemoveArcOperation *rao = new RemoveArcOperation(aao);
+        auto *ca = aao->constructionArc;
         constructionGraph.removeArc(ca);
         constructionArcMap.resetToDefault(ca);
 
         if (removeIsolatedEnds) {
-            AddVertexOperation *avoTail = vertices[tailId];
-            AddVertexOperation *avoHead = vertices[headId];
+            AddVertexOperation *avoTail = aao->tail;
+            AddVertexOperation *avoHead = aao->head;
             IncidenceListVertex *tail = dynamic_cast<IncidenceListVertex*>(avoTail->constructionVertex);
             IncidenceListVertex *head = dynamic_cast<IncidenceListVertex*>(avoHead->constructionVertex);
             if (tail->isIsolated() || head->isIsolated()) {
@@ -422,14 +459,14 @@ struct DynamicDiGraph::CheshireCat {
                     constructionGraph.removeVertex(avoTail->constructionVertex);
                     RemoveVertexOperation *rvo = new RemoveVertexOperation(avoTail);
                     op->operations.push_back(rvo);
-                    vertices[tailId] = nullptr;
+                    vertices[avoTail->vertexId] = nullptr;
                     curVertexSize--;
                 }
-                if (tailId != headId && head->isIsolated()) {
+                if (avoTail != avoHead && head->isIsolated()) {
                     constructionGraph.removeVertex(avoHead->constructionVertex);
                     RemoveVertexOperation *rvo = new RemoveVertexOperation(avoHead);
                     op->operations.push_back(rvo);
-                    vertices[headId] = nullptr;
+                    vertices[avoHead->vertexId] = nullptr;
                     curVertexSize--;
                 }
                 operations.push_back(op);
@@ -717,6 +754,19 @@ void DynamicDiGraph::addArc(VertexIdentifier tailId, VertexIdentifier headId,
     }
 }
 
+void DynamicDiGraph::addArcAndRemoveIn(VertexIdentifier tailId, VertexIdentifier headId,
+                                       DynamicTime timestamp, size_type ageInDeltas,
+                                       bool antedateVertexAdditions)
+{
+    grin->addArcAndRemoveIn(tailId, headId, timestamp, ageInDeltas, antedateVertexAdditions);
+}
+
+void DynamicDiGraph::removeArc(VertexIdentifier tailId, VertexIdentifier headId,
+                               DynamicTime timestamp)
+{
+    grin->removeArc(tailId, headId, timestamp, grin->removeIsolatedEnds);
+}
+
 void DynamicDiGraph::removeArc(VertexIdentifier tailId, VertexIdentifier headId,
                                DynamicTime timestamp, bool removeIsolatedEnds)
 {
@@ -852,6 +902,29 @@ void DynamicDiGraph::squashTimes(DynamicTime timeFrom, DynamicTime timeUntil)
 void DynamicDiGraph::secondArcIsRemoval(bool sir)
 {
     grin->doubleArcIsRemoval = sir;
+}
+
+void DynamicDiGraph::setDefaultArcAge(DynamicDiGraph::size_type defaultAge)
+{
+    if (defaultAge > grin->defaultArcAge) {
+        grin->autoArcRemovals.resize(defaultAge);
+    }
+    grin->defaultArcAge = defaultAge;
+}
+
+DynamicDiGraph::size_type DynamicDiGraph::getDefaultArcAge() const
+{
+    return grin->defaultArcAge;
+}
+
+void DynamicDiGraph::setRemoveIsolatedEnds(bool remove)
+{
+    grin->removeIsolatedEnds = remove;
+}
+
+bool DynamicDiGraph::removeIsolatedEnds() const
+{
+    return grin->removeIsolatedEnds;
 }
 
 }

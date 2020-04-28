@@ -42,6 +42,9 @@ public:
     std::string getErrors() const { return lastError; }
     void clearErrors() { lastError.clear(); }
     void setStrict(bool strict) { this->strict = strict; }
+    void setArcLifetime(DiGraph::size_type arcLifetime) {
+        this->arcLifetime = arcLifetime;
+    }
 
     // DiGraphProvider interface
 public:
@@ -54,6 +57,7 @@ private:
     bool removeIsolatedEndVertices;
     DiGraph::size_type limitNumTimestamps;
     bool strict;
+    DiGraph::size_type arcLifetime;
 };
 
 }

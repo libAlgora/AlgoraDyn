@@ -52,8 +52,13 @@ public:
     void removeVertex(VertexIdentifier vertexId, DynamicTime timestamp);
     void addArc(VertexIdentifier tailId, VertexIdentifier headId,
                 DynamicTime timestamp, bool antedateVertexAdditions = false);
+    void addArcAndRemoveIn(VertexIdentifier tailId, VertexIdentifier headId,
+                DynamicTime timestamp, size_type ageInDeltas = 0,
+                bool antedateVertexAdditions = false);
     void removeArc(VertexIdentifier tailId, VertexIdentifier headId,
-                   DynamicTime timestamp, bool removeIsolatedEnds = false);
+                   DynamicTime timestamp);
+    void removeArc(VertexIdentifier tailId, VertexIdentifier headId,
+                   DynamicTime timestamp, bool removeIsolatedEnds);
     void noop(DynamicTime timestamp);
     bool hasArc(VertexIdentifier tailId, VertexIdentifier headId);
     void clear();
@@ -81,6 +86,12 @@ public:
 
     void squashTimes(DynamicTime timeFrom, DynamicTime timeUntil);
     void secondArcIsRemoval(bool sir);
+
+    void setDefaultArcAge(size_type defaultAge);
+    size_type getDefaultArcAge() const;
+
+    void setRemoveIsolatedEnds(bool remove);
+    bool removeIsolatedEnds() const;
 
 private:
     struct CheshireCat;
