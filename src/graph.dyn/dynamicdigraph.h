@@ -28,6 +28,9 @@
 
 namespace Algora {
 
+struct Operation;
+struct AddArcOperation;
+
 class DynamicDiGraph
 {
 public:
@@ -36,7 +39,7 @@ public:
     typedef std::vector<DynamicTime>::size_type size_type;
 
     explicit DynamicDiGraph();
-    ~DynamicDiGraph();
+    virtual ~DynamicDiGraph();
 
     IncidenceListGraph *getDiGraph() const;
     DynamicTime getCurrentTime() const;
@@ -92,6 +95,12 @@ public:
 
     void setRemoveIsolatedEnds(bool remove);
     bool removeIsolatedEnds() const;
+
+protected:
+    void addOperation(DynamicTime timestamp, Operation *op);
+    Operation *getLastOperation() const;
+    void replaceLastOperation(Operation *op);
+    AddArcOperation *findAddArcOperation(VertexIdentifier tailId, VertexIdentifier headId);
 
 private:
     struct CheshireCat;
