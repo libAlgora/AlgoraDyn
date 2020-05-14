@@ -30,6 +30,7 @@
 namespace Algora {
 
 class DynamicDiGraph;
+class DynamicWeightedDiGraph;
 
 class KonectNetworkReader : public StreamDiGraphReader
 {
@@ -37,7 +38,7 @@ public:
     explicit KonectNetworkReader(bool antedateVertexAdditions = false,
                                  bool removeIsolatedEndVertices = false,
                                  DiGraph::size_type limitNumTimestamps = 0);
-    virtual ~KonectNetworkReader() override;
+    virtual ~KonectNetworkReader() override = default;
 
     std::string getErrors() const { return lastError; }
     void clearErrors() { lastError.clear(); }
@@ -50,6 +51,7 @@ public:
 public:
     virtual bool provideDiGraph(DiGraph *) override { return false; }
     virtual bool provideDynamicDiGraph(DynamicDiGraph *dynGraph);
+    virtual bool provideDynamicWeightedDiGraph(DynamicWeightedDiGraph *dynGraph);
 
 private:
     std::string lastError;
