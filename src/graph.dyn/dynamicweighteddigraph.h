@@ -7,14 +7,16 @@
 
 namespace Algora {
 
-template<typename weight_type,
+template<typename W,
          template<typename T>
          typename propertymap_type = FastPropertyMap>
 class DynamicWeightedDiGraph : public DynamicDiGraph
 {
 public:
+    typedef W weight_type;
+
     explicit DynamicWeightedDiGraph(weight_type defaultWeight = weight_type())
-        : defaultWeight(defaultWeight), weights(defaultWeight)
+        : defaultWeight(defaultWeight), weights(defaultWeight), constructionWeights(defaultWeight)
     { }
     virtual ~DynamicWeightedDiGraph() = default;
 
@@ -30,11 +32,13 @@ public:
             auto *aao = dynamic_cast<AddArcOperation*>(os->operations.back());
             assert(aao);
             auto *wco = new ArcWeightChangeOperation<weight_type>(&weights, aao, weight);
+            constructionWeights[aao->constructionArc] = weight;
             os->operations.push_back(wco);
         } else {
             auto *aao = dynamic_cast<AddArcOperation*>(lastOp);
             assert(aao);
             auto *wco = new ArcWeightChangeOperation<weight_type>(&weights, aao, weight);
+            constructionWeights[aao->constructionArc] = weight;
 
             auto *os = new OperationSet;
             os->operations.push_back(aao);
@@ -43,13 +47,62 @@ public:
         }
     }
 
+    void addWeightedArcOrChangeWeight(VertexIdentifier tailId,
+                VertexIdentifier headId,
+                const weight_type &weight,
+                DynamicTime timestamp,
+                bool antedateVertexAdditions = false) {
+        auto *aao = findAddArcOperation(tailId, headId);
+        if (aao) {
+            changeArcWeight(aao, weight, timestamp);
+        } else {
+            addWeightedArc(tailId, headId, weight, timestamp, antedateVertexAdditions);
+        }
+    }
+
+    void addWeightedArcOrChangeWeightRelative(VertexIdentifier tailId,
+                VertexIdentifier headId,
+                const weight_type &weight,
+                bool increase,
+                bool removeIfNonPositive,
+                DynamicTime timestamp,
+                bool antedateVertexAdditions = false) {
+        auto *aao = findAddArcOperation(tailId, headId);
+        if (aao) {
+            changeArcWeightRelative(aao, weight, increase, removeIfNonPositive, timestamp);
+        } else {
+            addWeightedArc(tailId, headId, weight, timestamp, antedateVertexAdditions);
+        }
+    }
+
     void changeArcWeight(VertexIdentifier tailId,
                 VertexIdentifier headId,
                 const weight_type &weight,
                 DynamicTime timestamp) {
         auto *aao = findAddArcOperation(tailId, headId);
-        auto *wco = new ArcWeightChangeOperation<weight_type>(&weights, aao, weight);
-        addOperation(timestamp, wco);
+        if (aao) {
+            changeArcWeight(aao, weight, timestamp);
+        }
+    }
+
+    void changeArcWeightRelative(VertexIdentifier tailId,
+                VertexIdentifier headId,
+                const weight_type &weight,
+                bool increase,
+                bool removeIfNonPositive,
+                DynamicTime timestamp) {
+        auto *aao = findAddArcOperation(tailId, headId);
+        if (aao) {
+            changeArcWeightRelative(aao, weight, increase, removeIfNonPositive, timestamp);
+        }
+    }
+
+    weight_type getCurrentArcWeight(VertexIdentifier tailId, VertexIdentifier headId) {
+        auto *aao = findAddArcOperation(tailId, headId);
+        if (aao) {
+            return constructionWeights[aao->constructionArc];
+        }
+        return constructionWeights.getDefaultValue();
     }
 
     propertymap_type<weight_type> *getArcWeights() {
@@ -59,6 +112,30 @@ public:
 private:
     weight_type defaultWeight;
     propertymap_type<weight_type> weights;
+    propertymap_type<weight_type> constructionWeights;
+
+    void changeArcWeight(AddArcOperation *aao, const weight_type &weight, DynamicTime timestamp) {
+        addOperation(timestamp,
+                new ArcWeightChangeOperation<weight_type>(&weights, aao, weight));
+        constructionWeights[aao->constructionArc] = weight;
+    }
+
+    void changeArcWeightRelative(AddArcOperation *aao, const weight_type &weight, bool increase,
+                                 bool removeIfNonPositive, DynamicTime timestamp) {
+        auto newWeight = constructionWeights(aao->constructionArc);
+        if (increase) {
+            newWeight += weight;
+        } if (removeIfNonPositive && weight > newWeight){
+            // remove
+            constructionWeights.resetToDefault(aao->constructionArc);
+            removeArc(aao);
+        } else {
+            newWeight -= weight;
+        }
+        addOperation(timestamp,
+                new ArcWeightChangeOperation<weight_type>(&weights, aao, newWeight));
+        constructionWeights[aao->constructionArc] = newWeight;
+    }
 };
 
 }

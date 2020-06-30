@@ -26,11 +26,11 @@
 #include "io/streamdigraphreader.h"
 #include "graph/digraph.h"
 #include <string>
+#include "graph.dyn/dynamicweighteddigraph.h"
 
 namespace Algora {
 
 class DynamicDiGraph;
-class DynamicWeightedDiGraph;
 
 class KonectNetworkReader : public StreamDiGraphReader
 {
@@ -46,12 +46,16 @@ public:
     void setArcLifetime(DiGraph::size_type arcLifetime) {
         this->arcLifetime = arcLifetime;
     }
+    void setRelativeArcWeights(bool relative, bool removeIfNonPositive) {
+        this->relativeWeights = relative;
+        this->removeNonPositiveArcs = removeIfNonPositive;
+    }
 
     // DiGraphProvider interface
 public:
     virtual bool provideDiGraph(DiGraph *) override { return false; }
     virtual bool provideDynamicDiGraph(DynamicDiGraph *dynGraph);
-    virtual bool provideDynamicWeightedDiGraph(DynamicWeightedDiGraph *dynGraph);
+    virtual bool provideDynamicWeightedDiGraph(DynamicWeightedDiGraph<unsigned long> *dynGraph);
 
 private:
     std::string lastError;
@@ -60,6 +64,8 @@ private:
     DiGraph::size_type limitNumTimestamps;
     bool strict;
     DiGraph::size_type arcLifetime;
+    bool relativeWeights;
+    bool removeNonPositiveArcs;
 };
 
 }

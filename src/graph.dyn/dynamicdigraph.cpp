@@ -870,4 +870,9 @@ AddArcOperation *DynamicDiGraph::findAddArcOperation(DynamicDiGraph::VertexIdent
     return grin->findAddArcOperation(tailId, headId);
 }
 
+void DynamicDiGraph::removeArc(AddArcOperation *aao)
+{
+    grin->removeArc(aao, grin->removeIsolatedEnds);
+}
+
 }

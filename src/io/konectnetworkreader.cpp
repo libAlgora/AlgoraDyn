@@ -30,6 +30,7 @@
 #include <iostream>
 
 #include "graph.dyn/dynamicdigraph.h"
+#include "graph.dyn/dynamicweighteddigraph.h"
 
 //#define DEBUG_KONECTREADER
 
@@ -148,7 +149,10 @@ KonectNetworkReader::KonectNetworkReader(bool antedateVertexAdditions,
       removeIsolatedEndVertices(removeIsolatedEndVertices),
       limitNumTimestamps(limitNumTimestamps),
       strict(false),
-      arcLifetime(0U)
+      arcLifetime(0U),
+      relativeWeights(false),
+      removeNonPositiveArcs(true)
+
 {  }
 
 bool KonectNetworkReader::provideDynamicDiGraph(DynamicDiGraph *dynGraph)
@@ -254,7 +258,7 @@ bool KonectNetworkReader::provideDynamicDiGraph(DynamicDiGraph *dynGraph)
     return !errorsOccurred;
 }
 
-bool KonectNetworkReader::provideDynamicWeightedDiGraph(DynamicWeightedDiGraph *dywGraph)
+bool KonectNetworkReader::provideDynamicWeightedDiGraph(DynamicWeightedDiGraph<unsigned long> *dywGraph)
 {
     if (StreamDiGraphReader::inputStream == nullptr) {
         lastError.append("No input stream.\n");
@@ -264,22 +268,18 @@ bool KonectNetworkReader::provideDynamicWeightedDiGraph(DynamicWeightedDiGraph *
     auto parse_weight = [](const std::string &s, bool &ok) {
         if (s.empty()) {
             ok = true;
-            return 1UL;
+            return 1L;
         }
         try {
             ok = true;
-            auto w = std::stoul(s);
-            if (w == 0) {
-                return 0UL;
-            }
-            return w;
+            return std::stol(s);
         } catch (std::invalid_argument &e) {
             ok = false;
         }
-        return 0UL;
+        return 0L;
     };
 
-    typedef Entry<unsigned long> entry_type;
+    typedef Entry<long long> entry_type;
     std::vector<entry_type> entries;
     bool errorsOccurred = !parseEntries<>(*(StreamDiGraphReader::inputStream),
                                                     parse_weight,
@@ -289,7 +289,7 @@ bool KonectNetworkReader::provideDynamicWeightedDiGraph(DynamicWeightedDiGraph *
     std::string lastRError;
 
     if (progressStream) {
-        *progressStream << "Creating dynamic digraph..." << std::flush;
+        *progressStream << "Creating dynamic weighted digraph..." << std::flush;
     }
 
     DiGraph::size_type numTs = 1;
@@ -313,32 +313,13 @@ bool KonectNetworkReader::provideDynamicWeightedDiGraph(DynamicWeightedDiGraph *
             lastTimestamp = e.timestamp;
         }
 
-        if (e.weight) {
-            if (arcLifetime > 0) {
-                //PRINT_DEBUG("Adding arc " << e.tail << ", " << e.head << " with lifetime " << arcLifetime << " at time " << e.timestamp)
-                //        try {
-                //    dywGraph->addArcAndRemoveIn(e.tail, e.head, e.timestamp, arcLifetime, antedateVertexAdditions);
-                //} catch (const std::invalid_argument &e) {
-                //    lastError.append(e.what());
-                //}
-            } else {
-                //PRINT_DEBUG("Adding arc " << e.tail << ", " << e.head << " at time " << e.timestamp)
-                //        try {
-                //    dynGraph->addArc(e.tail, e.head, e.timestamp, antedateVertexAdditions);
-                //} catch (const std::invalid_argument &e) {
-                //    lastError.append(e.what());
-                //}
-            }
+        if (relativeWeights) {
+            PRINT_DEBUG("Adding/updating arc " << e.tail << ", " << e.head << " by relative weight " << e.weight << " at time " << e.timestamp);
+            unsigned long aWeight = e.weight >= 0 ? e.weight : -e.weight;
+            dywGraph->addWeightedArcOrChangeWeightRelative(e.tail, e.head, aWeight, e.weight >= 0, removeNonPositiveArcs, e.timestamp);
         } else {
-            PRINT_DEBUG("Removing arc " << e.tail << ", " << e.head << " at time " << e.timestamp)
-            //try {
-            //    dynGraph->removeArc(e.tail, e.head, e.timestamp, removeIsolatedEndVertices);
-            //} catch (const std::invalid_argument &ia) {
-            //    rErrors++;
-            //    lastRError = ia.what();
-            //    //std::cerr << "Error at arc " << e.tail << " -> " << e.head
-            //    // << " at time " << e.timestamp << ": " << ia.what() << std::endl;
-            //}
+            PRINT_DEBUG("Adding/updating arc " << e.tail << ", " << e.head << " with weight " << e.weight << " at time " << e.timestamp);
+            dywGraph->addWeightedArcOrChangeWeight(e.tail, e.head, e.weight, e.timestamp);
         }
     }
 

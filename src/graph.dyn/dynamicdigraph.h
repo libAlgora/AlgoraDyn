@@ -101,6 +101,7 @@ protected:
     Operation *getLastOperation() const;
     void replaceLastOperation(Operation *op);
     AddArcOperation *findAddArcOperation(VertexIdentifier tailId, VertexIdentifier headId);
+    void removeArc(AddArcOperation *aao);
 
 private:
     struct CheshireCat;
