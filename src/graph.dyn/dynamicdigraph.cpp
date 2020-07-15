@@ -32,6 +32,7 @@
 
 #include <stdexcept>
 #include <cassert>
+#include <limits>
 
 //#define DEBUG_DYNDIGRAPH
 
@@ -77,6 +78,8 @@ struct DynamicDiGraph::CheshireCat {
     DiGraph::size_type maxVertexSize;
     DiGraph::size_type maxArcSize;
 
+    DiGraph::size_type minVertexId;
+
     bool graphChangedSinceLastReset;
 
 
@@ -86,6 +89,7 @@ struct DynamicDiGraph::CheshireCat {
         autoArcRemovals(defaultArcAge),
         vertexToIdMapNextOpIndex(0ULL), numResets(0U),
         curVertexSize(0ULL), curArcSize(0ULL), maxVertexSize(0ULL), maxArcSize(0ULL),
+        minVertexId(std::numeric_limits<DiGraph::size_type>::infinity()),
         graphChangedSinceLastReset(false) {
         constructionArcMap.setDefaultValue(nullptr);
         vertexToIdMap.setDefaultValue(0U);
@@ -100,13 +104,13 @@ struct DynamicDiGraph::CheshireCat {
         opIndex = 0U;
         if (graphChangedSinceLastReset) {
             dynGraph.clearAndRelease();
-            dynGraph.reserveVertexCapacity(maxVertexSize);
+            dynGraph.reserveVertexCapacity(minVertexId + maxVertexSize);
             dynGraph.reserveArcCapacity(maxArcSize);
         } else {
             dynGraph.clearOrderedly();
         }
         //vertexToIdMap.clear();
-        vertexToIdMap.resetAll(maxVertexSize);
+        vertexToIdMap.resetAll(minVertexId + maxVertexSize);
         vertexToIdMapNextOpIndex = 0ULL;
 
         antedated.reset();
@@ -134,6 +138,7 @@ struct DynamicDiGraph::CheshireCat {
         curArcSize = 0ULL;
         maxVertexSize = 0ULL;
         maxArcSize = 0ULL;
+        minVertexId = std::numeric_limits<DiGraph::size_type>::infinity();
 
         antedated.clear();
         for (auto op : operations) {
@@ -186,6 +191,9 @@ struct DynamicDiGraph::CheshireCat {
         curVertexSize++;
         if (curVertexSize > maxVertexSize) {
             maxVertexSize = curVertexSize;
+        }
+        if (vertexId < minVertexId) {
+            minVertexId = vertexId;
         }
 
         graphChangedSinceLastReset = true;
@@ -647,6 +655,16 @@ DiGraph::size_type DynamicDiGraph::getConstructedGraphSize() const
 DiGraph::size_type DynamicDiGraph::getConstructedArcSize() const
 {
     return grin->constructionGraph.getNumArcs(true);
+}
+
+GraphArtifact::size_type DynamicDiGraph::getMinVertexId() const
+{
+    return grin->minVertexId;
+}
+
+GraphArtifact::size_type DynamicDiGraph::getMaxVertexId() const
+{
+    return grin->minVertexId + grin->maxVertexSize - 1;
 }
 
 DynamicDiGraph::VertexIdentifier DynamicDiGraph::addVertex(DynamicTime timestamp)

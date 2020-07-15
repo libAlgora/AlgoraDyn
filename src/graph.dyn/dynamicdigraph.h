@@ -49,6 +49,8 @@ public:
     size_type getNumberOfDeltas() const;
     DiGraph::size_type getConstructedGraphSize() const;
     DiGraph::size_type getConstructedArcSize() const;
+    DiGraph::size_type getMinVertexId() const;
+    DiGraph::size_type getMaxVertexId() const;
 
     VertexIdentifier addVertex(DynamicTime timestamp);
     void addVertex(VertexIdentifier vertexId, DynamicTime timestamp);
