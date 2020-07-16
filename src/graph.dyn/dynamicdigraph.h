@@ -38,6 +38,10 @@ public:
     typedef unsigned long long DynamicTime;
     typedef std::vector<DynamicTime>::size_type size_type;
 
+    const static VertexIdentifier NO_VERTEX_ID
+        = std::numeric_limits<VertexIdentifier>::max();
+
+
     explicit DynamicDiGraph();
     virtual ~DynamicDiGraph();
 
