@@ -28,6 +28,7 @@
 #include <vector>
 #include "property/fastpropertymap.h"
 
+#include <stdexcept>
 #include <cassert>
 
 //#define DEBUG_DYNDIGRAPH
