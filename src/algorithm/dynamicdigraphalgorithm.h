@@ -42,7 +42,7 @@ public:
     explicit DynamicDiGraphAlgorithm();
     virtual ~DynamicDiGraphAlgorithm() override;
 
-    void setAutoUpdate(bool au) {
+    virtual void setAutoUpdate(bool au) {
         if (!au && registered) {
             deregisterAsObserver();
         } else if (au && !registered) {
@@ -94,17 +94,18 @@ protected:
         pr_consideredVertices = 0UL; pr_consideredArcs = 0UL; pr_numResets = 0UL;
     }
 
+
 private:
     bool autoUpdate;
     bool registered;
-
-    void registerAsObserver();
-    void deregisterAsObserver();
 
     bool registerOnVertexAdd;
     bool registerOnVertexRemove;
     bool registerOnArcAdd;
     bool registerOnArcRemove;
+
+    void registerAsObserver();
+    void deregisterAsObserver();
 };
 
 }
