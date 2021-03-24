@@ -38,7 +38,7 @@
 
 #ifdef DEBUG_DYNDIGRAPH
 #include <iostream>
-#define PRINT_DEBUG(msg) std::cout << msg << std::endl;
+#define PRINT_DEBUG(msg) std::cout << "DynamicDiGraph: " << msg << std::endl;
 #define IF_DEBUG(cmd) cmd;
 #else
 #define PRINT_DEBUG(msg)
@@ -100,26 +100,33 @@ struct DynamicDiGraph::CheshireCat {
     }
 
     void reset() {
+        PRINT_DEBUG("R: Resetting at time index " << timeIndex << ", op index " << opIndex)
         timeIndex = 0U;
         opIndex = 0U;
         if (graphChangedSinceLastReset) {
+            PRINT_DEBUG("R: Graph has changed, clear&release...")
             dynGraph.clearAndRelease();
+            PRINT_DEBUG("R: Reserving capacities...")
             dynGraph.reserveVertexCapacity(minVertexId + maxVertexSize);
             dynGraph.reserveArcCapacity(maxArcSize);
         } else {
+            PRINT_DEBUG("R: Graph hasn't changed, clearing orderedly...")
             dynGraph.clearOrderedly();
         }
         //vertexToIdMap.clear();
+        PRINT_DEBUG("R: Resetting id map...")
         vertexToIdMap.resetAll(minVertexId + maxVertexSize);
         vertexToIdMapNextOpIndex = 0ULL;
 
         antedated.reset();
+        PRINT_DEBUG("R: Resetting operations...")
         for (auto op : operations) {
             op->reset();
         }
         numResets++;
 
         graphChangedSinceLastReset = false;
+        PRINT_DEBUG("R: Reset done.\n")
     }
 
     void init() {
@@ -129,6 +136,7 @@ struct DynamicDiGraph::CheshireCat {
     }
 
     void clear() {
+        PRINT_DEBUG("C: Clearing dynamic digraph...")
         reset();
         vertices.clear();
         constructionArcMap.resetAll(0);
@@ -141,11 +149,13 @@ struct DynamicDiGraph::CheshireCat {
         minVertexId = std::numeric_limits<DiGraph::size_type>::infinity();
 
         antedated.clear();
+        PRINT_DEBUG("C: Deleting operations...")
         for (auto op : operations) {
             delete op;
         }
         operations.clear();
         offset.clear();
+        PRINT_DEBUG("C: done.\n")
     }
 
     void checkTimestamp(DynamicTime timestamp) {
@@ -432,12 +442,14 @@ struct DynamicDiGraph::CheshireCat {
     }
 
     bool advance(bool sameTime = false) {
+        PRINT_DEBUG("Trying to advance, same time " << (sameTime ? "" : "NOT ") << "required.");
         if (opIndex >= operations.size()) {
             PRINT_DEBUG("Cannot advance further.")
             return false;
         }
 
         if (timeIndex + 1 < timestamps.size() && opIndex == offset[timeIndex + 1]) {
+            PRINT_DEBUG("Next operation is ahead in time.")
             if (sameTime) {
                 return false;
             }
@@ -445,8 +457,10 @@ struct DynamicDiGraph::CheshireCat {
         }
 
         if (opIndex == 0) {
+            PRINT_DEBUG("First operation is about to be executed, calling init...")
             init();
         }
+        PRINT_DEBUG("Advanced successfully.")
 
         return true;
     }
