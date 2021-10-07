@@ -885,6 +885,11 @@ void DynamicDiGraph::addOperation(DynamicTime timestamp, Operation *op)
     grin->operations.push_back(op);
 }
 
+void DynamicDiGraph::checkTimestamp(DynamicTime timestamp)
+{
+    grin->checkTimestamp(timestamp);
+}
+
 Operation *DynamicDiGraph::getLastOperation() const
 {
     assert(!grin->operations.empty());

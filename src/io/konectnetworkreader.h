@@ -46,6 +46,9 @@ public:
     void setArcLifetime(DiGraph::size_type arcLifetime) {
         this->arcLifetime = arcLifetime;
     }
+    void removeNonPositiveWeightedArcs(bool removeIfNonPositive) {
+        this->removeNonPositiveArcs = removeIfNonPositive;
+    }
     void setRelativeArcWeights(bool relative, bool removeIfNonPositive) {
         this->relativeWeights = relative;
         this->removeNonPositiveArcs = removeIfNonPositive;

@@ -97,6 +97,16 @@ public:
         }
     }
 
+    void removeWeightedArc(VertexIdentifier tailId,
+                VertexIdentifier headId,
+                DynamicTime timestamp) {
+        auto *aao = findAddArcOperation(tailId, headId);
+        if (!aao) {
+            throw std::invalid_argument("Arc does not exist.");
+        }
+        removeWeightedArc(aao, timestamp);
+    }
+
     weight_type getCurrentArcWeight(VertexIdentifier tailId, VertexIdentifier headId) {
         auto *aao = findAddArcOperation(tailId, headId);
         if (aao) {
@@ -125,16 +135,23 @@ private:
         auto newWeight = constructionWeights(aao->constructionArc);
         if (increase) {
             newWeight += weight;
-        } if (removeIfNonPositive && weight > newWeight){
-            // remove
-            constructionWeights.resetToDefault(aao->constructionArc);
-            removeArc(aao);
         } else {
-            newWeight -= weight;
+            if (removeIfNonPositive && weight > newWeight) {
+                removeWeightedArc(aao, timestamp);
+                return;
+            } else {
+                newWeight -= weight;
+            }
         }
+        constructionWeights[aao->constructionArc] = newWeight;
         addOperation(timestamp,
                 new ArcWeightChangeOperation<weight_type>(&weights, aao, newWeight));
-        constructionWeights[aao->constructionArc] = newWeight;
+    }
+
+    void removeWeightedArc(AddArcOperation *aao, DynamicTime timestamp) {
+        checkTimestamp(timestamp);
+        constructionWeights.resetToDefault(aao->constructionArc);
+        removeArc(aao);
     }
 };
 

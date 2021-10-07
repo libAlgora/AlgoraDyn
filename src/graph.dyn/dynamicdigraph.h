@@ -104,6 +104,7 @@ public:
 
 protected:
     void addOperation(DynamicTime timestamp, Operation *op);
+    void checkTimestamp(DynamicTime timestamp);
     Operation *getLastOperation() const;
     void replaceLastOperation(Operation *op);
     AddArcOperation *findAddArcOperation(VertexIdentifier tailId, VertexIdentifier headId);
