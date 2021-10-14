@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ########################################################################
-# Copyright (C) 2013 - 2019 : Kathrin Hanauer                          #
+# Copyright (C) 2013 - 2021 : Kathrin Hanauer                          #
 #                                                                      #
 # This file is part of Algora.                                         #
 #                                                                      #
@@ -22,8 +22,10 @@
 #   http://algora.xaikal.org                                           #
 ########################################################################
 
+set -e
+
 print_usage() {
-	echo "Usage: $0 [-f] <PATH_TO_HEADER_FILE>"
+	echo "Usage: $0 [-f] <PATH_TO_TEMPLATE_FILE> <PATH_TO_OUTPUT_FILE>"
 }
 
 FORCE=0
@@ -34,15 +36,16 @@ then
 	shift
 fi
 
-VERSION_HEADER=$1
+VERSION_HEADER_TEMPLATE=$1
+VERSION_HEADER_OUTPUT=$2
 
-if [ -z "${VERSION_HEADER}" ]
+if [ -z "${VERSION_HEADER_TEMPLATE}" ] || [ -z "${VERSION_HEADER_OUTPUT}" ]
 then
 	print_usage
 	exit 1
 fi
 
-[ -f "${VERSION_HEADER}" ] || eval 'echo "Version header file ${VERSION_HEADER} not found." 1>&2; exit 1'
+[ -f "${VERSION_HEADER_TEMPLATE}" ] || eval 'echo "Version header file ${VERSION_HEADER_TEMPLATE} not found." 1>&2; exit 1'
 
 [ -z "${GIT_CMD}" ] && GIT_CMD=$(which git 2>/dev/null)
 [ -n "${GIT_CMD}" ] || eval 'echo Binary "git" not found. Please specify its location explicitly via the GIT_CMD variable." 1>&2; exit 1'
@@ -55,7 +58,7 @@ echo "Git revision: ${GIT_REVISION}"
 echo "Git date: ${GIT_DATE}"
 echo "Git timestamp: ${GIT_TIMESTAMP}"
 
-if [ "${FORCE}" -eq "0" ] && grep -q $GIT_REVISION $VERSION_HEADER && grep -q "$GIT_TIMESTAMP" $VERSION_HEADER
+if [ "${FORCE}" -eq "0" ] && grep -q $GIT_REVISION $VERSION_HEADER_TEMPLATE && grep -q "$GIT_TIMESTAMP" $VERSION_HEADER_TEMPLATE
 then
 	echo "Git revision unchanged. No update required."
 	exit 0
@@ -65,7 +68,8 @@ GIT_REVISION_IN_HEADER="  static constexpr char GIT_REVISION[] = \"${GIT_REVISIO
 GIT_DATE_IN_HEADER="  static constexpr char GIT_DATE[] = \"${GIT_DATE}\";"
 GIT_TS_IN_HEADER="  static constexpr char GIT_TIMESTAMP[] = \"${GIT_TIMESTAMP}\";"
 
+cp ${VERSION_HEADER_TEMPLATE} ${VERSION_HEADER_OUTPUT}
 
-sed -i -e "s/^.*GIT_REVISION.*$/${GIT_REVISION_IN_HEADER}/" $VERSION_HEADER
-sed -i -e "s/^.*GIT_DATE.*$/${GIT_DATE_IN_HEADER}/" $VERSION_HEADER
-sed -i -e "s/^.*GIT_TIMESTAMP.*$/${GIT_TS_IN_HEADER}/" $VERSION_HEADER
+sed -i -e "s/^.*GIT_REVISION.*$/${GIT_REVISION_IN_HEADER}/" ${VERSION_HEADER_OUTPUT}
+sed -i -e "s/^.*GIT_DATE.*$/${GIT_DATE_IN_HEADER}/" ${VERSION_HEADER_OUTPUT}
+sed -i -e "s/^.*GIT_TIMESTAMP.*$/${GIT_TS_IN_HEADER}/" ${VERSION_HEADER_OUTPUT}

@@ -1,5 +1,5 @@
 ########################################################################
-# Copyright (C) 2013 - 2019 : Kathrin Hanauer                          #
+# Copyright (C) 2013 - 2021 : Kathrin Hanauer                          #
 #                                                                      #
 # This file is part of Algora.                                         #
 #                                                                      #
@@ -26,10 +26,11 @@ TARGET = AlgoraDyn
 TEMPLATE = lib
 CONFIG += staticlib c++17
 
+ADINFOHDRTMPL = $$PWD/algoradyn_info.TEMPLATE.h
 ADINFOHDR = $$PWD/algoradyn_info.h
 adinfotarget.target =  $$ADINFOHDR
-adinfotarget.commands = '$$PWD/../updateInfoHeader $$ADINFOHDR'
-adinfotarget.depends = FORCE
+adinfotarget.commands = '$$PWD/../updateInfoHeader $$ADINFOHDRTMPL $$ADINFOHDR'
+adinfotarget.depends = FORCE $$ADINFOHDRTMPL
 PRE_TARGETDEPS += $$ADINFOHDR
 QMAKE_EXTRA_TARGETS += adinfotarget
 
