@@ -28,6 +28,9 @@
 
 namespace Algora {
 
+struct Operation;
+struct AddArcOperation;
+
 class DynamicDiGraph
 {
 public:
@@ -35,8 +38,12 @@ public:
     typedef unsigned long long DynamicTime;
     typedef std::vector<DynamicTime>::size_type size_type;
 
+    const static VertexIdentifier NO_VERTEX_ID
+        = std::numeric_limits<VertexIdentifier>::max();
+
+
     explicit DynamicDiGraph();
-    ~DynamicDiGraph();
+    virtual ~DynamicDiGraph();
 
     IncidenceListGraph *getDiGraph() const;
     DynamicTime getCurrentTime() const;
@@ -46,14 +53,21 @@ public:
     size_type getNumberOfDeltas() const;
     DiGraph::size_type getConstructedGraphSize() const;
     DiGraph::size_type getConstructedArcSize() const;
+    DiGraph::size_type getMinVertexId() const;
+    DiGraph::size_type getMaxVertexId() const;
 
     VertexIdentifier addVertex(DynamicTime timestamp);
     void addVertex(VertexIdentifier vertexId, DynamicTime timestamp);
     void removeVertex(VertexIdentifier vertexId, DynamicTime timestamp);
     void addArc(VertexIdentifier tailId, VertexIdentifier headId,
                 DynamicTime timestamp, bool antedateVertexAdditions = false);
+    void addArcAndRemoveIn(VertexIdentifier tailId, VertexIdentifier headId,
+                DynamicTime timestamp, size_type ageInDeltas = 0,
+                bool antedateVertexAdditions = false);
     void removeArc(VertexIdentifier tailId, VertexIdentifier headId,
-                   DynamicTime timestamp, bool removeIsolatedEnds = false);
+                   DynamicTime timestamp);
+    void removeArc(VertexIdentifier tailId, VertexIdentifier headId,
+                   DynamicTime timestamp, bool removeIsolatedEnds);
     void noop(DynamicTime timestamp);
     bool hasArc(VertexIdentifier tailId, VertexIdentifier headId);
     void clear();
@@ -81,6 +95,20 @@ public:
 
     void squashTimes(DynamicTime timeFrom, DynamicTime timeUntil);
     void secondArcIsRemoval(bool sir);
+
+    void setDefaultArcAge(size_type defaultAge);
+    size_type getDefaultArcAge() const;
+
+    void setRemoveIsolatedEnds(bool remove);
+    bool removeIsolatedEnds() const;
+
+protected:
+    void addOperation(DynamicTime timestamp, Operation *op);
+    void checkTimestamp(DynamicTime timestamp);
+    Operation *getLastOperation() const;
+    void replaceLastOperation(Operation *op);
+    AddArcOperation *findAddArcOperation(VertexIdentifier tailId, VertexIdentifier headId);
+    void removeArc(AddArcOperation *aao);
 
 private:
     struct CheshireCat;

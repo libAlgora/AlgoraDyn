@@ -26,6 +26,7 @@
 #include "io/streamdigraphreader.h"
 #include "graph/digraph.h"
 #include <string>
+#include "graph.dyn/dynamicweighteddigraph.h"
 
 namespace Algora {
 
@@ -37,16 +38,27 @@ public:
     explicit KonectNetworkReader(bool antedateVertexAdditions = false,
                                  bool removeIsolatedEndVertices = false,
                                  DiGraph::size_type limitNumTimestamps = 0);
-    virtual ~KonectNetworkReader() override;
+    virtual ~KonectNetworkReader() override = default;
 
     std::string getErrors() const { return lastError; }
     void clearErrors() { lastError.clear(); }
     void setStrict(bool strict) { this->strict = strict; }
+    void setArcLifetime(DiGraph::size_type arcLifetime) {
+        this->arcLifetime = arcLifetime;
+    }
+    void removeNonPositiveWeightedArcs(bool removeIfNonPositive) {
+        this->removeNonPositiveArcs = removeIfNonPositive;
+    }
+    void setRelativeArcWeights(bool relative, bool removeIfNonPositive) {
+        this->relativeWeights = relative;
+        this->removeNonPositiveArcs = removeIfNonPositive;
+    }
 
     // DiGraphProvider interface
 public:
     virtual bool provideDiGraph(DiGraph *) override { return false; }
     virtual bool provideDynamicDiGraph(DynamicDiGraph *dynGraph);
+    virtual bool provideDynamicWeightedDiGraph(DynamicWeightedDiGraph<unsigned long> *dynGraph);
 
 private:
     std::string lastError;
@@ -54,6 +66,9 @@ private:
     bool removeIsolatedEndVertices;
     DiGraph::size_type limitNumTimestamps;
     bool strict;
+    DiGraph::size_type arcLifetime;
+    bool relativeWeights;
+    bool removeNonPositiveArcs;
 };
 
 }
