@@ -1,5 +1,5 @@
 ########################################################################
-# Copyright (C) 2013 - 2019 : Kathrin Hanauer                          #
+# Copyright (C) 2013 - 2021 : Kathrin Hanauer                          #
 #                                                                      #
 # This file is part of Algora.                                         #
 #                                                                      #
@@ -24,12 +24,13 @@ QT       -= core gui
 
 TARGET = AlgoraDyn
 TEMPLATE = lib
-CONFIG += staticlib c++17
+CONFIG += staticlib c++17 c++1z
 
+ADINFOHDRTMPL = $$PWD/algoradyn_info.TEMPLATE.h
 ADINFOHDR = $$PWD/algoradyn_info.h
 adinfotarget.target =  $$ADINFOHDR
-adinfotarget.commands = '$$PWD/../updateInfoHeader $$ADINFOHDR'
-adinfotarget.depends = FORCE
+adinfotarget.commands = '$$PWD/../updateInfoHeader $$ADINFOHDRTMPL $$ADINFOHDR'
+adinfotarget.depends = FORCE $$ADINFOHDRTMPL
 PRE_TARGETDEPS += $$ADINFOHDR
 QMAKE_EXTRA_TARGETS += adinfotarget
 
@@ -42,7 +43,9 @@ QMAKE_CXXFLAGS_RELEASE += -std=c++17 -DNDEBUG -flto
 custom-ar {
   QMAKE_AR += rcs
 } else {
-  QMAKE_AR = gcc-ar rcs
+  QMAKE_AR -= cqs
+  QMAKE_AR -= cq
+  QMAKE_AR += rcs
 }
 
 general {
@@ -52,12 +55,12 @@ general {
 }
 
 debugsymbols {
-	QMAKE_CXXFLAGS_RELEASE += -fno-omit-frame-pointer -g
+  QMAKE_CXXFLAGS_RELEASE += -fno-omit-frame-pointer -g
 }
 
 profiling {
-	QMAKE_CXXFLAGS_DEBUG   += -DCOLLECT_PR_DATA
-	QMAKE_CXXFLAGS_RELEASE += -DCOLLECT_PR_DATA
+  QMAKE_CXXFLAGS_DEBUG   += -DCOLLECT_PR_DATA
+  QMAKE_CXXFLAGS_RELEASE += -DCOLLECT_PR_DATA
 }
 
 unix {

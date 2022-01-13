@@ -24,6 +24,7 @@
 
 #include "graph.dyn/dynamicdigraph.h"
 #include "graph.incidencelist/incidencelistgraph.h"
+#include "property/fastpropertymap.h"
 #include <vector>
 #include <algorithm>
 #include <numeric>
@@ -32,17 +33,23 @@
 namespace Algora {
 
 template<typename C>
-typename C::value_type medianOf(const C &container,
+typename C::value_type percentile(const C &container, double percent,
                              const typename C::value_type &emptyValue = typename C::value_type()) {
     auto v(container);
     if (v.empty()) {
         return emptyValue;
     }
-    auto half = v.size() / 2;
+    auto half = static_cast<typename C::size_type>(v.size() * percent);
     std::nth_element(v.begin(),
                      v.begin() + static_cast<typename C::difference_type>(half),
                      v.end());
     return v[half];
+}
+
+template<typename C>
+typename C::value_type medianOf(const C &container,
+                             const typename C::value_type &emptyValue = typename C::value_type()) {
+    return percentile(container, 0.5, emptyValue);
 }
 
 void DynamicDiGraphStatistics::analyzeDynamicDiGraph(DynamicDiGraph *dyGraph)
@@ -59,6 +66,20 @@ void DynamicDiGraphStatistics::analyzeDynamicDiGraph(DynamicDiGraph *dyGraph)
     auto tsOld = dyGraph->getCurrentTime();
     auto tsNew = tsOld;
 
+    FastPropertyMap<DiGraph::size_type> arcAge(0U);
+
+    graph->onArcAdd(this, [this,&arcAge](Arc *a) {
+        arcAge[a] = graphSizes.size(); // ~ #delta
+    });
+    graph->onArcRemove(this, [this,&arcAge](Arc *a) {
+        arcAges.push_back(graphSizes.size() - arcAge(a));
+        arcAge.resetToDefault(a);
+    });
+
+    //graph->mapArcs([this,&arcAge](Arc *a) {
+    //    arcAge[a] = graphSizes.size(); // ~ #delta
+    //});
+
     while (next) {
         auto n = graph->getSize();
         auto m = graph->getNumArcs(true);
@@ -74,6 +95,13 @@ void DynamicDiGraphStatistics::analyzeDynamicDiGraph(DynamicDiGraph *dyGraph)
             timeDeltas.push_back(tsNew - tsOld);
         }
     }
+
+    graph->removeOnArcAdd(this);
+    graph->removeOnArcRemove(this);
+
+    //graph->mapArcs([this,&arcAge](Arc *a) {
+    //    arcAges.push_back(graphSizes.size() + 1 - arcAge(a));
+    //});
 
     assert(graphSizes.size() == arcSizes.size());
     assert(graphSizes.size() == densities.size());
@@ -128,6 +156,17 @@ void DynamicDiGraphStatistics::analyzeDynamicDiGraph(DynamicDiGraph *dyGraph)
         avgTimeDelta = (1.0 * sumTimeDelta) / timeDeltas.size();
     }
 
+    if (!arcAges.empty()) {
+        p = std::minmax_element(std::begin(arcAges), std::end(arcAges));
+        minArcAge = *(p.first);
+        maxArcAge = *(p.second);
+        medArcAge = medianOf(arcAges);
+        lowQuartileArcAge = percentile(arcAges, 0.25);
+        upQuartileArcAge = percentile(arcAges, 0.75);
+        avgArcAge = (1.0 * std::accumulate(std::begin(arcAges), std::end(arcAges), 0ULL))
+                / arcAges.size();
+    }
+
     timestamps = dyGraph->getTimestamps();
 }
 
@@ -177,6 +216,14 @@ void DynamicDiGraphStatistics::clear()
     sumTimeDelta = 0U;
     avgTimeDelta = 0.0;
     timeDeltas.clear();
+
+    maxArcAge = 0U;
+    minArcAge = 0U;
+    medArcAge = 0U;
+    lowQuartileArcAge = 0U;
+    upQuartileArcAge = 0U;
+    avgArcAge = 0.0;
+    arcAges.clear();
 }
 
 

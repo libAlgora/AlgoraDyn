@@ -85,6 +85,14 @@ public:
 
     const std::vector<DynamicDiGraph::DynamicTime> &getTimestamps() const { return timestamps; }
 
+    DiGraph::size_type maximumArcAge() const { return maxArcAge; }
+    DiGraph::size_type minimumArcAge() const { return minArcAge; }
+    DiGraph::size_type medianArcAge() const { return medArcAge; }
+    DiGraph::size_type lowerQuartileArcAge() const { return lowQuartileArcAge; }
+    DiGraph::size_type upperQuartileArcAge() const { return upQuartileArcAge; }
+    double averageArcAge() const { return avgArcAge; }
+    const std::vector<DiGraph::size_type> &getArcAges() const { return arcAges; }
+
 private:
     std::vector<DiGraph::size_type> graphSizes;
     DiGraph::size_type iGraphSize;
@@ -132,6 +140,14 @@ private:
     double avgTimeDelta;
 
     std::vector<DynamicDiGraph::DynamicTime> timestamps;
+
+    std::vector<DiGraph::size_type> arcAges;
+    DiGraph::size_type maxArcAge;
+    DiGraph::size_type minArcAge;
+    DiGraph::size_type medArcAge;
+    DiGraph::size_type lowQuartileArcAge;
+    DiGraph::size_type upQuartileArcAge;
+    double avgArcAge;
 };
 
 }

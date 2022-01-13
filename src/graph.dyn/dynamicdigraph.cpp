@@ -21,12 +21,14 @@
  */
 
 #include "dynamicdigraph.h"
+#include "dynamicdigraphoperations.h"
 
 #include "graph.incidencelist/incidencelistgraph.h"
 #include "graph.incidencelist/incidencelistvertex.h"
 
 #include <vector>
 #include "property/fastpropertymap.h"
+#include "datastructure/circularbucketlist.h"
 
 #include <stdexcept>
 #include <cassert>
@@ -35,7 +37,7 @@
 
 #ifdef DEBUG_DYNDIGRAPH
 #include <iostream>
-#define PRINT_DEBUG(msg) std::cout << msg << std::endl;
+#define PRINT_DEBUG(msg) std::cout << "DynamicDiGraph: " << msg << std::endl;
 #define IF_DEBUG(cmd) cmd;
 #else
 #define PRINT_DEBUG(msg)
@@ -44,100 +46,6 @@
 
 namespace Algora {
 
-struct Operation {
-    enum Type { VERTEX_ADDITION, VERTEX_REMOVAL, ARC_ADDITION, ARC_REMOVAL, MULTIPLE, NONE };
-    virtual ~Operation() {}
-    virtual void apply(IncidenceListGraph *graph) = 0;
-    virtual Type getType() const = 0;
-    virtual void reset() { }
-};
-
-struct OperationSet : public Operation {
-    std::vector<Operation*> operations;
-    Type type = MULTIPLE;
-
-    void clear() {
-        for (auto op : operations) {
-            delete op;
-        }
-        operations.clear();
-    }
-
-    virtual ~OperationSet() override {
-        clear();
-    }
-
-    virtual void apply(IncidenceListGraph *graph) override {
-        for (auto op : operations) {
-            op->apply(graph);
-        }
-    }
-    virtual Type getType() const override { return type; }
-    virtual void reset() override {
-        for (auto op : operations) {
-            op->reset();
-        }
-    }
-};
-
-struct NoOperation : public Operation {
-    virtual void apply(IncidenceListGraph *) override {}
-    virtual Type getType() const override { return NONE; }
-};
-
-
-struct AddVertexOperation : public Operation {
-    Vertex *vertex;
-    Vertex *constructionVertex;
-    DynamicDiGraph::VertexIdentifier vertexId;
-
-    AddVertexOperation(Vertex *cv, DynamicDiGraph::VertexIdentifier vId) : vertex(nullptr), constructionVertex(cv), vertexId(vId) { }
-
-    virtual void apply(IncidenceListGraph *graph) override {
-        vertex = graph->addVertex();
-        vertex->setName(std::to_string(vertexId));
-    }
-    virtual Type getType() const override { return VERTEX_ADDITION; }
-    virtual void reset() override { vertex = nullptr; }
-};
-
-struct RemoveVertexOperation : public Operation {
-    AddVertexOperation *addOp;
-
-    RemoveVertexOperation(AddVertexOperation *avo) : addOp(avo) {}
-
-    virtual void apply(IncidenceListGraph *graph) override {
-        graph->removeVertex(addOp->vertex);
-    }
-    virtual Type getType() const override { return VERTEX_REMOVAL; }
-};
-
-struct AddArcOperation : public Operation {
-    AddVertexOperation *tail;
-    AddVertexOperation *head;
-    Arc *arc;
-    Arc *constructionArc;
-
-    AddArcOperation(AddVertexOperation *t, AddVertexOperation *h, Arc *ca)
-        : tail(t), head(h), arc(nullptr), constructionArc(ca) { }
-
-    virtual void apply(IncidenceListGraph *graph) override {
-        arc = graph->addArc(tail->vertex, head->vertex);
-    }
-    virtual Type getType() const override { return ARC_ADDITION; }
-    virtual void reset() override { arc = nullptr; }
-};
-
-struct RemoveArcOperation : public Operation {
-    AddArcOperation *addOp;
-
-    RemoveArcOperation(AddArcOperation *aao) : addOp(aao) { }
-
-    virtual void apply(IncidenceListGraph *graph) override {
-        graph->removeArc(addOp->arc);
-    }
-    virtual Type getType() const override { return ARC_REMOVAL; }
-};
 
 struct DynamicDiGraph::CheshireCat {
     IncidenceListGraph dynGraph;
@@ -150,9 +58,12 @@ struct DynamicDiGraph::CheshireCat {
 
     DynamicDiGraph::size_type timeIndex;
     DynamicDiGraph::size_type opIndex;
-    //DiGraph::size_type numVertices;
 
     bool doubleArcIsRemoval;
+    bool removeIsolatedEnds;
+
+    size_type defaultArcAge;
+    CircularBucketList<AddArcOperation*> autoArcRemovals;
 
     std::vector<AddVertexOperation*> vertices;
     FastPropertyMap<AddArcOperation*> constructionArcMap;
@@ -166,11 +77,18 @@ struct DynamicDiGraph::CheshireCat {
     DiGraph::size_type maxVertexSize;
     DiGraph::size_type maxArcSize;
 
+    DiGraph::size_type minVertexId;
+
     bool graphChangedSinceLastReset;
 
+
     CheshireCat() : timeIndex(0U), opIndex(0U), doubleArcIsRemoval(false),
+        removeIsolatedEnds(false),
+        defaultArcAge(1U),
+        autoArcRemovals(defaultArcAge),
         vertexToIdMapNextOpIndex(0ULL), numResets(0U),
         curVertexSize(0ULL), curArcSize(0ULL), maxVertexSize(0ULL), maxArcSize(0ULL),
+        minVertexId(std::numeric_limits<DiGraph::size_type>::infinity()),
         graphChangedSinceLastReset(false) {
         constructionArcMap.setDefaultValue(nullptr);
         vertexToIdMap.setDefaultValue(0U);
@@ -181,26 +99,33 @@ struct DynamicDiGraph::CheshireCat {
     }
 
     void reset() {
+        PRINT_DEBUG("R: Resetting at time index " << timeIndex << ", op index " << opIndex)
         timeIndex = 0U;
         opIndex = 0U;
         if (graphChangedSinceLastReset) {
+            PRINT_DEBUG("R: Graph has changed, clear&release...")
             dynGraph.clearAndRelease();
-            dynGraph.reserveVertexCapacity(maxVertexSize);
+            PRINT_DEBUG("R: Reserving capacities...")
+            dynGraph.reserveVertexCapacity(minVertexId + maxVertexSize);
             dynGraph.reserveArcCapacity(maxArcSize);
         } else {
-            dynGraph.clear();
+            PRINT_DEBUG("R: Graph hasn't changed, clearing orderedly...")
+            dynGraph.clearOrderedly();
         }
         //vertexToIdMap.clear();
-        vertexToIdMap.resetAll(maxVertexSize);
+        PRINT_DEBUG("R: Resetting id map...")
+        vertexToIdMap.resetAll(minVertexId + maxVertexSize);
         vertexToIdMapNextOpIndex = 0ULL;
 
         antedated.reset();
+        PRINT_DEBUG("R: Resetting operations...")
         for (auto op : operations) {
             op->reset();
         }
         numResets++;
 
         graphChangedSinceLastReset = false;
+        PRINT_DEBUG("R: Reset done.\n")
     }
 
     void init() {
@@ -210,6 +135,7 @@ struct DynamicDiGraph::CheshireCat {
     }
 
     void clear() {
+        PRINT_DEBUG("C: Clearing dynamic digraph...")
         reset();
         vertices.clear();
         constructionArcMap.resetAll(0);
@@ -219,13 +145,16 @@ struct DynamicDiGraph::CheshireCat {
         curArcSize = 0ULL;
         maxVertexSize = 0ULL;
         maxArcSize = 0ULL;
+        minVertexId = std::numeric_limits<DiGraph::size_type>::infinity();
 
         antedated.clear();
+        PRINT_DEBUG("C: Deleting operations...")
         for (auto op : operations) {
             delete op;
         }
         operations.clear();
         offset.clear();
+        PRINT_DEBUG("C: done.\n")
     }
 
     void checkTimestamp(DynamicTime timestamp) {
@@ -241,10 +170,17 @@ struct DynamicDiGraph::CheshireCat {
             //            << (timestamps.empty() ? 0U : timestamps.back()) << " to " << timestamp )
             timestamps.push_back(timestamp);
             offset.push_back(operations.size());
+
+            // run before all other operations
+            for (auto *aao : autoArcRemovals.front()) {
+                removeArc(aao, this->removeIsolatedEnds);
+            }
+            autoArcRemovals.front().clear();
+            autoArcRemovals.shift();
         }
     }
 
-    VertexIdentifier addVertex(DynamicTime timestamp, bool atEnd, VertexIdentifier vertexId = 0U,
+    AddVertexOperation *createAddVertexOperation(DynamicTime timestamp, bool atEnd, VertexIdentifier vertexId = 0U,
                                bool okIfExists = false) {
         checkTimestamp(timestamp);
 
@@ -259,17 +195,27 @@ struct DynamicDiGraph::CheshireCat {
 
         Vertex *cv = constructionGraph.addVertex();
         AddVertexOperation *avo = new AddVertexOperation(cv, vertexId);
-        operations.push_back(avo);
         vertices[vertexId] = avo;
 
         curVertexSize++;
         if (curVertexSize > maxVertexSize) {
             maxVertexSize = curVertexSize;
         }
+        if (vertexId < minVertexId) {
+            minVertexId = vertexId;
+        }
 
         graphChangedSinceLastReset = true;
 
-        return vertexId;
+        return avo;
+    }
+
+    VertexIdentifier addVertex(DynamicTime timestamp, bool atEnd, VertexIdentifier vertexId = 0U,
+                               bool okIfExists = false) {
+        auto *avo = createAddVertexOperation(timestamp, atEnd, vertexId, okIfExists);
+        operations.push_back(avo);
+
+        return avo->vertexId;
     }
 
     void removeVertex(VertexIdentifier vertexId, DynamicTime timestamp) {
@@ -298,7 +244,7 @@ struct DynamicDiGraph::CheshireCat {
         graphChangedSinceLastReset = true;
     }
 
-    void addArc(VertexIdentifier tailId, VertexIdentifier headId, DynamicTime timestamp, bool antedateVertexAddition)
+    AddArcOperation *addArc(VertexIdentifier tailId, VertexIdentifier headId, DynamicTime timestamp, bool antedateVertexAddition)
     {
         checkTimestamp(timestamp);
 
@@ -359,6 +305,21 @@ struct DynamicDiGraph::CheshireCat {
         }
 
         graphChangedSinceLastReset = true;
+        return aao;
+    }
+
+    void addArcAndRemoveIn(VertexIdentifier tailId, VertexIdentifier headId, DynamicTime timestamp,
+                           size_type arcAge,
+                           bool antedateVertexAddition)
+    {
+        if (arcAge < 1) {
+            arcAge = defaultArcAge;
+        }
+        auto *aao = addArc(tailId, headId, timestamp, antedateVertexAddition);
+        if (arcAge > autoArcRemovals.size()) {
+            autoArcRemovals.resize(arcAge);
+        }
+        autoArcRemovals[arcAge - 1].push_back(aao);
     }
 
     void noop(DynamicTime timestamp) {
@@ -379,32 +340,53 @@ struct DynamicDiGraph::CheshireCat {
         Vertex *ct = avoTail->constructionVertex;
         Vertex *ch = avoHead->constructionVertex;
         Arc *ca = nullptr;
-        constructionGraph.mapOutgoingArcsUntil(ct, [&](Arc *a) {
-            if (a->getHead() == ch) {
-                ca = a;
-            }
-        }, [&](const Arc*) { return ca != nullptr; });
+        if (constructionGraph.getOutDegree(ct, true) <= constructionGraph.getInDegree(ch, true)) {
+            constructionGraph.mapOutgoingArcsUntil(ct, [&ch,&ca](Arc *a) {
+                if (a->getHead() == ch) {
+                    ca = a;
+                }
+            }, [&ca](const Arc*) { return ca != nullptr; });
+        } else {
+            constructionGraph.mapIncomingArcsUntil(ch, [&ct,&ca](Arc *a) {
+                if (a->getTail() == ct) {
+                    ca = a;
+                }
+            }, [&ca](const Arc*) { return ca != nullptr; });
+        }
 
         return ca;
     }
 
-    void removeArc(VertexIdentifier tailId, VertexIdentifier headId, DynamicTime timestamp, bool removeIsolatedEnds) {
+    AddArcOperation *findAddArcOperation(VertexIdentifier tailId, VertexIdentifier headId) {
         Arc *ca = findArc(tailId, headId);
         if (!ca) {
-            throw std::invalid_argument("Arc does not exist.");
+            return nullptr;
         }
-
-        checkTimestamp(timestamp);
 
         AddArcOperation *aao = constructionArcMap[ca];
         assert(ca == aao->constructionArc);
+        return aao;
+    }
+
+
+    void removeArc(VertexIdentifier tailId, VertexIdentifier headId, DynamicTime timestamp, bool removeIsolatedEnds) {
+        AddArcOperation *aao = findAddArcOperation(tailId, headId);
+        if (!aao) {
+            throw std::invalid_argument("Arc does not exist.");
+        }
+        checkTimestamp(timestamp);
+        removeArc(aao, removeIsolatedEnds);
+    }
+
+    void removeArc(AddArcOperation *aao, bool removeIsolatedEnds) {
         RemoveArcOperation *rao = new RemoveArcOperation(aao);
+        auto *ca = aao->constructionArc;
         constructionGraph.removeArc(ca);
         constructionArcMap.resetToDefault(ca);
 
         if (removeIsolatedEnds) {
-            AddVertexOperation *avoTail = vertices[tailId];
-            AddVertexOperation *avoHead = vertices[headId];
+            AddVertexOperation *avoTail = aao->tail;
+            AddVertexOperation *avoHead = aao->head;
             IncidenceListVertex *tail = dynamic_cast<IncidenceListVertex*>(avoTail->constructionVertex);
             IncidenceListVertex *head = dynamic_cast<IncidenceListVertex*>(avoHead->constructionVertex);
             if (tail->isIsolated() || head->isIsolated()) {
@@ -414,14 +396,14 @@ struct DynamicDiGraph::CheshireCat {
                     constructionGraph.removeVertex(avoTail->constructionVertex);
                     RemoveVertexOperation *rvo = new RemoveVertexOperation(avoTail);
                     op->operations.push_back(rvo);
-                    vertices[tailId] = nullptr;
+                    vertices[avoTail->vertexId] = nullptr;
                     curVertexSize--;
                 }
-                if (tailId != headId && head->isIsolated()) {
+                if (avoTail != avoHead && head->isIsolated()) {
                     constructionGraph.removeVertex(avoHead->constructionVertex);
                     RemoveVertexOperation *rvo = new RemoveVertexOperation(avoHead);
                     op->operations.push_back(rvo);
-                    vertices[headId] = nullptr;
+                    vertices[avoHead->vertexId] = nullptr;
                     curVertexSize--;
                 }
                 operations.push_back(op);
@@ -459,12 +441,14 @@ struct DynamicDiGraph::CheshireCat {
     }
 
     bool advance(bool sameTime = false) {
+        PRINT_DEBUG("Trying to advance, same time " << (sameTime ? "" : "NOT ") << "required.");
         if (opIndex >= operations.size()) {
             PRINT_DEBUG("Cannot advance further.")
             return false;
         }
 
         if (timeIndex + 1 < timestamps.size() && opIndex == offset[timeIndex + 1]) {
+            PRINT_DEBUG("Next operation is ahead in time.")
             if (sameTime) {
                 return false;
             }
@@ -472,8 +456,10 @@ struct DynamicDiGraph::CheshireCat {
         }
 
         if (opIndex == 0) {
+            PRINT_DEBUG("First operation is about to be executed, calling init...")
             init();
         }
+        PRINT_DEBUG("Advanced successfully.")
 
         return true;
     }
@@ -684,6 +670,16 @@ DiGraph::size_type DynamicDiGraph::getConstructedArcSize() const
     return grin->constructionGraph.getNumArcs(true);
 }
 
+GraphArtifact::size_type DynamicDiGraph::getMinVertexId() const
+{
+    return grin->minVertexId;
+}
+
+GraphArtifact::size_type DynamicDiGraph::getMaxVertexId() const
+{
+    return grin->minVertexId + grin->maxVertexSize - 1;
+}
+
 DynamicDiGraph::VertexIdentifier DynamicDiGraph::addVertex(DynamicTime timestamp)
 {
     return grin->addVertex(timestamp, true);
@@ -707,6 +703,19 @@ void DynamicDiGraph::addArc(VertexIdentifier tailId, VertexIdentifier headId,
     } else {
         grin->addArc(tailId, headId, timestamp, antedateVertexAdditions);
     }
+}
+
+void DynamicDiGraph::addArcAndRemoveIn(VertexIdentifier tailId, VertexIdentifier headId,
+                                       DynamicTime timestamp, size_type ageInDeltas,
+                                       bool antedateVertexAdditions)
+{
+    grin->addArcAndRemoveIn(tailId, headId, timestamp, ageInDeltas, antedateVertexAdditions);
+}
+
+void DynamicDiGraph::removeArc(VertexIdentifier tailId, VertexIdentifier headId,
+                               DynamicTime timestamp)
+{
+    grin->removeArc(tailId, headId, timestamp, grin->removeIsolatedEnds);
 }
 
 void DynamicDiGraph::removeArc(VertexIdentifier tailId, VertexIdentifier headId,
@@ -844,6 +853,62 @@ void DynamicDiGraph::squashTimes(DynamicTime timeFrom, DynamicTime timeUntil)
 void DynamicDiGraph::secondArcIsRemoval(bool sir)
 {
     grin->doubleArcIsRemoval = sir;
+}
+
+void DynamicDiGraph::setDefaultArcAge(DynamicDiGraph::size_type defaultAge)
+{
+    if (defaultAge > grin->defaultArcAge) {
+        grin->autoArcRemovals.resize(defaultAge);
+    }
+    grin->defaultArcAge = defaultAge;
+}
+
+DynamicDiGraph::size_type DynamicDiGraph::getDefaultArcAge() const
+{
+    return grin->defaultArcAge;
+}
+
+void DynamicDiGraph::setRemoveIsolatedEnds(bool remove)
+{
+    grin->removeIsolatedEnds = remove;
+}
+
+bool DynamicDiGraph::removeIsolatedEnds() const
+{
+    return grin->removeIsolatedEnds;
+}
+
+void DynamicDiGraph::addOperation(DynamicTime timestamp, Operation *op)
+{
+    grin->checkTimestamp(timestamp);
+    grin->operations.push_back(op);
+}
+
+void DynamicDiGraph::checkTimestamp(DynamicTime timestamp)
+{
+    grin->checkTimestamp(timestamp);
+}
+
+Operation *DynamicDiGraph::getLastOperation() const
+{
+    assert(!grin->operations.empty());
+    return grin->operations.back();
+}
+
+void DynamicDiGraph::replaceLastOperation(Operation *op)
+{
+    assert(!grin->operations.empty());
+    grin->operations[grin->operations.size() - 1] = op;
+}
+
+AddArcOperation *DynamicDiGraph::findAddArcOperation(DynamicDiGraph::VertexIdentifier tailId, DynamicDiGraph::VertexIdentifier headId)
+{
+    return grin->findAddArcOperation(tailId, headId);
+}
+
+void DynamicDiGraph::removeArc(AddArcOperation *aao)
+{
+    grin->removeArc(aao, grin->removeIsolatedEnds);
 }
 
 }

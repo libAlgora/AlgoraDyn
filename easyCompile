@@ -1,7 +1,7 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 ########################################################################
-# Copyright (C) 2013 - 2019 : Kathrin Hanauer                          #
+# Copyright (C) 2013 - 2021 : Kathrin Hanauer                          #
 #                                                                      #
 # This file is part of Algora.                                         #
 #                                                                      #
@@ -30,13 +30,13 @@ PRO_FILE="AlgoraDyn.pro"
 CLEAN=0
 EXTRA_ARGS=""
 QMAKE=""
-SPEC="linux-g++-64"
+SPEC=""
 
 function usage() {
-    echo "Usage: $0 [ --qmake <path/to/qmake> ] [ -c | --clean ] [ -g | --general ] [ -d | --debugsymbols] [ -p | --profiling] [ --clang ] [ -C | --compiler <compiler> ] [ -A | --ar <archive-cmd> ]"
+    echo "Usage: $0 [ --qmake <path/to/qmake> ] [ -c | --clean ] [ -g | --general ] [ -d | --debugsymbols] [ -p | --profiling] [ -C | --compiler <compiler> ] [ -A | --ar <archive-cmd> ] [ -S | --spec <spec> ]"
 }
 
-while [[ $# -gt 0 ]]
+while [ $# -gt 0 ]
 do
 case $1 in
     --qmake)
@@ -60,10 +60,6 @@ case $1 in
     EXTRA_ARGS="${EXTRA_ARGS} CONFIG+=profiling" # enable profiling code
     shift
     ;;
-    --clang)
-    SPEC="linux-clang"
-    shift
-    ;;
     -C|--compiler)
     EXTRA_ARGS="${EXTRA_ARGS} QMAKE_CXX=$2"
     shift
@@ -71,6 +67,11 @@ case $1 in
     ;;
     -A|--ar)
     EXTRA_ARGS="${EXTRA_ARGS} CONFIG+=custom-ar QMAKE_AR=$2"
+    shift
+    shift
+    ;;
+    -S|--spec)
+    SPEC="$2"
     shift
     shift
     ;;
@@ -93,6 +94,14 @@ done
 [ -z "${QMAKE}" ] && QMAKE=$(which qmake-qt5 2>/dev/null) && echo "Using \"${QMAKE}\" for \"qmake\"."
 [ -n "${QMAKE}" ] || eval 'echo "Binary \"qmake\" or \"qmake-qt5\" not found. Please specify its location explicitly via --qmake <path/to/qmake>." 1>&2; exit 1'
 [ -x "${QMAKE}" ] || eval 'echo "\"${QMAKE}\" is not an executable. Please specify the location of the qmake binary explicitly via --qmake <path/to/qmake>." 1>&2; exit 1'
+
+if [ -z "${SPEC}" ]
+then
+  SPEC=$(qmake -query QMAKE_SPEC)
+fi
+[ -n "${SPEC}" ] || eval 'echo "Could not determine QMake SPEC to use. Please specify manually via --spec <SPEC>." 1>&2; exit 1'
+
+echo "Using QMake spec ${SPEC}."
 
 QMAKE_ARGS="-r -spec ${SPEC} ${EXTRA_ARGS} $@"
 QMAKE_ARGS_DEBUG="CONFIG+=debug"

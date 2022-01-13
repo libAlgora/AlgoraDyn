@@ -19,6 +19,7 @@ The building process employs `qmake` version 5.
 On Debian/Ubuntu, all dependencies can be installed by running: `# apt install
 qt5-qmake libboost-dev`.
 On Fedora, run `# dnf install qt5-qtbase-devel boost-devel`.
+On FreeBSD, run `# pkg install qt5-qmake boost-libs`.
 
 **Algora|Dyn** is built on top of the Algora core library
 [**Algora|Core**](https://gitlab.com/libalgora/AlgoraCore).
