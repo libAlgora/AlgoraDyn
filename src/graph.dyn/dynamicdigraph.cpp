@@ -32,7 +32,6 @@
 
 #include <stdexcept>
 #include <cassert>
-#include <limits>
 
 //#define DEBUG_DYNDIGRAPH
 

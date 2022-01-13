@@ -24,6 +24,7 @@
 #define SESVERTEXDATA_H
 
 #include <climits>
+#include <limits>
 #include <iostream>
 #include <cassert>
 #include "graph/digraph.h"

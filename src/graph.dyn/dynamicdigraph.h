@@ -24,6 +24,7 @@
 #define DYNAMICDIGRAPH_H
 
 #include <vector>
+#include <limits>
 #include "graph.incidencelist/incidencelistgraph.h"
 
 namespace Algora {
