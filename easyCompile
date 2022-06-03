@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 ########################################################################
-# Copyright (C) 2013 - 2021 : Kathrin Hanauer                          #
+# Copyright (C) 2013 - 2022 : Kathrin Hanauer                          #
 #                                                                      #
 # This file is part of Algora.                                         #
 #                                                                      #
@@ -97,7 +97,7 @@ done
 
 if [ -z "${SPEC}" ]
 then
-  SPEC=$(qmake -query QMAKE_SPEC)
+  SPEC=$(${QMAKE} -query QMAKE_SPEC)
 fi
 [ -n "${SPEC}" ] || eval 'echo "Could not determine QMake SPEC to use. Please specify manually via --spec <SPEC>." 1>&2; exit 1'
 
