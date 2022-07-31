@@ -26,6 +26,7 @@
 #include <climits>
 #include <iostream>
 #include <cassert>
+#include <limits>
 #include "graph/digraph.h"
 
 namespace Algora {

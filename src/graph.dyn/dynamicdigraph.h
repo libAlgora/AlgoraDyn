@@ -25,6 +25,7 @@
 
 #include <vector>
 #include "graph.incidencelist/incidencelistgraph.h"
+#include <limits>
 
 namespace Algora {
 
