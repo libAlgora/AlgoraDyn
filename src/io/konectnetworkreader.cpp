@@ -316,14 +316,26 @@ bool KonectNetworkReader::provideDynamicWeightedDiGraph(DynamicWeightedDiGraph<u
         if (relativeWeights) {
             PRINT_DEBUG("Adding/updating arc " << e.tail << ", " << e.head << " by relative weight " << e.weight << " at time " << e.timestamp);
             unsigned long aWeight = e.weight >= 0 ? e.weight : -e.weight;
-            dywGraph->addWeightedArcOrChangeWeightRelative(e.tail, e.head, aWeight, e.weight >= 0, removeNonPositiveArcs, e.timestamp);
+            try {
+                dywGraph->addWeightedArcOrChangeWeightRelative(e.tail, e.head, aWeight, e.weight >= 0, removeNonPositiveArcs, e.timestamp);
+            } catch (const std::invalid_argument &e) {
+                lastError.append(e.what());
+            }
         } else {
             if (removeNonPositiveArcs && e.weight <= 0) {
                 PRINT_DEBUG("Removing arc " << e.tail << ", " << e.head << " due to weight " << e.weight << " at time " << e.timestamp);
-                dywGraph->removeWeightedArc(e.tail, e.head, e.timestamp);
+                try {
+                    dywGraph->removeWeightedArc(e.tail, e.head, e.timestamp);
+                } catch (const std::invalid_argument &e) {
+                    lastError.append(e.what());
+                }
             } else {
                 PRINT_DEBUG("Adding/updating arc " << e.tail << ", " << e.head << " with weight " << e.weight << " at time " << e.timestamp);
-                dywGraph->addWeightedArcOrChangeWeight(e.tail, e.head, e.weight, e.timestamp);
+                try {
+                    dywGraph->addWeightedArcOrChangeWeight(e.tail, e.head, e.weight, e.timestamp);
+                } catch (const std::invalid_argument &e) {
+                    lastError.append(e.what());
+                }
             }
         }
     }
