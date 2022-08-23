@@ -24,8 +24,9 @@ public:
                 VertexIdentifier headId,
                 const weight_type &weight,
                 DynamicTime timestamp,
+                bool directed = true,
                 bool antedateVertexAdditions = false) {
-        DynamicDiGraph::addArc(tailId, headId, timestamp, antedateVertexAdditions);
+        DynamicDiGraph::addArc(tailId, headId, timestamp, antedateVertexAdditions, directed);
         auto *lastOp = getLastOperation();
         if (lastOp->getType() == Operation::MULTIPLE) {
             OperationSet *os = dynamic_cast<OperationSet*>(lastOp);
@@ -51,12 +52,13 @@ public:
                 VertexIdentifier headId,
                 const weight_type &weight,
                 DynamicTime timestamp,
-                bool antedateVertexAdditions = false) {
-        auto *aao = findAddArcOperation(tailId, headId);
+                bool antedateVertexAdditions = false,
+                bool directed = true) {
+        auto *aao = findAddArcOperation(tailId, headId, directed);
         if (aao) {
             changeArcWeight(aao, weight, timestamp);
         } else {
-            addWeightedArc(tailId, headId, weight, timestamp, antedateVertexAdditions);
+            addWeightedArc(tailId, headId, weight, timestamp, antedateVertexAdditions, directed);
         }
     }
 
@@ -66,20 +68,22 @@ public:
                 bool increase,
                 bool removeIfNonPositive,
                 DynamicTime timestamp,
-                bool antedateVertexAdditions = false) {
-        auto *aao = findAddArcOperation(tailId, headId);
+                bool antedateVertexAdditions = false,
+                bool directed = true) {
+        auto *aao = findAddArcOperation(tailId, headId, directed);
         if (aao) {
             changeArcWeightRelative(aao, weight, increase, removeIfNonPositive, timestamp);
         } else {
-            addWeightedArc(tailId, headId, weight, timestamp, antedateVertexAdditions);
+            addWeightedArc(tailId, headId, weight, timestamp, antedateVertexAdditions, directed);
         }
     }
 
     void changeArcWeight(VertexIdentifier tailId,
                 VertexIdentifier headId,
                 const weight_type &weight,
-                DynamicTime timestamp) {
-        auto *aao = findAddArcOperation(tailId, headId);
+                DynamicTime timestamp,
+                bool directed = true) {
+        auto *aao = findAddArcOperation(tailId, headId, directed);
         if (aao) {
             changeArcWeight(aao, weight, timestamp);
         }
@@ -90,8 +94,9 @@ public:
                 const weight_type &weight,
                 bool increase,
                 bool removeIfNonPositive,
-                DynamicTime timestamp) {
-        auto *aao = findAddArcOperation(tailId, headId);
+                DynamicTime timestamp,
+                bool directed = true) {
+        auto *aao = findAddArcOperation(tailId, headId, directed);
         if (aao) {
             changeArcWeightRelative(aao, weight, increase, removeIfNonPositive, timestamp);
         }
@@ -99,16 +104,18 @@ public:
 
     void removeWeightedArc(VertexIdentifier tailId,
                 VertexIdentifier headId,
-                DynamicTime timestamp) {
-        auto *aao = findAddArcOperation(tailId, headId);
+                DynamicTime timestamp,
+                bool directed = true) {
+        auto *aao = findAddArcOperation(tailId, headId, directed);
         if (!aao) {
             throw std::invalid_argument("Arc does not exist.");
         }
         removeWeightedArc(aao, timestamp);
     }
 
-    weight_type getCurrentArcWeight(VertexIdentifier tailId, VertexIdentifier headId) {
-        auto *aao = findAddArcOperation(tailId, headId);
+    weight_type getCurrentArcWeight(VertexIdentifier tailId, VertexIdentifier headId,
+            bool directed) {
+        auto *aao = findAddArcOperation(tailId, headId, directed);
         if (aao) {
             return constructionWeights[aao->constructionArc];
         }
@@ -117,6 +124,11 @@ public:
 
     propertymap_type<weight_type> *getArcWeights() {
         return &weights;
+    }
+
+    bool lastOpWasArcWeightChange() const
+    {
+        return getLastOperation()->getType() == Operation::Type::ARC_WEIGHT_CHANGE;
     }
 
 private:
