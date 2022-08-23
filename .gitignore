@@ -1,3 +1,7 @@
 build/*
 /src/AlgoraDyn.pro.user*
 /src/algoradyn_info.h
+*.swp
+/examples/*
+!/examples/*.cpp
+!/examples/Makefile
