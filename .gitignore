@@ -4,4 +4,5 @@ build/*
 *.swp
 /examples/*
 !/examples/*.cpp
+!/examples/*.graph
 !/examples/Makefile
