@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+
+OK=0
+
+if [ ! -f "algora.revs" ]
+then
+  >&2 echo "ERROR: algora.revs does not exist."
+	OK=1
+	exit $OK
+fi
+
+mapfile -t ALGORA_REVS < algora.revs
+
+pushd . > /dev/null
+pushd .. > /dev/null
+
+for i in "${ALGORA_REVS[@]}"
+do
+	AREV=(${i})
+	ALGORA_LIB=${AREV[0]}
+	REV=${AREV[1]}
+
+	if [ ! -d "${ALGORA_LIB}" ]
+	then
+	  >&2 echo "ERROR: ../${ALGORA_LIB} does not exist."
+		OK=$((OK + 1))
+		continue
+	fi
+
+	pushd ${ALGORA_LIB} > /dev/null
+
+	if [ -d ".git" ]
+	then
+		test "$(git rev-parse --verify --end-of-options ${REV} 2>/dev/null)" = "$(git rev-parse --verify --end-of-options HEAD)"
+	  THIS_OK=$?
+		if [ "${THIS_OK}" -gt 0 ]
+		then
+	  	>&2 echo "ERROR: ../${ALGORA_LIB} is not on revision ${REV}."
+			OK=$((OK + THIS_OK))
+		fi
+	else
+	  >&2 echo "WARNING: ../${ALGORA_LIB} is not a git repository, cannot check for correct version."
+	fi
+
+	popd > /dev/null
+
+done
+
+popd > /dev/null
+exit $OK
