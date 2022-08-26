@@ -389,7 +389,11 @@ struct DynamicDiGraph::CheshireCat {
     void removeArc(AddArcOperation *aao, bool removeIsolatedEnds) {
         RemoveArcOperation *rao = new RemoveArcOperation(aao);
         auto *ca = aao->constructionArc;
-        constructionGraph.removeArc(ca);
+        if (ca->isDirected()) {
+            constructionGraph.removeArc(ca);
+        } else {
+            constructionGraph.removeEdge(ca);
+        }
         constructionArcMap.resetToDefault(ca);
 
         if (removeIsolatedEnds) {
