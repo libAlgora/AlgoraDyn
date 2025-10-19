@@ -43,6 +43,7 @@ public:
     std::string getErrors() const { return lastError; }
     void clearErrors() { lastError.clear(); }
     void setStrict(bool strict) { this->strict = strict; }
+    void setAllUndirected(bool undirected) { this->directed = !undirected; }
     void setArcLifetime(DiGraph::size_type arcLifetime) {
         this->arcLifetime = arcLifetime;
     }
@@ -69,6 +70,7 @@ private:
     DiGraph::size_type arcLifetime;
     bool relativeWeights;
     bool removeNonPositiveArcs;
+    bool directed {true};
 };
 
 }

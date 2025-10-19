@@ -2,12 +2,18 @@
 #define DYNAMICDIGRAPHOPERATIONS_H
 
 #include "graph.incidencelist/incidencelistgraph.h"
-#include "graph.dyn/dynamicdigraph.h"
+//#include "graph.dyn/dynamicdigraph.h"
 
 namespace Algora {
 
 struct Operation {
-    enum Type { VERTEX_ADDITION, VERTEX_REMOVAL, ARC_ADDITION, ARC_REMOVAL, MULTIPLE, NONE, VERTEX_WEIGHT_CHANGE, ARC_WEIGHT_CHANGE };
+    enum Type {
+      VERTEX_ADDITION, VERTEX_REMOVAL,
+      ARC_ADDITION, ARC_REMOVAL,
+      EDGE_ADDITION, EDGE_REMOVAL,
+      MULTIPLE, NONE,
+      VERTEX_WEIGHT_CHANGE, ARC_WEIGHT_CHANGE
+    };
     virtual ~Operation() {}
     virtual void apply(IncidenceListGraph *graph) = 0;
     virtual Type getType() const = 0;
@@ -79,14 +85,17 @@ struct AddArcOperation : public Operation {
     AddVertexOperation *head;
     Arc *arc;
     Arc *constructionArc;
+    const bool directed;
 
     AddArcOperation(AddVertexOperation *t, AddVertexOperation *h, Arc *ca)
-        : tail(t), head(h), arc(nullptr), constructionArc(ca) { }
+        : tail(t), head(h), arc(nullptr), constructionArc(ca), directed(ca->isDirected()) { }
 
     virtual void apply(IncidenceListGraph *graph) override {
-        arc = graph->addArc(tail->vertex, head->vertex);
+        arc = directed ?
+          graph->addArc(tail->vertex, head->vertex)
+          : graph->addEdge(tail->vertex, head->vertex);
     }
-    virtual Type getType() const override { return ARC_ADDITION; }
+    virtual Type getType() const override { return directed ? ARC_ADDITION : EDGE_ADDITION; }
     virtual void reset() override { arc = nullptr; }
 };
 
@@ -96,9 +105,13 @@ struct RemoveArcOperation : public Operation {
     RemoveArcOperation(AddArcOperation *aao) : addOp(aao) { }
 
     virtual void apply(IncidenceListGraph *graph) override {
+      if (addOp->directed) {
         graph->removeArc(addOp->arc);
+      } else {
+        graph->removeEdge(addOp->arc);
+      }
     }
-    virtual Type getType() const override { return ARC_REMOVAL; }
+    virtual Type getType() const override { return addOp->directed ? ARC_REMOVAL : EDGE_REMOVAL; }
 };
 
 template<typename weight_type>

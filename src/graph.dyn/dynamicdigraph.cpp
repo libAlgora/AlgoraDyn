@@ -244,7 +244,8 @@ struct DynamicDiGraph::CheshireCat {
         graphChangedSinceLastReset = true;
     }
 
-    AddArcOperation *addArc(VertexIdentifier tailId, VertexIdentifier headId, DynamicTime timestamp, bool antedateVertexAddition)
+    AddArcOperation *addArc(VertexIdentifier tailId, VertexIdentifier headId, DynamicTime timestamp,
+            bool antedateVertexAddition, bool directed)
     {
         checkTimestamp(timestamp);
 
@@ -289,7 +290,9 @@ struct DynamicDiGraph::CheshireCat {
         }
 
 
-        Arc *ca = constructionGraph.addArc(avoTail->constructionVertex, avoHead->constructionVertex);
+        Arc *ca = directed
+            ? constructionGraph.addArc(avoTail->constructionVertex, avoHead->constructionVertex)
+            : constructionGraph.addEdge(avoTail->constructionVertex, avoHead->constructionVertex);
         AddArcOperation *aao = new AddArcOperation(avoTail, avoHead, ca);
         if (os && os != &antedated) {
             os->operations.push_back(aao);
@@ -310,12 +313,13 @@ struct DynamicDiGraph::CheshireCat {
 
     void addArcAndRemoveIn(VertexIdentifier tailId, VertexIdentifier headId, DynamicTime timestamp,
                            size_type arcAge,
-                           bool antedateVertexAddition)
+                           bool antedateVertexAddition,
+                           bool directed)
     {
         if (arcAge < 1) {
             arcAge = defaultArcAge;
         }
-        auto *aao = addArc(tailId, headId, timestamp, antedateVertexAddition);
+        auto *aao = addArc(tailId, headId, timestamp, antedateVertexAddition, directed);
         if (arcAge > autoArcRemovals.size()) {
             autoArcRemovals.resize(arcAge);
         }
@@ -328,7 +332,7 @@ struct DynamicDiGraph::CheshireCat {
         operations.push_back(nop);
     }
 
-    Arc *findArc(VertexIdentifier tailId, VertexIdentifier headId) {
+    Arc *findArc(VertexIdentifier tailId, VertexIdentifier headId, bool directed) {
         if (tailId >= vertices.size() || headId >= vertices.size()) {
             return nullptr;
         }
@@ -339,26 +343,30 @@ struct DynamicDiGraph::CheshireCat {
         }
         Vertex *ct = avoTail->constructionVertex;
         Vertex *ch = avoHead->constructionVertex;
-        Arc *ca = nullptr;
-        if (constructionGraph.getOutDegree(ct, true) <= constructionGraph.getInDegree(ch, true)) {
-            constructionGraph.mapOutgoingArcsUntil(ct, [&ch,&ca](Arc *a) {
-                if (a->getHead() == ch) {
-                    ca = a;
-                }
-            }, [&ca](const Arc*) { return ca != nullptr; });
-        } else {
-            constructionGraph.mapIncomingArcsUntil(ch, [&ct,&ca](Arc *a) {
-                if (a->getTail() == ct) {
-                    ca = a;
-                }
-            }, [&ca](const Arc*) { return ca != nullptr; });
-        }
+        //Arc *ca = nullptr;
+        //if (constructionGraph.getOutDegree(ct, true) <= constructionGraph.getInDegree(ch, true)) {
+        //    constructionGraph.mapOutgoingArcsUntil(ct, [&ch,&ca](Arc *a) {
+        //        if (a->getHead() == ch) {
+        //            ca = a;
+        //        }
+        //    }, [&ca](const Arc*) { return ca != nullptr; });
+        //} else {
+        //    constructionGraph.mapIncomingArcsUntil(ch, [&ct,&ca](Arc *a) {
+        //        if (a->getTail() == ct) {
+        //            ca = a;
+        //        }
+        //    }, [&ca](const Arc*) { return ca != nullptr; });
+        //}
 
-        return ca;
+        //return ca;
+
+        return directed
+            ? constructionGraph.findArc(ct, ch)
+            : constructionGraph.findEdge(ct, ch);
     }
 
-    AddArcOperation *findAddArcOperation(VertexIdentifier tailId, VertexIdentifier headId) {
-        Arc *ca = findArc(tailId, headId);
+    AddArcOperation *findAddArcOperation(VertexIdentifier tailId, VertexIdentifier headId, bool directed) {
+        Arc *ca = findArc(tailId, headId, directed);
         if (!ca) {
             return nullptr;
         }
@@ -369,8 +377,8 @@ struct DynamicDiGraph::CheshireCat {
     }
 
 
-    void removeArc(VertexIdentifier tailId, VertexIdentifier headId, DynamicTime timestamp, bool removeIsolatedEnds) {
-        AddArcOperation *aao = findAddArcOperation(tailId, headId);
+    void removeArc(VertexIdentifier tailId, VertexIdentifier headId, DynamicTime timestamp, bool removeIsolatedEnds, bool directed) {
+        AddArcOperation *aao = findAddArcOperation(tailId, headId, directed);
         if (!aao) {
             throw std::invalid_argument("Arc does not exist.");
         }
@@ -381,7 +389,11 @@ struct DynamicDiGraph::CheshireCat {
     void removeArc(AddArcOperation *aao, bool removeIsolatedEnds) {
         RemoveArcOperation *rao = new RemoveArcOperation(aao);
         auto *ca = aao->constructionArc;
-        constructionGraph.removeArc(ca);
+        if (ca->isDirected()) {
+            constructionGraph.removeArc(ca);
+        } else {
+            constructionGraph.removeEdge(ca);
+        }
         constructionArcMap.resetToDefault(ca);
 
         if (removeIsolatedEnds) {
@@ -696,32 +708,35 @@ void DynamicDiGraph::removeVertex(VertexIdentifier vertexId, DynamicTime timesta
 }
 
 void DynamicDiGraph::addArc(VertexIdentifier tailId, VertexIdentifier headId,
-                            DynamicTime timestamp, bool antedateVertexAdditions)
+                            DynamicTime timestamp, bool antedateVertexAdditions,
+                            bool directed)
 {
-    if (grin->doubleArcIsRemoval && hasArc(tailId, headId)) {
-        grin->removeArc(tailId, headId, timestamp, antedateVertexAdditions);
+    if (grin->doubleArcIsRemoval && hasArc(tailId, headId, directed)) {
+        grin->removeArc(tailId, headId, timestamp, antedateVertexAdditions, directed);
     } else {
-        grin->addArc(tailId, headId, timestamp, antedateVertexAdditions);
+        grin->addArc(tailId, headId, timestamp, antedateVertexAdditions, directed);
     }
 }
 
 void DynamicDiGraph::addArcAndRemoveIn(VertexIdentifier tailId, VertexIdentifier headId,
                                        DynamicTime timestamp, size_type ageInDeltas,
-                                       bool antedateVertexAdditions)
+                                       bool antedateVertexAdditions, bool directed)
 {
-    grin->addArcAndRemoveIn(tailId, headId, timestamp, ageInDeltas, antedateVertexAdditions);
+    grin->addArcAndRemoveIn(tailId, headId, timestamp, ageInDeltas, antedateVertexAdditions,
+            directed);
 }
 
 void DynamicDiGraph::removeArc(VertexIdentifier tailId, VertexIdentifier headId,
-                               DynamicTime timestamp)
+                               DynamicTime timestamp, bool directed)
 {
-    grin->removeArc(tailId, headId, timestamp, grin->removeIsolatedEnds);
+    grin->removeArc(tailId, headId, timestamp, grin->removeIsolatedEnds, directed);
 }
 
 void DynamicDiGraph::removeArc(VertexIdentifier tailId, VertexIdentifier headId,
-                               DynamicTime timestamp, bool removeIsolatedEnds)
+                               DynamicTime timestamp, bool removeIsolatedEnds,
+                               bool directed)
 {
-    grin->removeArc(tailId, headId, timestamp, removeIsolatedEnds);
+    grin->removeArc(tailId, headId, timestamp, removeIsolatedEnds, directed);
 }
 
 void DynamicDiGraph::noop(DynamicDiGraph::DynamicTime timestamp)
@@ -729,9 +744,9 @@ void DynamicDiGraph::noop(DynamicDiGraph::DynamicTime timestamp)
     grin->noop(timestamp);
 }
 
-bool DynamicDiGraph::hasArc(VertexIdentifier tailId, VertexIdentifier headId)
+bool DynamicDiGraph::hasArc(VertexIdentifier tailId, VertexIdentifier headId, bool directed)
 {
-    return grin->findArc(tailId, headId) != nullptr;
+    return grin->findArc(tailId, headId, directed) != nullptr;
 }
 
 void DynamicDiGraph::clear()
@@ -782,6 +797,16 @@ bool DynamicDiGraph::lastOpWasArcAddition() const
 bool DynamicDiGraph::lastOpWasArcRemoval() const
 {
     return grin->lastOpHadType(Operation::Type::ARC_REMOVAL);
+}
+
+bool DynamicDiGraph::lastOpWasEdgeAddition() const
+{
+    return grin->lastOpHadType(Operation::Type::EDGE_ADDITION);
+}
+
+bool DynamicDiGraph::lastOpWasEdgeRemoval() const
+{
+    return grin->lastOpHadType(Operation::Type::EDGE_REMOVAL);
 }
 
 bool DynamicDiGraph::lastOpWasMultiple() const
@@ -836,6 +861,18 @@ DynamicDiGraph::size_type DynamicDiGraph::countArcRemovals(DynamicTime timeFrom,
                                                            DynamicTime timeUntil) const
 {
     return grin->countOperations(timeFrom, timeUntil, Operation::Type::ARC_REMOVAL);
+}
+
+DynamicDiGraph::size_type DynamicDiGraph::countEdgeAdditions(DynamicTime timeFrom,
+                                                            DynamicTime timeUntil) const
+{
+    return grin->countOperations(timeFrom, timeUntil, Operation::Type::EDGE_ADDITION);
+}
+
+DynamicDiGraph::size_type DynamicDiGraph::countEdgeRemovals(DynamicTime timeFrom,
+                                                           DynamicTime timeUntil) const
+{
+    return grin->countOperations(timeFrom, timeUntil, Operation::Type::EDGE_REMOVAL);
 }
 
 DynamicDiGraph::size_type DynamicDiGraph::countNoops(DynamicDiGraph::DynamicTime timeFrom,
@@ -901,9 +938,11 @@ void DynamicDiGraph::replaceLastOperation(Operation *op)
     grin->operations[grin->operations.size() - 1] = op;
 }
 
-AddArcOperation *DynamicDiGraph::findAddArcOperation(DynamicDiGraph::VertexIdentifier tailId, DynamicDiGraph::VertexIdentifier headId)
+AddArcOperation *DynamicDiGraph::findAddArcOperation(
+        DynamicDiGraph::VertexIdentifier tailId, DynamicDiGraph::VertexIdentifier headId,
+        bool directed)
 {
-    return grin->findAddArcOperation(tailId, headId);
+    return grin->findAddArcOperation(tailId, headId, directed);
 }
 
 void DynamicDiGraph::removeArc(AddArcOperation *aao)

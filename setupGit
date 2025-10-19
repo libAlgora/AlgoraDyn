@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+git config merge.ours.name "Merge driver that always keeps our version of file"
+git config merge.ours.driver true
