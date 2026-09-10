@@ -26,6 +26,7 @@
 #include <vector>
 #include <limits>
 #include "graph.incidencelist/incidencelistgraph.h"
+#include <limits>
 
 namespace Algora {
 
@@ -38,7 +39,6 @@ public:
     typedef unsigned long long VertexIdentifier;
     typedef unsigned long long DynamicTime;
     typedef std::vector<DynamicTime>::size_type size_type;
-
     const static VertexIdentifier NO_VERTEX_ID
         = std::numeric_limits<VertexIdentifier>::max();
 
@@ -61,16 +61,19 @@ public:
     void addVertex(VertexIdentifier vertexId, DynamicTime timestamp);
     void removeVertex(VertexIdentifier vertexId, DynamicTime timestamp);
     void addArc(VertexIdentifier tailId, VertexIdentifier headId,
-                DynamicTime timestamp, bool antedateVertexAdditions = false);
+                DynamicTime timestamp, bool antedateVertexAdditions = false,
+                bool directed = true);
     void addArcAndRemoveIn(VertexIdentifier tailId, VertexIdentifier headId,
                 DynamicTime timestamp, size_type ageInDeltas = 0,
-                bool antedateVertexAdditions = false);
+                bool antedateVertexAdditions = false,
+                bool directed = true);
     void removeArc(VertexIdentifier tailId, VertexIdentifier headId,
-                   DynamicTime timestamp);
+                   DynamicTime timestamp, bool directed = true);
     void removeArc(VertexIdentifier tailId, VertexIdentifier headId,
-                   DynamicTime timestamp, bool removeIsolatedEnds);
+                   DynamicTime timestamp, bool removeIsolatedEnds,
+                   bool directed);
     void noop(DynamicTime timestamp);
-    bool hasArc(VertexIdentifier tailId, VertexIdentifier headId);
+    bool hasArc(VertexIdentifier tailId, VertexIdentifier headId, bool directed = true);
     void clear();
     void compact(size_type num);
 
@@ -81,6 +84,8 @@ public:
     bool lastOpWasVertexRemoval() const;
     bool lastOpWasArcAddition() const;
     bool lastOpWasArcRemoval() const;
+    bool lastOpWasEdgeAddition() const;
+    bool lastOpWasEdgeRemoval() const;
     bool lastOpWasMultiple() const;
     bool lastOpWasNoop() const;
     Vertex *getCurrentVertexForId(VertexIdentifier vertexId) const;
@@ -92,6 +97,8 @@ public:
     size_type countVertexRemovals(DynamicTime timeFrom, DynamicTime timeUntil) const;
     size_type countArcAdditions(DynamicTime timeFrom, DynamicTime timeUntil) const;
     size_type countArcRemovals(DynamicTime timeFrom, DynamicTime timeUntil) const;
+    size_type countEdgeAdditions(DynamicTime timeFrom, DynamicTime timeUntil) const;
+    size_type countEdgeRemovals(DynamicTime timeFrom, DynamicTime timeUntil) const;
     size_type countNoops(DynamicTime timeFrom, DynamicTime timeUntil) const;
 
     void squashTimes(DynamicTime timeFrom, DynamicTime timeUntil);
@@ -108,7 +115,9 @@ protected:
     void checkTimestamp(DynamicTime timestamp);
     Operation *getLastOperation() const;
     void replaceLastOperation(Operation *op);
-    AddArcOperation *findAddArcOperation(VertexIdentifier tailId, VertexIdentifier headId);
+    AddArcOperation *findAddArcOperation(VertexIdentifier tailId, VertexIdentifier headId,
+            bool directed = true);
+
     void removeArc(AddArcOperation *aao);
 
 private:

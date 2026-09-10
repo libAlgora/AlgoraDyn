@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 ########################################################################
-# Copyright (C) 2013 - 2021 : Kathrin Hanauer                          #
+# Copyright (C) 2013 - 2022 : Kathrin Hanauer                          #
 #                                                                      #
 # This file is part of Algora.                                         #
 #                                                                      #
@@ -90,6 +90,8 @@ case $1 in
 esac
 done
 
+./checkAlgora || echo -e "I assume you know what you're doing. Continuing anyway...\n"
+
 [ -z "${QMAKE}" ] && QMAKE=$(which qmake 2>/dev/null) && echo "Using \"${QMAKE}\" for \"qmake\"."
 [ -z "${QMAKE}" ] && QMAKE=$(which qmake-qt5 2>/dev/null) && echo "Using \"${QMAKE}\" for \"qmake\"."
 [ -n "${QMAKE}" ] || eval 'echo "Binary \"qmake\" or \"qmake-qt5\" not found. Please specify its location explicitly via --qmake <path/to/qmake>." 1>&2; exit 1'
@@ -97,7 +99,7 @@ done
 
 if [ -z "${SPEC}" ]
 then
-  SPEC=$(qmake -query QMAKE_SPEC)
+  SPEC=$(${QMAKE} -query QMAKE_SPEC)
 fi
 [ -n "${SPEC}" ] || eval 'echo "Could not determine QMake SPEC to use. Please specify manually via --spec <SPEC>." 1>&2; exit 1'
 
